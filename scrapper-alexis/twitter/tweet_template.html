@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tweet</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: white;
+        }
+        .screenshot-wrapper {
+            width: fit-content;
+            padding: 500px 0;
+            background-color: white;
+        }
+        .tweet-container {
+            width: fit-content;
+            padding: 32px;
+            background-color: white;
+            box-sizing: border-box;
+        }
+        .tweet-header {
+            display: flex;
+            margin-bottom: 48px;
+        }
+        .profile-picture {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            margin-right: 48px;
+            flex-shrink: 0;
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .display-name {
+            font-size: 68px;
+            font-weight: 700;
+            color: #0F1419;
+            line-height: 80px;
+        }
+        .username {
+            font-size: 68px;
+            font-weight: 400;
+            color: #536471;
+            line-height: 80px;
+        }
+        .tweet-text {
+            font-size: 68px;
+            font-weight: 400;
+            color: #0F1419;
+            line-height: 96px;
+            white-space: pre-wrap;
+            margin: 0;
+            padding-left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="screenshot-wrapper">
+        <div class="tweet-container" id="tweet">
+        <div class="tweet-header">
+            <img src="https://pbs.twimg.com/profile_images/1958793949692260352/PAlLs8Va_400x400.jpg" alt="El Emiliano Zapata" class="profile-picture">
+            <div class="user-info">
+                <span class="display-name">El Emiliano Zapata</span>
+                <span class="username">@soyemizapata</span>
+            </div>
+        </div>
+        <p class="tweet-text">Somos mis 4 horas de sueño y yo contra el Miércoles y sus dificultades</p>
+        </div>
+    </div>
+</body>
+</html>
+

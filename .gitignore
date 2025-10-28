@@ -1,0 +1,50 @@
+# Environment files
+scrapper-alexis/.env
+scrapper-alexis-web/.env
+.env
+*.env
+!env.docker.template
+
+# Docker volumes data
+data/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.bak
+
+# Node modules
+scrapper-alexis-web/node_modules/
+node_modules/
+
+# Python cache
+scrapper-alexis/__pycache__/
+scrapper-alexis/**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Build artifacts
+scrapper-alexis-web/build/
+scrapper-alexis-web/dist/
+scrapper-alexis-web/.next/
+
+# Dependencies
+scrapper-alexis-web/package-lock.json
+scrapper-alexis-web/yarn.lock
+scrapper-alexis-web/pnpm-lock.yaml
+

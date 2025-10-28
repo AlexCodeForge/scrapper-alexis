@@ -1,0 +1,10 @@
+# MyTaxEU Automated Maintenance
+# Daily permission fix and worker restart at 3 AM
+0 3 * * * /var/www/mytaxeu/start-workers-with-permissions.sh >> /var/www/mytaxeu/storage/logs/cron-maintenance.log 2>&1
+
+# Check workers every 15 minutes and restart if needed (now expects 2 workers instead of 8)
+*/15 * * * * /bin/bash -c 'if [ $(ps aux | grep "queue:work" | grep -v grep | wc -l) -lt 2 ]; then echo "$(date): Workers missing, restarting..." >> /var/www/mytaxeu/storage/logs/cron-maintenance.log && /var/www/mytaxeu/start-workers-with-permissions.sh >> /var/www/mytaxeu/storage/logs/cron-maintenance.log 2>&1; fi'
+
+# Laravel task scheduler (if you use it)
+* * * * * cd /var/www/mytaxeu && php artisan schedule:run >> /dev/null 2>&1
+0 */2 * * * cd /var/www/option-rocket && php artisan jitsu:cleanup --force >/dev/null 2>&1

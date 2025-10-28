@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Custom utility for dashboard stat cards (4 columns) */
+@layer utilities {
+    @media (min-width: 64rem) {
+        .stats-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+        .stats-grid-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+    }
+
+    /* Fix for image gallery - 2 columns on desktop */
+    @media (min-width: 48rem) {
+        .image-gallery-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+    }
+
+    /* Fix for action buttons - row on desktop, column on mobile */
+    @media (min-width: 40rem) {
+        .action-buttons-container {
+            flex-direction: row !important;
+        }
+    }
+}

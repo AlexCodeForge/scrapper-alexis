@@ -1,0 +1,60 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Logs and debug output (will be created in container)
+logs/
+debug_output/
+
+# Data directory (database and images - will use volume)
+data/
+
+# Sensitive data - CRITICAL: Never include in images
+auth/
+*.env
+copy.env
+.env
+.env.*
+migration_backup/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database files (will use volume-mounted data)
+*.db
+*.db-journal
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Node modules (if any)
+node_modules/
+
+# Documentation
+docs/
+*.md
+!docker-entrypoint.sh
+

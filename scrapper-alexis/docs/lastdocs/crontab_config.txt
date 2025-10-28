@@ -1,0 +1,33 @@
+# Social Media Relay Agent - Cron Schedule for Testing
+# 
+# Usage: crontab crontab_config.txt
+# 
+# To view current crontab: crontab -l
+# To edit crontab: crontab -e
+# To remove crontab: crontab -r
+#
+# ============================================================================
+
+# Facebook Scraper - Every 1 hour
+0 * * * * /bin/bash /var/www/scrapper-alexis/run_facebook_flow.sh >> /var/www/scrapper-alexis/logs/cron_facebook.log 2>&1
+
+# Twitter Poster + Image Generator - Every 8 minutes
+*/8 * * * * /bin/bash /var/www/scrapper-alexis/run_twitter_flow.sh >> /var/www/scrapper-alexis/logs/cron_twitter.log 2>&1
+
+# ============================================================================
+# Schedule Explanation:
+# 
+# Facebook: Runs at minute 0 of every hour (00:00, 01:00, 02:00, etc.)
+# Twitter: Runs every 8 minutes (00:00, 00:08, 00:16, 00:24, etc.)
+# Images: Automatically runs after each Twitter posting
+#
+# ============================================================================
+# Log Files:
+# - /var/www/scrapper-alexis/logs/cron_facebook.log - Facebook scraper output
+# - /var/www/scrapper-alexis/logs/cron_twitter.log - Twitter poster + image gen output
+# - /var/www/scrapper-alexis/logs/cron_execution.log - Execution timestamps
+# ============================================================================
+
+
+
+

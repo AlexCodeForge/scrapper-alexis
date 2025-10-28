@@ -1,0 +1,24 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-CGN5tIvb.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/css/luvi-ui.css": {
+    "file": "assets/luvi-ui-BDV2baGj.css",
+    "src": "resources/css/luvi-ui.css",
+    "isEntry": true,
+    "names": [
+      "luvi-ui.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-C4mQnSi9.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}
