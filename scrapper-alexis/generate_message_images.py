@@ -141,33 +141,31 @@ def update_template(message_text: str, local_avatar_path: str) -> Optional[str]:
             avatar_file_url = PROFILE_AVATAR_FALLBACK or ""
             logger.warning(f"Using fallback avatar URL from environment: {avatar_file_url}")
         
-        # Update template with local avatar
-        updated_content = template_content.replace(
-            'src="https://pbs.twimg.com/profile_images/1958793949692260352/PAlLs8Va_400x400.jpg"',
-            f'src="{avatar_file_url}"'
+        # Update template with placeholders replaced by actual values
+        updated_content = template_content
+        
+        # Replace avatar URL
+        updated_content = updated_content.replace(
+            'AVATAR_URL_PLACEHOLDER',
+            avatar_file_url
         )
         
-        # Update profile display name and username from environment
+        # Replace display name
         updated_content = updated_content.replace(
-            '<span class="display-name">El Emiliano Zapata</span>',
-            f'<span class="display-name">{PROFILE_DISPLAY_NAME}</span>'
-        )
-        updated_content = updated_content.replace(
-            '<span class="username">@soyemizapata</span>',
-            f'<span class="username">{PROFILE_USERNAME}</span>'
-        )
-        updated_content = updated_content.replace(
-            'alt="El Emiliano Zapata"',
-            f'alt="{PROFILE_DISPLAY_NAME}"'
+            'DISPLAY_NAME_PLACEHOLDER',
+            PROFILE_DISPLAY_NAME
         )
         
-        # Update message text (find the <p class="tweet-text"> content)
-        tweet_pattern = r'(<p class="tweet-text">)(.*?)(</p>)'
-        updated_content = re.sub(
-            tweet_pattern,
-            f'\\1{message_text}\\3',
-            updated_content,
-            flags=re.DOTALL
+        # Replace username
+        updated_content = updated_content.replace(
+            'USERNAME_PLACEHOLDER',
+            PROFILE_USERNAME
+        )
+        
+        # Replace message text
+        updated_content = updated_content.replace(
+            'MESSAGE_TEXT_PLACEHOLDER',
+            message_text
         )
         
         # Create temporary template file

@@ -155,8 +155,8 @@ def get_user_display_name(page) -> str:
         display_name_selectors = [
             # Account switcher button area
             '[data-testid="SideNav_AccountSwitcher_Button"] [dir="ltr"] span',
-            # Profile link in navigation
-            'a[href*="/soyemizapata"] span[dir="ltr"]',
+            # Profile link in navigation (generic selector)
+            'a[data-testid="AppTabBar_Profile_Link"] span[dir="ltr"]',
             # Any bold/semibold text near avatar in nav
             'nav [role="link"] span[dir="ltr"]',
         ]
@@ -174,12 +174,12 @@ def get_user_display_name(page) -> str:
             except:
                 continue
         
-        logger.warning("Could not extract display name, using default")
-        return "El Emiliano Zapata"
+        logger.warning("Could not extract display name, using environment default")
+        return os.getenv('X_DISPLAY_NAME', 'Twitter User')
         
     except Exception as e:
         logger.error(f"Error extracting display name: {e}")
-        return "El Emiliano Zapata"
+        return os.getenv('X_DISPLAY_NAME', 'Twitter User')
 
 
 def get_user_username(page) -> str:
@@ -189,8 +189,8 @@ def get_user_username(page) -> str:
         username_selectors = [
             # Account switcher button area - look for @username
             '[data-testid="SideNav_AccountSwitcher_Button"]',
-            # Profile link in navigation
-            'a[href*="/soyemizapata"]',
+            # Profile link in navigation (generic selector, not hardcoded)
+            'a[data-testid="AppTabBar_Profile_Link"]',
             # Navigation area
             'nav [role="link"]',
         ]
@@ -226,12 +226,12 @@ def get_user_username(page) -> str:
         except:
             pass
                 
-        logger.warning("Could not extract username, using default")
-        return "@soyemizapata"
+        logger.warning("Could not extract username, using environment default")
+        return os.getenv('X_USERNAME', '@username')
         
     except Exception as e:
         logger.error(f"Error extracting username: {e}")
-        return "@soyemizapata"
+        return os.getenv('X_USERNAME', '@username')
 
 
 def update_template(tweet_text: str, local_avatar_path: str, display_name: str = None, username: str = None) -> str:

@@ -34,16 +34,26 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
-# Run the Twitter poster with Xvfb (virtual display)
+# STEP 1: Extract Twitter profile info (username, display name, avatar)
+# This ensures .env files are always up-to-date for image generation
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Extracting Twitter profile info..." >> logs/cron_execution.log
+xvfb-run -a python3 extract_twitter_profile.py >> logs/profile_extraction.log 2>&1
+PROFILE_EXIT_CODE=$?
+
+if [ $PROFILE_EXIT_CODE -ne 0 ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Profile extraction failed, using existing .env values" >> logs/cron_execution.log
+fi
+
+# STEP 2: Run the Twitter poster with Xvfb (virtual display)
 xvfb-run -a python3 -m twitter.twitter_post
 
 # Log execution
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Twitter posting completed" >> logs/cron_execution.log
 
-# Run image generation after posting
+# STEP 3: Run image generation after posting (uses profile info from .env)
 sleep 2
 /app/run_image_generation.sh
 
-# Update posting log after everything
+# STEP 4: Update posting log after everything
 python3 generate_posting_log.py > /dev/null 2>&1
 

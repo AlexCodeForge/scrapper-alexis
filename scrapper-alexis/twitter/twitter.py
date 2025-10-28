@@ -9,8 +9,10 @@ Usage:
 """
 
 import sys
+import os
 import argparse
 import logging
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 # Import our modules
@@ -29,9 +31,9 @@ if not PROXY_CONFIG:
     print("   Add PROXY_SERVER, PROXY_USERNAME, PROXY_PASSWORD to copy.env")
     sys.exit(1)
 
-# Credentials (from credenciales.txt)
-X_USERNAME = "soyemizapata"
-X_PASSWORD = "AleGar27$"
+# Credentials from environment variables
+X_USERNAME = config.X_EMAIL or os.getenv('X_EMAIL', '')
+X_PASSWORD = config.X_PASSWORD or os.getenv('X_PASSWORD', '')
 
 def validate_and_fix_encoding(text: str) -> str:
     """Validate and fix text encoding to prevent posting malformed characters."""

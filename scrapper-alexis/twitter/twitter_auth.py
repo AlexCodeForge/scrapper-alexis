@@ -23,7 +23,7 @@ def login_x(browser: Browser, username: str, password: str, proxy_config: Option
     
     Args:
         browser: Playwright browser instance
-        username: X username (soyemizapata)
+        username: X username (your Twitter username)
         password: X password
         proxy_config: Optional proxy configuration
     
