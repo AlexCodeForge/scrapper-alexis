@@ -474,4 +474,132 @@
                         @endif
                     </x-card.content>
                 </x-card>
+
+                <!-- Facebook Page Posting Settings -->
+                <x-card class="mb-6">
+                    <x-card.header>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <x-card.title>Publicación en Página de Facebook</x-card.title>
+                                <x-card.description>Configurar la publicación automática de imágenes aprobadas en tu página de Facebook</x-card.description>
+                            </div>
+                            <button type="button" wire:click="togglePagePosting"
+                                    style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $pagePostingEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                    class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    title="Click para {{ $pagePostingEnabled ? 'desactivar' : 'activar' }}">
+                                <span style="position: absolute; top: 3px; {{ $pagePostingEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                            </button>
+                        </div>
+                    </x-card.header>
+                    <x-card.content>
+                        <form wire:submit.prevent="savePagePostingSettings">
+                            <div class="space-y-6">
+                                <!-- Page Name -->
+                                <div>
+                                    <label class="block text-sm font-medium text-foreground mb-2">
+                                        Nombre de la Página <span class="text-destructive">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        wire:model="pageName"
+                                        placeholder="Ej: Miltoner, Mi Página de Negocios"
+                                        class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                    />
+                                    @error('pageName') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                                    <p class="text-xs text-muted-foreground mt-1">
+                                        El nombre exacto de tu página de Facebook (debe coincidir exactamente)
+                                    </p>
+                                </div>
+
+                                <!-- Posting Intervals -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-foreground mb-2">
+                                            Intervalo Mínimo (minutos)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            wire:model="pageIntervalMin"
+                                            min="10"
+                                            max="1440"
+                                            class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                        />
+                                        @error('pageIntervalMin') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-foreground mb-2">
+                                            Intervalo Máximo (minutos)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            wire:model="pageIntervalMax"
+                                            min="10"
+                                            max="1440"
+                                            class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                        />
+                                        @error('pageIntervalMax') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                                    </div>
+                                </div>
+
+                                <!-- Auto-cleanup Settings -->
+                                <div class="border-t border-border pt-6 mt-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <h4 class="text-sm font-semibold text-foreground">Limpieza Automática de Imágenes Publicadas</h4>
+                                            <p class="text-xs text-muted-foreground mt-1">Eliminar automáticamente imágenes descargadas y publicadas después de N días</p>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            wire:model.live="autoCleanupEnabled"
+                                            class="h-5 w-5 rounded text-primary focus:ring-primary cursor-pointer"
+                                        />
+                                    </div>
+
+                                    @if ($autoCleanupEnabled)
+                                        <div>
+                                            <label class="block text-sm font-medium text-foreground mb-2">
+                                                Días para mantener imágenes <span class="text-destructive">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                wire:model="cleanupDays"
+                                                min="1"
+                                                max="365"
+                                                class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                            />
+                                            @error('cleanupDays') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                                            <p class="text-xs text-muted-foreground mt-1">
+                                                Las imágenes descargadas y publicadas hace más de {{ $cleanupDays }} días serán eliminadas automáticamente
+                                            </p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div class="flex items-start gap-3">
+                                        <x-lucide-info class="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <div class="text-sm text-blue-800">
+                                            <p class="font-medium mb-1">Cómo funciona:</p>
+                                            <ul class="list-disc list-inside space-y-1 text-xs">
+                                                <li>Las imágenes deben ser aprobadas manualmente en la sección "Aprobación"</li>
+                                                <li>El sistema publicará una imagen cada vez con un intervalo aleatorio entre el mínimo y máximo</li>
+                                                <li>Solo se publican imágenes (sin texto)</li>
+                                                <li>El cronjob se ejecuta cada 30 minutos para verificar si es tiempo de publicar</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Submit Button -->
+                                <div class="flex justify-end">
+                                    <x-button type="submit">
+                                        <x-lucide-save class="mr-2 h-4 w-4" />
+                                        Guardar Configuración
+                                    </x-button>
+                                </div>
+                            </div>
+                        </form>
+                    </x-card.content>
+                </x-card>
         </div>

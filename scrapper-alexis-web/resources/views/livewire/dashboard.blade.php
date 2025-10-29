@@ -17,7 +17,7 @@
             @endif
 
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 stats-grid mb-8">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stats-grid mb-8">
                 <!-- Total Messages -->
                 <x-card class="hover:shadow-md transition-shadow">
                     <x-card.content class="p-4">
@@ -73,6 +73,36 @@
                             </div>
                             <div class="flex-shrink-0">
                                 <x-lucide-users class="h-8 w-8 text-purple-500" />
+                            </div>
+                        </div>
+                    </x-card.content>
+                </x-card>
+
+                <!-- Approved for Page -->
+                <x-card class="hover:shadow-md transition-shadow">
+                    <x-card.content class="p-4">
+                        <div class="flex items-center justify-between space-x-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-muted-foreground truncate">Aprobadas para Página</p>
+                                <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['approved_for_page']) }}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <x-lucide-check-circle class="h-8 w-8 text-orange-500" />
+                            </div>
+                        </div>
+                    </x-card.content>
+                </x-card>
+
+                <!-- Posted to Page -->
+                <x-card class="hover:shadow-md transition-shadow">
+                    <x-card.content class="p-4">
+                        <div class="flex items-center justify-between space-x-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-muted-foreground truncate">Publicadas en Página</p>
+                                <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['posted_to_page']) }}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <x-lucide-facebook class="h-8 w-8 text-blue-600" />
                             </div>
                         </div>
                     </x-card.content>

@@ -114,6 +114,10 @@ else
     echo "✗ Twitter poster disabled"
 fi
 
+# Add Facebook Page Poster job (checks every 30 minutes if it's time to post)
+echo "*/30 * * * * cd /app && /app/run_page_poster.sh >> /app/logs/page_poster_cron.log 2>&1" >> $CRON_FILE
+echo "✓ Facebook Page Poster scheduled: checks every 30 minutes"
+
 # Note: Image generation runs automatically as part of Twitter flow (run_twitter_flow.sh)
 # No separate cron job needed
 

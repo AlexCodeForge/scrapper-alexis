@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Livewire\Dashboard;
 use App\Livewire\ImageGallery;
 use App\Livewire\Logs;
+use App\Livewire\PostingApproval;
 use App\Livewire\Settings;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,7 @@ Route::middleware('auth')->group(function () {
 
         abort(404);
     })->name('images.download');
+    Route::get('/posting/approve', PostingApproval::class)->name('posting.approve');
     Route::get('/settings', Settings::class)->name('settings');
     Route::get('/logs', Logs::class)->name('logs');
 });

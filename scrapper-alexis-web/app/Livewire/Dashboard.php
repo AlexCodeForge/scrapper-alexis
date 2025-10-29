@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Message;
 use App\Models\Profile;
+use App\Services\PostingService;
 use Livewire\Component;
 
 class Dashboard extends Component
@@ -21,6 +22,9 @@ class Dashboard extends Component
 
     public function render()
     {
+        $postingService = app(PostingService::class);
+        $pageStats = $postingService->getPageStats();
+
         $stats = [
             'total_messages' => Message::count(),
             // Only count actually posted messages (exclude quality-filter skipped ones)
@@ -30,6 +34,8 @@ class Dashboard extends Component
                 ->count(),
             'images_generated' => Message::where('image_generated', true)->count(),
             'active_profiles' => Profile::where('is_active', true)->count(),
+            'approved_for_page' => $pageStats['approved'],
+            'posted_to_page' => $pageStats['posted'],
         ];
 
         // Load all messages for instant tab switching with Alpine

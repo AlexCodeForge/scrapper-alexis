@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Services\PostingService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -27,6 +28,14 @@ class Settings extends Component
     public $proxyUsername = '';
     public $proxyPassword = '';
 
+    // Facebook Page Posting Settings
+    public $pageName = '';
+    public $pageIntervalMin = 60;
+    public $pageIntervalMax = 120;
+    public $pagePostingEnabled = false;
+    public $autoCleanupEnabled = false;
+    public $cleanupDays = 7;
+
     // File uploads for auth
     public $twitterAuthFile;
     public $facebookAuthFile;
@@ -38,7 +47,21 @@ class Settings extends Component
     public function mount()
     {
         $this->loadSettings();
+        $this->loadPagePostingSettings();
         $this->checkAuthFiles();
+    }
+
+    public function loadPagePostingSettings()
+    {
+        $postingService = app(PostingService::class);
+        $settings = $postingService->getSettings();
+
+        $this->pageName = $settings->page_name ?? '';
+        $this->pageIntervalMin = $settings->interval_min;
+        $this->pageIntervalMax = $settings->interval_max;
+        $this->pagePostingEnabled = $settings->enabled;
+        $this->autoCleanupEnabled = $settings->auto_cleanup_enabled ?? false;
+        $this->cleanupDays = $settings->cleanup_days ?? 7;
     }
 
     public function checkAuthFiles()
@@ -380,6 +403,51 @@ class Settings extends Component
         } catch (\Exception $e) {
             \Log::error("deleteFacebookAuth: Failed", ['error' => $e->getMessage()]);
             session()->flash('error', 'Error al eliminar autenticación: ' . $e->getMessage());
+        }
+    }
+
+    public function savePagePostingSettings()
+    {
+        $this->validate([
+            'pageName' => 'required|string|max:255',
+            'pageIntervalMin' => 'required|integer|min:10|max:1440',
+            'pageIntervalMax' => 'required|integer|min:10|max:1440|gte:pageIntervalMin',
+            'cleanupDays' => 'required|integer|min:1|max:365',
+        ]);
+
+        $postingService = app(PostingService::class);
+
+        $result = $postingService->updateSettings([
+            'page_name' => $this->pageName,
+            'interval_min' => $this->pageIntervalMin,
+            'interval_max' => $this->pageIntervalMax,
+            'enabled' => $this->pagePostingEnabled,
+            'auto_cleanup_enabled' => $this->autoCleanupEnabled,
+            'cleanup_days' => $this->cleanupDays,
+        ]);
+
+        if ($result) {
+            session()->flash('success', 'Configuración de publicación en página guardada correctamente.');
+        } else {
+            session()->flash('error', 'Error al guardar la configuración de publicación en página.');
+        }
+    }
+
+    public function togglePagePosting()
+    {
+        $this->pagePostingEnabled = !$this->pagePostingEnabled;
+
+        $postingService = app(PostingService::class);
+
+        $result = $postingService->updateSettings([
+            'enabled' => $this->pagePostingEnabled,
+        ]);
+
+        if ($result) {
+            session()->flash('success', '✓ Publicación en página ' . ($this->pagePostingEnabled ? 'activada' : 'desactivada'));
+        } else {
+            session()->flash('error', 'Error al cambiar el estado de publicación en página.');
+            $this->pagePostingEnabled = !$this->pagePostingEnabled; // Revert
         }
     }
 
