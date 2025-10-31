@@ -8,6 +8,7 @@ class PostingSetting extends Model
 {
     protected $fillable = [
         'page_name',
+        'page_url',
         'interval_min',
         'interval_max',
         'enabled',

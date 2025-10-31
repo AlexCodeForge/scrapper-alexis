@@ -511,6 +511,23 @@
                                     </p>
                                 </div>
 
+                                <!-- Page URL -->
+                                <div>
+                                    <label class="block text-sm font-medium text-foreground mb-2">
+                                        URL de la Página <span class="text-destructive">*</span>
+                                    </label>
+                                    <input
+                                        type="url"
+                                        wire:model="pageUrl"
+                                        placeholder="https://www.facebook.com/TuPagina"
+                                        class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                    />
+                                    @error('pageUrl') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                                    <p class="text-xs text-muted-foreground mt-1">
+                                        La URL completa de tu página de Facebook (se usa para validar que estás logueado correctamente)
+                                    </p>
+                                </div>
+
                                 <!-- Posting Intervals -->
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>

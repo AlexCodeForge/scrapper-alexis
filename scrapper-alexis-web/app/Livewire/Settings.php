@@ -19,6 +19,8 @@ class Settings extends Component
     public $facebookEmail = '';
     public $facebookPassword = '';
     public $facebookProfiles = '';
+    public $facebookProfilesList = [];
+    public $newProfileUrl = '';
     public $twitterEmail = '';
     public $twitterPassword = '';
     public $twitterDisplayName = '';
@@ -30,6 +32,7 @@ class Settings extends Component
 
     // Facebook Page Posting Settings
     public $pageName = '';
+    public $pageUrl = '';
     public $pageIntervalMin = 60;
     public $pageIntervalMax = 120;
     public $pagePostingEnabled = false;
@@ -57,6 +60,7 @@ class Settings extends Component
         $settings = $postingService->getSettings();
 
         $this->pageName = $settings->page_name ?? '';
+        $this->pageUrl = $settings->page_url ?? '';
         $this->pageIntervalMin = $settings->interval_min;
         $this->pageIntervalMax = $settings->interval_max;
         $this->pagePostingEnabled = $settings->enabled;
@@ -160,6 +164,10 @@ class Settings extends Component
                             break;
                         case 'FACEBOOK_PROFILES':
                             $this->facebookProfiles = str_replace(',', "\n", $value);
+                            // Convert to array for list display
+                            if (!empty($value)) {
+                                $this->facebookProfilesList = array_filter(explode(',', $value));
+                            }
                             break;
                         case 'X_EMAIL':
                             $this->twitterEmail = $value;
@@ -410,6 +418,7 @@ class Settings extends Component
     {
         $this->validate([
             'pageName' => 'required|string|max:255',
+            'pageUrl' => 'required|url:http,https|max:500',
             'pageIntervalMin' => 'required|integer|min:10|max:1440',
             'pageIntervalMax' => 'required|integer|min:10|max:1440|gte:pageIntervalMin',
             'cleanupDays' => 'required|integer|min:1|max:365',
@@ -419,6 +428,7 @@ class Settings extends Component
 
         $result = $postingService->updateSettings([
             'page_name' => $this->pageName,
+            'page_url' => $this->pageUrl,
             'interval_min' => $this->pageIntervalMin,
             'interval_max' => $this->pageIntervalMax,
             'enabled' => $this->pagePostingEnabled,
@@ -451,8 +461,125 @@ class Settings extends Component
         }
     }
 
+    public function addProfileUrl()
+    {
+        $this->validate([
+            'newProfileUrl' => 'required|url',
+        ], [
+            'newProfileUrl.required' => 'La URL es requerida',
+            'newProfileUrl.url' => 'Debe ser una URL válida',
+        ]);
+
+        if (!in_array($this->newProfileUrl, $this->facebookProfilesList)) {
+            $this->facebookProfilesList[] = $this->newProfileUrl;
+            $this->newProfileUrl = '';
+            session()->flash('success', 'URL agregada correctamente');
+        } else {
+            session()->flash('error', 'Esta URL ya existe en la lista');
+        }
+    }
+
+    public function removeProfileUrl($index)
+    {
+        if (isset($this->facebookProfilesList[$index])) {
+            unset($this->facebookProfilesList[$index]);
+            $this->facebookProfilesList = array_values($this->facebookProfilesList); // Re-index array
+            session()->flash('success', 'URL eliminada correctamente');
+        }
+    }
+
+    public function saveFacebookSettings()
+    {
+        $profilesCommaSeparated = implode(',', $this->facebookProfilesList);
+
+        $updates = [
+            'FACEBOOK_EMAIL' => $this->facebookEmail,
+            'FACEBOOK_PASSWORD' => $this->facebookPassword,
+            'FACEBOOK_PROFILES' => $profilesCommaSeparated,
+        ];
+
+        foreach ($updates as $key => $value) {
+            if (!updateEnvFile($key, $value)) {
+                session()->flash('error', 'Error al guardar configuración de Facebook');
+                return;
+            }
+        }
+
+        session()->flash('success', 'Configuración de Facebook guardada correctamente');
+    }
+
+    public function saveTwitterSettings()
+    {
+        $updates = [
+            'X_EMAIL' => $this->twitterEmail,
+            'X_PASSWORD' => $this->twitterPassword,
+            'X_USERNAME' => $this->twitterUsername,
+        ];
+
+        foreach ($updates as $key => $value) {
+            if (!updateEnvFile($key, $value)) {
+                session()->flash('error', 'Error al guardar configuración de Twitter');
+                return;
+            }
+        }
+
+        session()->flash('success', 'Configuración de Twitter guardada correctamente');
+    }
+
+    public function saveCronSettings()
+    {
+        $this->validate([
+            'facebookIntervalMin' => 'required|integer|min:1|max:1440',
+            'facebookIntervalMax' => 'required|integer|min:1|max:1440|gte:facebookIntervalMin',
+            'twitterIntervalMin' => 'required|integer|min:1|max:1440',
+            'twitterIntervalMax' => 'required|integer|min:1|max:1440|gte:twitterIntervalMin',
+        ]);
+
+        $updates = [
+            'FACEBOOK_INTERVAL_MIN' => $this->facebookIntervalMin,
+            'FACEBOOK_INTERVAL_MAX' => $this->facebookIntervalMax,
+            'TWITTER_INTERVAL_MIN' => $this->twitterIntervalMin,
+            'TWITTER_INTERVAL_MAX' => $this->twitterIntervalMax,
+        ];
+
+        foreach ($updates as $key => $value) {
+            if (!updateEnvFile($key, $value)) {
+                session()->flash('error', 'Error al guardar intervalos de cron');
+                return;
+            }
+        }
+
+        // Update crontab
+        updateCrontab(
+            $this->facebookIntervalMin,
+            $this->twitterIntervalMin,
+            $this->facebookEnabled,
+            $this->twitterEnabled
+        );
+
+        session()->flash('success', 'Configuración de cron guardada correctamente');
+    }
+
+    public function saveProxySettings()
+    {
+        $updates = [
+            'PROXY_SERVER' => $this->proxyServer,
+            'PROXY_USERNAME' => $this->proxyUsername,
+            'PROXY_PASSWORD' => $this->proxyPassword,
+        ];
+
+        foreach ($updates as $key => $value) {
+            if (!updateEnvFile($key, $value)) {
+                session()->flash('error', 'Error al guardar configuración de proxy');
+                return;
+            }
+        }
+
+        session()->flash('success', 'Configuración de proxy guardada correctamente');
+    }
+
     public function render()
     {
-        return view('livewire.settings')->layout('components.layouts.app', ['title' => 'Settings']);
+        return view('livewire.settings-modular')->layout('components.layouts.app', ['title' => 'Settings']);
     }
 }

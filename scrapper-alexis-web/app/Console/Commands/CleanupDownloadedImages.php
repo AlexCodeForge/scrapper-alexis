@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Message;
+use App\Models\PostingSetting;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -27,7 +28,16 @@ class CleanupDownloadedImages extends Command
      */
     public function handle()
     {
-        $days = $this->option('days');
+        // Check if auto-cleanup is enabled
+        $settings = PostingSetting::getSettings();
+
+        if (!$settings->auto_cleanup_enabled) {
+            $this->info('Auto-cleanup is disabled in settings. Skipping cleanup.');
+            Log::info('CleanupDownloadedImages: Auto-cleanup disabled, skipping');
+            return 0;
+        }
+
+        $days = $this->option('days') ?: $settings->cleanup_days;
         $cutoffDate = now()->subDays($days);
 
         $this->info("Starting cleanup of downloaded images older than {$days} days (before {$cutoffDate->toDateTimeString()})");
@@ -110,6 +120,9 @@ class CleanupDownloadedImages extends Command
             'skipped' => $skippedCount,
             'total_size_mb' => $totalSizeMB
         ]);
+
+        // Update last cleanup timestamp
+        $settings->update(['last_cleanup_at' => now()]);
 
         return 0;
     }

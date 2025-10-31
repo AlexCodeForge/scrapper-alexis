@@ -6,18 +6,9 @@
                 <h2 class="text-2xl font-bold text-gray-900">Logs del Sistema</h2>
                 <p class="text-sm text-gray-600 mt-1">Monitorear la ejecución de los scrapers</p>
             </div>
-            <div class="flex items-center gap-3">
-                <!-- Auto-refresh Toggle -->
-                <div x-data="{ autoRefresh: @entangle('autoRefresh').live }"
-                     x-init="setInterval(() => { if(autoRefresh) $wire.$refresh() }, 3000)"
-                     class="flex items-center gap-2">
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" x-model="autoRefresh" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                    <span class="text-sm text-gray-700">Auto-refresh</span>
-                </div>
-
+            <div class="flex items-center gap-3"
+                 x-data="{ autoRefresh: @entangle('autoRefresh').live }"
+                 x-init="setInterval(() => { if(autoRefresh) $wire.$refresh() }, 3000)">
                 <!-- Download Button -->
                 <x-button wire:click="downloadLog" variant="outline" size="sm">
                     <x-lucide-download class="h-4 w-4 mr-1" />
@@ -77,6 +68,37 @@
             </x-card.content>
         </x-card>
     </div>
+
+    <!-- Auto Cleanup Status -->
+    <x-card class="mt-6 mb-6">
+        <x-card.content class="p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-2 bg-purple-100 rounded-lg">
+                            <x-lucide-trash-2 class="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Limpieza Automática de Imágenes</h3>
+                            <p class="text-sm {{ $cleanupEnabled ? 'text-green-600' : 'text-red-600' }}">
+                                Estado: {{ $cleanupEnabled ? '🟢 Activo' : '🔴 Detenido' }}
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Elimina imágenes descargadas/publicadas cada {{ $cleanupDays }} días
+                                @if($lastCleanupAt)
+                                    • Última limpieza: {{ $lastCleanupAt->diffForHumans() }}
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <x-button wire:click="runCleanup" variant="outline" size="sm" class="text-purple-600 hover:bg-purple-50">
+                    <x-lucide-play class="h-4 w-4 mr-1" />
+                    Ejecutar Ahora
+                </x-button>
+            </div>
+        </x-card.content>
+    </x-card>
 
     <!-- Log Viewer -->
     <x-card>
@@ -184,7 +206,6 @@
                 <p><strong>Twitter:</strong> Logs de publicaciones en Twitter (cron_twitter.log)</p>
                 <p><strong>Execution:</strong> Logs generales de ejecución de cron (cron_execution.log)</p>
                 <p><strong>Manual Runs:</strong> Logs de ejecuciones manuales desde el dashboard</p>
-                <p class="text-xs text-gray-500 mt-4">💡 Tip: Activa el auto-refresh para monitorear en tiempo real</p>
             </div>
         </x-card.content>
     </x-card>

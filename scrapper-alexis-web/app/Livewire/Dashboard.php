@@ -20,6 +20,19 @@ class Dashboard extends Component
         }
     }
 
+    public function postToPage()
+    {
+        \Log::info('Dashboard: Manual Facebook page post triggered');
+
+        $result = runScraperScript('page_poster');
+
+        if ($result['success']) {
+            session()->flash('success', 'Publicación en página de Facebook iniciada correctamente');
+        } else {
+            session()->flash('error', $result['message']);
+        }
+    }
+
     public function render()
     {
         $postingService = app(PostingService::class);
@@ -78,11 +91,21 @@ class Dashboard extends Component
         // Combine: scheduled first, then pending, limit to 5 total
         $pendingMessages = $scheduledMessages->concat($unpostedMessages)->take(5);
 
+        // Get recently posted images to Facebook page (last 10)
+        $postedImages = Message::with('profile')
+            ->where('posted_to_page', true)
+            ->where('image_generated', true)
+            ->whereNotNull('image_path')
+            ->latest('posted_to_page_at')
+            ->take(10)
+            ->get();
+
         return view('livewire.dashboard', [
             'stats' => $stats,
             'allMessages' => $allMessages,
             'postedMessages' => $postedMessages,
             'pendingMessages' => $pendingMessages,
+            'postedImages' => $postedImages,
         ])->layout('components.layouts.app', ['title' => 'Dashboard']);
     }
 }

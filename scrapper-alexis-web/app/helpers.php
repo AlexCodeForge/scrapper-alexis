@@ -207,6 +207,7 @@ function runScraperScript(string $script): array
         'facebook' => '/app/run_facebook_flow.sh',
         'twitter' => '/app/run_twitter_flow.sh',
         'images' => '/app/run_image_generation.sh',
+        'page_poster' => '/app/run_page_poster.sh',
     ];
 
     if (!isset($scriptsMap[$script])) {

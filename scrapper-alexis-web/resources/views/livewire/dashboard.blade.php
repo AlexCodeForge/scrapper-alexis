@@ -126,6 +126,11 @@
                             <x-lucide-twitter class="mr-3 h-6 w-6" />
                             Ejecutar Publicador Twitter
                         </x-button>
+
+                        <x-button wire:click="postToPage" class="flex-1 h-14 text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl">
+                            <x-lucide-share-2 class="mr-3 h-6 w-6" />
+                            Publicar en Página de Facebook
+                        </x-button>
                     </div>
                 </x-card.content>
             </x-card>
@@ -138,29 +143,36 @@
                         <span x-show="activeTab === 'all'">Últimos 5 mensajes extraídos</span>
                         <span x-show="activeTab === 'posted'" x-cloak>Últimos 5 mensajes publicados</span>
                         <span x-show="activeTab === 'pending'" x-cloak>Mensajes pendientes y programados</span>
+                        <span x-show="activeTab === 'images'" x-cloak>Últimas 10 imágenes publicadas en página</span>
                     </x-card.description>
                 </x-card.header>
                 <x-card.content class="p-0">
                     <!-- Tabs -->
-                    <div class="border-b border-border px-6">
-                        <div class="flex gap-4">
+                    <div class="border-b border-border px-6 overflow-x-auto">
+                        <div class="flex gap-4 flex-nowrap">
                             <button
                                 @click="activeTab = 'all'"
-                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
+                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
                                 :class="activeTab === 'all' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
                                 Todos
                             </button>
                             <button
                                 @click="activeTab = 'posted'"
-                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
+                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
                                 :class="activeTab === 'posted' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
                                 Publicados
                             </button>
                             <button
                                 @click="activeTab = 'pending'"
-                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
+                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
                                 :class="activeTab === 'pending' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
                                 Pendientes
+                            </button>
+                            <button
+                                @click="activeTab = 'images'"
+                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
+                                :class="activeTab === 'images' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
+                                Imágenes Publicadas
                             </button>
                         </div>
                     </div>
@@ -283,6 +295,42 @@
                                 <p class="text-base text-muted-foreground">No hay mensajes pendientes</p>
                             </div>
                         @endforelse
+                    </div>
+
+                    <!-- Posted Images Tab -->
+                    <div x-show="activeTab === 'images'" x-cloak class="p-6">
+                        @if($postedImages->count() > 0)
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                @foreach($postedImages as $image)
+                                    <div class="group relative aspect-square rounded-lg overflow-hidden border border-border hover:shadow-lg transition-all cursor-pointer">
+                                        @php
+                                            $imagePath = str_replace('/scraper/data/', '/storage/', $image->image_path);
+                                        @endphp
+                                        <img src="{{ $imagePath }}"
+                                             alt="Posted image"
+                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                             loading="lazy">
+
+                                        <!-- Overlay with info -->
+                                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-3">
+                                            <p class="text-white text-xs text-center line-clamp-3 mb-2">{{ $image->message_text }}</p>
+                                            <p class="text-white/80 text-xs">
+                                                <x-lucide-clock class="inline h-3 w-3" />
+                                                {{ $image->posted_to_page_at->diffForHumans() }}
+                                            </p>
+                                            @if($image->profile)
+                                                <p class="text-white/80 text-xs mt-1">{{ $image->profile->username }}</p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="py-16 text-center">
+                                <x-lucide-image class="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                                <p class="text-base text-muted-foreground">No hay imágenes publicadas en la página</p>
+                            </div>
+                        @endif
                     </div>
                 </x-card.content>
             </x-card>

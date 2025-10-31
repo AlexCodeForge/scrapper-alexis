@@ -1,0 +1,596 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="{
+        activeModal: null,
+        openModal(name) {
+            this.activeModal = name;
+            console.log('Opening modal:', name);
+        },
+        closeModal() {
+            this.activeModal = null;
+        }
+    }">
+    <!-- Flash Messages -->
+    @if (session()->has('success'))
+        <x-alert class="mb-6">
+            <x-lucide-circle-check class="h-4 w-4" />
+            <x-alert.title>Éxito</x-alert.title>
+            <x-alert.description>{{ session('success') }}</x-alert.description>
+        </x-alert>
+    @endif
+
+    @if (session()->has('error'))
+        <x-alert variant="destructive" class="mb-6">
+            <x-lucide-triangle-alert class="h-4 w-4" />
+            <x-alert.title>Error</x-alert.title>
+            <x-alert.description>{{ session('error') }}</x-alert.description>
+        </x-alert>
+    @endif
+
+    <!-- Settings Overview Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Facebook Account -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('facebook')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-facebook class="h-5 w-5 text-blue-600" />
+                            Cuenta de Facebook
+                            @if($facebookEmail && $facebookPassword && count($facebookProfilesList) > 0 && $facebookAuthExists)
+                                <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                            @endif
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">Credenciales y sesión</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
+        <!-- Twitter Account -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('twitter')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-twitter class="h-5 w-5 text-sky-500" />
+                            Cuenta de Twitter
+                            @if($twitterEmail && $twitterPassword && $twitterUsername && $twitterAuthExists)
+                                <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                            @endif
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">Credenciales y sesión</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
+        <!-- Página donde se publica -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('page-posting')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-share-2 class="h-5 w-5 text-indigo-600" />
+                            Página donde se publica
+                            @if($pageName)
+                                <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                            @endif
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">Configuración y auto-limpieza</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
+        <!-- Proxy Config -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('proxy')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-globe class="h-5 w-5 text-purple-600" />
+                            Configuración Proxy
+                            @if($proxyServer)
+                                <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                            @endif
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">Servidor proxy</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
+        <!-- Cron Scheduling -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('cron-schedule')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-clock class="h-5 w-5 text-orange-600" />
+                            Programación Cron
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">Intervalos de ejecución</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
+    </div>
+
+
+    <!-- Page Posting Modal -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'page-posting'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Página donde se publica</h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="savePagePostingSettings">
+                    <div class="space-y-6">
+                        <!-- Enable Toggle -->
+                        <div class="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
+                            <div>
+                                <h4 class="font-semibold text-foreground">Estado</h4>
+                                <p class="text-sm text-muted-foreground">{{ $pagePostingEnabled ? 'Activo' : 'Desactivado' }}</p>
+                            </div>
+                            <button type="button" wire:click="togglePagePosting"
+                                    style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $pagePostingEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                    class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                <span style="position: absolute; top: 3px; {{ $pagePostingEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                            </button>
+                        </div>
+
+                        <!-- Page Name -->
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">
+                                Nombre de la Página <span class="text-destructive">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                wire:model="pageName"
+                                placeholder="Ej: Miltoner, Mi Página de Negocios"
+                                class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                            />
+                            @error('pageName') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        <!-- Page URL -->
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">
+                                URL de la Página <span class="text-destructive">*</span>
+                            </label>
+                            <input
+                                type="url"
+                                wire:model="pageUrl"
+                                placeholder="https://www.facebook.com/TuPagina"
+                                class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                            />
+                            @error('pageUrl') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                            <p class="text-xs text-muted-foreground mt-1">La URL completa de tu página de Facebook (se usa para validar que estás logueado correctamente)</p>
+                        </div>
+
+                        <!-- Intervals -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-foreground mb-2">Mínimo (minutos)</label>
+                                <input type="number" wire:model="pageIntervalMin" min="10" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-foreground mb-2">Máximo (minutos)</label>
+                                <input type="number" wire:model="pageIntervalMax" min="10" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                            </div>
+                        </div>
+
+                        <!-- Auto-cleanup Section -->
+                        <div class="border-t border-border pt-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-foreground">Limpieza Automática</h4>
+                                    <p class="text-xs text-muted-foreground mt-1">Eliminar imágenes descargadas y publicadas automáticamente</p>
+                                </div>
+                                <input type="checkbox" wire:model.live="autoCleanupEnabled" class="h-5 w-5 rounded text-primary focus:ring-primary cursor-pointer" />
+                            </div>
+
+                            @if ($autoCleanupEnabled)
+                                <div>
+                                    <label class="block text-sm font-medium text-foreground mb-2">Días para mantener imágenes</label>
+                                    <input type="number" wire:model="cleanupDays" min="1" max="365" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                    @error('cleanupDays') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                                    <p class="text-xs text-muted-foreground mt-1">Las imágenes descargadas y publicadas hace más de {{ $cleanupDays }} días serán eliminadas</p>
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end gap-3 pt-4">
+                            <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                            <x-button type="submit">
+                                <x-lucide-save class="mr-2 h-4 w-4" />
+                                Guardar Configuración
+                            </x-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- Cron Schedule Modal (Merged with Cronjobs) -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'cron-schedule' || activeModal === 'cronjobs'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Programación Cron y Cronjobs</h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="saveCronSettings">
+                    <div class="space-y-6">
+                        <!-- Facebook Scraper Cronjob Toggle -->
+                        <x-card>
+                            <x-card.content class="p-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <x-lucide-facebook class="h-5 w-5 text-blue-600" />
+                                            <h4 class="font-semibold text-foreground">Facebook Scraper</h4>
+                                        </div>
+                                        <p class="text-sm text-muted-foreground">Estado: @if($facebookEnabled) 🟢 Activo @else 🔴 Detenido @endif</p>
+                                        <p class="text-xs text-muted-foreground mt-1">{{ $facebookEnabled ? 'El cronjob está ejecutándose' : 'El cronjob está deshabilitado' }}</p>
+                                    </div>
+                                    <button type="button" wire:click="toggleFacebook"
+                                            style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $facebookEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                            class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                        <span style="position: absolute; top: 3px; {{ $facebookEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                    </button>
+                                </div>
+                            </x-card.content>
+                        </x-card>
+
+                        <!-- Facebook Interval -->
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Intervalo Facebook (minutos)</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs text-muted-foreground">Mínimo</label>
+                                    <input type="number" wire:model="facebookIntervalMin" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-muted-foreground">Máximo</label>
+                                    <input type="number" wire:model="facebookIntervalMax" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Twitter Poster Cronjob Toggle -->
+                        <x-card>
+                            <x-card.content class="p-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <x-lucide-twitter class="h-5 w-5 text-sky-500" />
+                                            <h4 class="font-semibold text-foreground">Twitter Poster</h4>
+                                        </div>
+                                        <p class="text-sm text-muted-foreground">Estado: @if($twitterEnabled) 🟢 Activo @else 🔴 Detenido @endif</p>
+                                        <p class="text-xs text-muted-foreground mt-1">{{ $twitterEnabled ? 'El cronjob está ejecutándose' : 'El cronjob está deshabilitado' }}</p>
+                                    </div>
+                                    <button type="button" wire:click="toggleTwitter"
+                                            style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $twitterEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                            class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                        <span style="position: absolute; top: 3px; {{ $twitterEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                    </button>
+                                </div>
+                            </x-card.content>
+                        </x-card>
+
+                        <!-- Twitter Interval -->
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Intervalo Twitter (minutos)</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs text-muted-foreground">Mínimo</label>
+                                    <input type="number" wire:model="twitterIntervalMin" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-muted-foreground">Máximo</label>
+                                    <input type="number" wire:model="twitterIntervalMax" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end gap-3 pt-4">
+                            <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                            <x-button type="submit">
+                                <x-lucide-save class="mr-2 h-4 w-4" />
+                                Guardar Configuración
+                            </x-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- Facebook Account Modal -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'facebook'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Cuenta de Facebook</h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="saveFacebookSettings">
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Correo electrónico</label>
+                            <input type="text" wire:model="facebookEmail" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Contraseña</label>
+                            <input type="password" wire:model="facebookPassword" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                        </div>
+
+                        <!-- Profile URLs List -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-sm font-medium text-foreground">URLs de perfiles</label>
+                            </div>
+
+                            <!-- Add URL Input -->
+                            <div class="flex gap-2 mb-3">
+                                <input
+                                    type="url"
+                                    wire:model="newProfileUrl"
+                                    placeholder="https://facebook.com/perfil"
+                                    class="flex-1 px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                />
+                                <x-button type="button" wire:click="addProfileUrl" size="sm">
+                                    <x-lucide-plus class="h-4 w-4" />
+                                </x-button>
+                            </div>
+                            @error('newProfileUrl') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+
+                            <!-- Profile URLs List -->
+                            @if(count($facebookProfilesList) > 0)
+                                <div class="space-y-2 max-h-40 overflow-y-auto">
+                                    @foreach($facebookProfilesList as $index => $profileUrl)
+                                        <div class="flex items-center gap-2 p-2 bg-accent/50 rounded-lg">
+                                            <span class="flex-1 text-sm truncate">{{ $profileUrl }}</span>
+                                            <button type="button" wire:click="removeProfileUrl({{ $index }})" class="text-destructive hover:text-destructive/80 cursor-pointer">
+                                                <x-lucide-x class="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="text-xs text-muted-foreground">No hay URLs agregadas. Usa el botón + para agregar.</p>
+                            @endif
+                        </div>
+
+                        <!-- Facebook Auth Section -->
+                        <div class="border-t border-border pt-6">
+                            <h4 class="font-semibold text-foreground mb-4 flex items-center gap-2">
+                                <x-lucide-shield-check class="h-5 w-5 text-green-600" />
+                                Autenticación de Sesión
+                            </h4>
+
+                            @if($facebookAuthExists)
+                                <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p class="text-sm text-green-800 font-semibold">✓ Sesión activa</p>
+                                </div>
+                                <x-button type="button" wire:click="deleteFacebookAuth" variant="destructive" class="w-full">
+                                    <x-lucide-trash-2 class="mr-2 h-4 w-4" />
+                                    Eliminar Autenticación
+                                </x-button>
+                            @else
+                                <div class="space-y-4">
+                                    <div class="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800">
+                                        <p class="font-semibold mb-2">📋 Instrucciones:</p>
+                                        <ol class="list-decimal list-inside space-y-1 ml-2 text-xs">
+                                            <li>Ejecuta <code class="bg-blue-200 px-1 rounded">capture_facebook_session.py</code> en tu PC</li>
+                                            <li>Inicia sesión en Facebook cuando se abra el navegador</li>
+                                            <li>El script generará <code class="bg-blue-200 px-1 rounded">auth_facebook.json</code></li>
+                                            <li>Sube el archivo aquí</li>
+                                        </ol>
+                                    </div>
+
+                                    <input type="file" wire:model="facebookAuthFile" accept=".json" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+                                    @error('facebookAuthFile') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+
+                                    @if($facebookAuthFile)
+                                        <x-button type="button" wire:click="uploadFacebookAuth" class="w-full">
+                                            <x-lucide-upload class="mr-2 h-4 w-4" />
+                                            Subir Archivo
+                                        </x-button>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end gap-3 pt-4 border-t border-border">
+                            <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                            <x-button type="submit">
+                                <x-lucide-save class="mr-2 h-4 w-4" />
+                                Guardar Configuración
+                            </x-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- Twitter Account Modal -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'twitter'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Cuenta de Twitter</h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="saveTwitterSettings">
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Correo electrónico</label>
+                            <input type="text" wire:model="twitterEmail" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Contraseña</label>
+                            <input type="password" wire:model="twitterPassword" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Nombre de usuario (@username)</label>
+                            <input type="text" wire:model="twitterUsername" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                        </div>
+
+                        <!-- Twitter Auth Section -->
+                        <div class="border-t border-border pt-6">
+                            <h4 class="font-semibold text-foreground mb-4 flex items-center gap-2">
+                                <x-lucide-shield-check class="h-5 w-5 text-sky-600" />
+                                Autenticación de Sesión
+                            </h4>
+
+                            @if($twitterAuthExists)
+                                <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p class="text-sm text-green-800 font-semibold">✓ Sesión activa</p>
+                                </div>
+                                <x-button type="button" wire:click="deleteTwitterAuth" variant="destructive" class="w-full">
+                                    <x-lucide-trash-2 class="mr-2 h-4 w-4" />
+                                    Eliminar Autenticación
+                                </x-button>
+                            @else
+                                <div class="space-y-4">
+                                    <div class="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800">
+                                        <p class="font-semibold mb-2">📋 Instrucciones:</p>
+                                        <ol class="list-decimal list-inside space-y-1 ml-2 text-xs">
+                                            <li>Ejecuta <code class="bg-blue-200 px-1 rounded">capture_twitter_session.py</code> en tu PC</li>
+                                            <li>Inicia sesión en Twitter cuando se abra el navegador</li>
+                                            <li>El script generará <code class="bg-blue-200 px-1 rounded">auth_twitter.json</code></li>
+                                            <li>Sube el archivo aquí</li>
+                                        </ol>
+                                    </div>
+
+                                    <input type="file" wire:model="twitterAuthFile" accept=".json" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+                                    @error('twitterAuthFile') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+
+                                    @if($twitterAuthFile)
+                                        <x-button type="button" wire:click="uploadTwitterAuth" class="w-full">
+                                            <x-lucide-upload class="mr-2 h-4 w-4" />
+                                            Subir Archivo
+                                        </x-button>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end gap-3 pt-4 border-t border-border">
+                            <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                            <x-button type="submit">
+                                <x-lucide-save class="mr-2 h-4 w-4" />
+                                Guardar Configuración
+                            </x-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- Proxy Config Modal -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'proxy'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Configuración Proxy</h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="saveProxySettings">
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Servidor Proxy</label>
+                            <input type="text" wire:model="proxyServer" placeholder="http://proxy.example.com:8080" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                            <p class="text-xs text-muted-foreground mt-1">Deja en blanco para no usar proxy</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Usuario Proxy</label>
+                            <input type="text" wire:model="proxyUsername" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Contraseña Proxy</label>
+                            <input type="password" wire:model="proxyPassword" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end gap-3 pt-4 border-t border-border">
+                            <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                            <x-button type="submit">
+                                <x-lucide-save class="mr-2 h-4 w-4" />
+                                Guardar Configuración
+                            </x-button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+</div>
+

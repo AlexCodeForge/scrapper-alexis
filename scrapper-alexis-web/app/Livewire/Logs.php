@@ -9,7 +9,7 @@ class Logs extends Component
     public $selectedLog = 'facebook';
     public $selectedManualLog = null;
     public $lines = 100;
-    public $autoRefresh = false;
+    public $autoRefresh = true;
 
     public function mount()
     {
@@ -47,6 +47,22 @@ class Logs extends Component
         ]);
     }
 
+    public function runCleanup()
+    {
+        \Log::info('Logs: Manual cleanup triggered');
+
+        try {
+            \Artisan::call('app:cleanup-downloaded-images');
+            $output = \Artisan::output();
+
+            session()->flash('success', 'Limpieza ejecutada correctamente. Revisa los logs para más detalles.');
+            \Log::info('Logs: Manual cleanup completed', ['output' => $output]);
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error al ejecutar la limpieza: ' . $e->getMessage());
+            \Log::error('Logs: Manual cleanup failed', ['error' => $e->getMessage()]);
+        }
+    }
+
     public function render()
     {
         $logContent = '';
@@ -63,11 +79,18 @@ class Logs extends Component
         $facebookEnabled = getJobStatus('facebook');
         $twitterEnabled = getJobStatus('twitter');
 
+        // Get cleanup settings
+        $cleanupSettings = \App\Models\PostingSetting::getSettings();
+        $cleanupEnabled = $cleanupSettings->auto_cleanup_enabled;
+
         return view('livewire.logs', [
             'logContent' => $logContent,
             'manualLogs' => $manualLogs,
             'facebookEnabled' => $facebookEnabled,
             'twitterEnabled' => $twitterEnabled,
+            'cleanupEnabled' => $cleanupEnabled,
+            'cleanupDays' => $cleanupSettings->cleanup_days,
+            'lastCleanupAt' => $cleanupSettings->last_cleanup_at,
         ])->layout('components.layouts.app', ['title' => 'Logs']);
     }
 }

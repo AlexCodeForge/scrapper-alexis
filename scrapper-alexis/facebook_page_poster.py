@@ -51,23 +51,24 @@ def get_posting_settings():
     try:
         import sqlite3
         
-        # Connect to Laravel database
-        db_path = '/var/www/html/database/database.sqlite'
+        # Connect to shared database (Docker volume)
+        db_path = '/app/data/scraper.db'
         if not os.path.exists(db_path):
-            logger.error(f"Laravel database not found at {db_path}")
+            logger.error(f"Database not found at {db_path}")
             return None
         
         conn = sqlite3.connect(db_path)
-        cursor = conn.execute("SELECT page_name, interval_min, interval_max, enabled FROM posting_settings LIMIT 1")
+        cursor = conn.execute("SELECT page_name, page_url, interval_min, interval_max, enabled FROM posting_settings LIMIT 1")
         result = cursor.fetchone()
         conn.close()
         
         if result:
             return {
                 'page_name': result[0],
-                'interval_min': result[1],
-                'interval_max': result[2],
-                'enabled': bool(result[3])
+                'page_url': result[1],
+                'interval_min': result[2],
+                'interval_max': result[3],
+                'enabled': bool(result[4])
             }
         
         return None
@@ -137,6 +138,56 @@ def mark_as_posted(message_id):
         return False
 
 
+def validate_page_login(page, page_url: str) -> bool:
+    """
+    Validate that we're logged into the correct page by navigating to it.
+    
+    Args:
+        page: Playwright Page instance
+        page_url: URL of the Facebook page to validate
+        
+    Returns:
+        True if successfully validated
+    """
+    try:
+        logger.info("="*70)
+        logger.info("VALIDATING PAGE LOGIN")
+        logger.info("="*70)
+        
+        logger.info(f"Navigating to page URL: {page_url}")
+        page.goto(page_url, wait_until='domcontentloaded')
+        page.wait_for_timeout(3000)
+        
+        take_debug_screenshot(page, "01_page_validation", "page_posting", f"Page validation: {page_url}")
+        
+        # Check if we can see the post creation area (indicates we're logged in and can post)
+        post_creation_indicators = [
+            'div[role="button"][aria-label*="Create"]',
+            'div[role="button"][aria-label*="Crear"]',
+            'div[role="button"]:has-text("What\'s on your mind")',
+            'div[role="button"]:has-text("¿Qué estás pensando")',
+            'span:has-text("What\'s on your mind")',
+            'span:has-text("¿Qué estás pensando")',
+        ]
+        
+        for selector in post_creation_indicators:
+            try:
+                element = page.locator(selector).first
+                if element.is_visible(timeout=3000):
+                    logger.info(f"✅ Found post creation area: {selector}")
+                    logger.info("✅ Page login validated - can post to this page")
+                    return True
+            except:
+                continue
+        
+        logger.error("❌ Could not find post creation area - may not have permission to post")
+        return False
+        
+    except Exception as e:
+        logger.error(f"Failed to validate page login: {e}")
+        return False
+
+
 def post_image_to_page(page, image_path: str) -> bool:
     """
     Post an image to the Facebook page.
@@ -153,12 +204,12 @@ def post_image_to_page(page, image_path: str) -> bool:
         logger.info("POSTING IMAGE TO FACEBOOK PAGE")
         logger.info("="*70)
         
-        # Navigate to Facebook home
-        logger.info("Navigating to Facebook...")
+        # Navigate to Facebook home (we're already on the page from validation)
+        logger.info("Navigating to Facebook home...")
         page.goto('https://www.facebook.com', wait_until='domcontentloaded')
         page.wait_for_timeout(3000)
         
-        take_debug_screenshot(page, "01_facebook_home", "page_posting", "Facebook home page")
+        take_debug_screenshot(page, "02_facebook_home", "page_posting", "Facebook home page")
         
         # Look for "What's on your mind?" or posting box
         logger.info("Looking for post creation area...")
@@ -189,7 +240,7 @@ def post_image_to_page(page, image_path: str) -> bool:
             logger.error("Could not find post creation box")
             return False
         
-        take_debug_screenshot(page, "02_post_dialog_opened", "page_posting", "Post dialog opened")
+        take_debug_screenshot(page, "03_post_dialog_opened", "page_posting", "Post dialog opened")
         
         # Click on "Photo/video" button
         logger.info("Looking for Photo/video button...")
@@ -220,7 +271,7 @@ def post_image_to_page(page, image_path: str) -> bool:
             logger.error("Could not find Photo/video button")
             return False
         
-        take_debug_screenshot(page, "03_before_file_upload", "page_posting", "Before file upload")
+        take_debug_screenshot(page, "04_before_file_upload", "page_posting", "Before file upload")
         
         # Upload the image file
         logger.info(f"Uploading image: {image_path}")
@@ -247,13 +298,13 @@ def post_image_to_page(page, image_path: str) -> bool:
             logger.error(f"Failed to upload image: {e}")
             return False
         
-        take_debug_screenshot(page, "04_image_uploaded", "page_posting", "Image uploaded")
+        take_debug_screenshot(page, "05_image_uploaded", "page_posting", "Image uploaded")
         
         # Wait for image to be processed
         logger.info("Waiting for image to be processed...")
         page.wait_for_timeout(5000)
         
-        take_debug_screenshot(page, "05_before_post", "page_posting", "Before clicking Post")
+        take_debug_screenshot(page, "06_before_post", "page_posting", "Before clicking Post")
         
         # Click "Post" button
         logger.info("Looking for Post button...")
@@ -284,7 +335,7 @@ def post_image_to_page(page, image_path: str) -> bool:
             logger.error("Could not find Post button")
             return False
         
-        take_debug_screenshot(page, "06_after_post", "page_posting", "After clicking Post")
+        take_debug_screenshot(page, "07_after_post", "page_posting", "After clicking Post")
         
         # Wait for post to complete
         logger.info("Waiting for post to complete...")
@@ -322,11 +373,18 @@ def main():
             return 0
         
         page_name = settings['page_name']
+        page_url = settings['page_url']
+        
         if not page_name:
             logger.error("Page name not configured")
             return 1
         
+        if not page_url:
+            logger.error("Page URL not configured")
+            return 1
+        
         logger.info(f"Target page: {page_name}")
+        logger.info(f"Page URL: {page_url}")
         
         # Get next approved image
         logger.info("Looking for approved images...")
@@ -399,6 +457,12 @@ def main():
                 logger.info(f"Ensuring page mode for: {page_name}")
                 if not ensure_page_mode(page, page_name):
                     logger.error("Failed to switch to page mode")
+                    return 1
+                
+                # Validate we can post to the page
+                logger.info(f"Validating page login at: {page_url}")
+                if not validate_page_login(page, page_url):
+                    logger.error("Failed to validate page login - cannot post to this page")
                     return 1
                 
                 # Post the image
