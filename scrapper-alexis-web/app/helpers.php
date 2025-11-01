@@ -222,11 +222,14 @@ function runScraperScript(string $script): array
 
     // Execute script inside scraper container using docker exec
     // SKIP_DELAY=1 ensures manual runs execute IMMEDIATELY without random delays
+    // MANUAL_RUN=1 signals to Python scripts this is a manual execution
     // Run in background with output redirected to log file
+    // Note: We don't use escapeshellarg here because the paths are controlled by us
+    // and we need the environment variables to work properly in the bash -c context
     $command = sprintf(
-        'docker exec -d scraper-alexis-scraper bash -c "export SKIP_DELAY=1 && %s > %s 2>&1"',
-        escapeshellarg($scriptPath),
-        escapeshellarg($logFile)
+        'docker exec -d -e SKIP_DELAY=1 -e MANUAL_RUN=1 scraper-alexis-scraper bash -c "%s > %s 2>&1"',
+        $scriptPath,
+        $logFile
     );
 
     // Log the command for debugging

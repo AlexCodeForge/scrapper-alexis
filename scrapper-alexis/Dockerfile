@@ -29,6 +29,8 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     # Cron for scheduled tasks
     cron \
+    # SQLite3 for database queries
+    sqlite3 \
     # Utilities
     curl \
     wget \
@@ -57,8 +59,7 @@ RUN mkdir -p /app/data/message_images \
     /app/avatar_cache \
     /app/auth
 
-# Make scripts executable
-RUN chmod +x /app/*.sh 2>/dev/null || true
+# Make entrypoint executable
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Set environment variables

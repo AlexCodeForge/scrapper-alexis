@@ -21,6 +21,8 @@ services:
       - scraper_avatars:/app/avatar_cache
       # Auth sessions (Playwright)
       - scraper_auth:/app/auth
+      # Debug screenshots accessible from web (bind mount to host images/ folder)
+      - ./images:/pictures
       # Mount .env file (read-write for settings updates from web container)
       - ./scrapper-alexis/.env:/app/.env
     environment:
@@ -57,6 +59,8 @@ services:
       - ./scrapper-alexis:/scraper
       # Shared auth volume (same as scraper) - for file uploads
       - scraper_auth:/app/auth
+      # Debug screenshots accessible from web (same bind mount as scraper)
+      - ./images:/var/www/html/public/images
       # Docker socket access for container management (restart scraper on settings change)
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:

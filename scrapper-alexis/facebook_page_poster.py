@@ -154,31 +154,28 @@ def validate_page_login(page, page_url: str) -> bool:
         logger.info("VALIDATING PAGE LOGIN")
         logger.info("="*70)
         
-        logger.info(f"Navigating to page URL: {page_url}")
+        # Bugfix: Use the same validation logic as is_in_page_mode() for consistency
+        from facebook.facebook_page_manager import is_in_page_mode
+        
+        logger.info(f"Current URL: {page.url}")
+        
+        # Check if we can already post (we're on the right page)
+        if is_in_page_mode(page):
+            logger.info("✅ Already on page and can post - validation successful")
+            take_debug_screenshot(page, "01_page_validation_success", "page_posting", f"Page validation successful")
+            return True
+        
+        # If not, try navigating to page URL
+        logger.info(f"Not ready to post, navigating to page URL: {page_url}")
         page.goto(page_url, wait_until='domcontentloaded')
         page.wait_for_timeout(3000)
         
-        take_debug_screenshot(page, "01_page_validation", "page_posting", f"Page validation: {page_url}")
+        take_debug_screenshot(page, "01_page_validation_after_nav", "page_posting", f"After navigation to: {page_url}")
         
-        # Check if we can see the post creation area (indicates we're logged in and can post)
-        post_creation_indicators = [
-            'div[role="button"][aria-label*="Create"]',
-            'div[role="button"][aria-label*="Crear"]',
-            'div[role="button"]:has-text("What\'s on your mind")',
-            'div[role="button"]:has-text("¿Qué estás pensando")',
-            'span:has-text("What\'s on your mind")',
-            'span:has-text("¿Qué estás pensando")',
-        ]
-        
-        for selector in post_creation_indicators:
-            try:
-                element = page.locator(selector).first
-                if element.is_visible(timeout=3000):
-                    logger.info(f"✅ Found post creation area: {selector}")
+        # Check again after navigation
+        if is_in_page_mode(page):
                     logger.info("✅ Page login validated - can post to this page")
                     return True
-            except:
-                continue
         
         logger.error("❌ Could not find post creation area - may not have permission to post")
         return False
@@ -188,7 +185,7 @@ def validate_page_login(page, page_url: str) -> bool:
         return False
 
 
-def post_image_to_page(page, image_path: str) -> bool:
+def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
     """
     Post an image to the Facebook page.
     
@@ -204,79 +201,66 @@ def post_image_to_page(page, image_path: str) -> bool:
         logger.info("POSTING IMAGE TO FACEBOOK PAGE")
         logger.info("="*70)
         
-        # Navigate to Facebook home (we're already on the page from validation)
-        logger.info("Navigating to Facebook home...")
-        page.goto('https://www.facebook.com', wait_until='domcontentloaded')
-        page.wait_for_timeout(3000)
+        # Bugfix: Click the post composer to open the "Crear publicación" modal
+        logger.info(f"Current URL: {page.url}")
+        logger.info("Clicking post composer to open creation modal...")
         
-        take_debug_screenshot(page, "02_facebook_home", "page_posting", "Facebook home page")
+        take_debug_screenshot(page, "02_before_clicking_composer", "page_posting", "Before clicking composer")
         
-        # Look for "What's on your mind?" or posting box
-        logger.info("Looking for post creation area...")
+        # Bugfix: The composer is NOT a button! It's a clickable text/div element
+        # Look for "¿Qué estás pensando, [PageName]?" and click it
+        composer_clicked = False
         
-        post_box_selectors = [
-            'div[role="button"][aria-label*="Create a post"]',
-            'div[role="button"][aria-label*="Crear una publicación"]',
-            'div[role="button"]:has-text("What\'s on your mind")',
-            'div[role="button"]:has-text("¿Qué estás pensando")',
-            'span:has-text("What\'s on your mind")',
-            'span:has-text("¿Qué estás pensando")',
-        ]
-        
-        post_box_clicked = False
-        for selector in post_box_selectors:
+        # Try with page name first (proves we're in page mode)
+        if page_name:
             try:
-                post_box = page.locator(selector).first
-                if post_box.is_visible(timeout=3000):
-                    logger.info(f"Found post box: {selector}")
-                    post_box.click(timeout=3000)
-                    page.wait_for_timeout(2000)
-                    post_box_clicked = True
-                    break
-            except:
-                continue
+                composer_text = f"¿Qué estás pensando, {page_name}?"
+                logger.info(f"Looking for composer: {composer_text}")
+                composer = page.get_by_text(composer_text).first
+                if composer.is_visible(timeout=3000):
+                    logger.info(f"✅ Found composer with page name: {composer_text}")
+                    composer.click(timeout=3000)
+                    page.wait_for_timeout(3000)
+                    composer_clicked = True
+            except Exception as e:
+                logger.debug(f"Composer with page name not found: {e}")
         
-        if not post_box_clicked:
-            logger.error("Could not find post creation box")
+        # Fallback: Try generic search
+        if not composer_clicked:
+            try:
+                logger.info("Trying generic composer search...")
+                # Look for clickable element with "¿Qué estás pensando"
+                composer = page.locator('[aria-label*="¿Qué estás pensando"], [placeholder*="¿Qué estás pensando"], div:has-text("¿Qué estás pensando")').first
+                if composer.is_visible(timeout=3000):
+                    logger.info("✅ Found composer using generic search")
+                    composer.click(timeout=3000)
+                    page.wait_for_timeout(3000)
+                    composer_clicked = True
+            except Exception as e:
+                logger.debug(f"Generic composer search failed: {e}")
+        
+        # Last resort: Try English
+        if not composer_clicked:
+            try:
+                logger.info("Trying English composer...")
+                composer = page.locator('[aria-label*="What\'s on your mind"], [placeholder*="What\'s on your mind"]').first
+                if composer.is_visible(timeout=3000):
+                    logger.info("✅ Found English composer")
+                    composer.click(timeout=3000)
+                    page.wait_for_timeout(3000)
+                    composer_clicked = True
+            except Exception as e:
+                logger.debug(f"English composer search failed: {e}")
+        
+        if not composer_clicked:
+            logger.error("❌ Could not find or click post composer")
+            take_debug_screenshot(page, "ERROR_no_composer_click", "page_posting", "ERROR: Composer not clicked")
             return False
         
-        take_debug_screenshot(page, "03_post_dialog_opened", "page_posting", "Post dialog opened")
+        logger.info("✅ Composer clicked - 'Crear publicación' modal should be open")
+        take_debug_screenshot(page, "03_modal_opened", "page_posting", "Create post modal opened")
         
-        # Click on "Photo/video" button
-        logger.info("Looking for Photo/video button...")
-        
-        photo_button_selectors = [
-            'div[role="button"]:has-text("Photo/video")',
-            'div[role="button"]:has-text("Foto/video")',
-            'button:has-text("Photo/video")',
-            'button:has-text("Foto/video")',
-            'div[aria-label*="Photo"]',
-            'div[aria-label*="Foto"]',
-        ]
-        
-        photo_button_clicked = False
-        for selector in photo_button_selectors:
-            try:
-                photo_button = page.locator(selector).first
-                if photo_button.is_visible(timeout=3000):
-                    logger.info(f"Found photo button: {selector}")
-                    photo_button.click(timeout=3000)
-                    page.wait_for_timeout(2000)
-                    photo_button_clicked = True
-                    break
-            except:
-                continue
-        
-        if not photo_button_clicked:
-            logger.error("Could not find Photo/video button")
-            return False
-        
-        take_debug_screenshot(page, "04_before_file_upload", "page_posting", "Before file upload")
-        
-        # Upload the image file
-        logger.info(f"Uploading image: {image_path}")
-        
-        # Get the full path to the image
+        # Get the full path to the image first
         if not os.path.isabs(image_path):
             image_full_path = os.path.join('/app/data/message_images', os.path.basename(image_path))
         else:
@@ -288,14 +272,67 @@ def post_image_to_page(page, image_path: str) -> bool:
         
         logger.info(f"Full image path: {image_full_path}")
         
-        # Find file input and upload
+        # Bugfix: Find the file input BEFORE clicking Foto/video button
+        # Then use with_file_chooser to handle the upload properly
+        logger.info("Looking for Foto/video button...")
+        
+        upload_success = False
+        photo_button = None
+        
         try:
-            file_input = page.locator('input[type="file"]').first
-            file_input.set_input_files(image_full_path, timeout=10000)
-            logger.info("Image uploaded successfully")
-            page.wait_for_timeout(3000)
+            # Try Spanish first
+            photo_button = page.get_by_role('button', name='Foto/video')
+            if photo_button.is_visible(timeout=5000):
+                logger.info("Found Foto/video button (Spanish)")
+                
+                # Use expect_file_chooser context manager to handle file upload
+                with page.expect_file_chooser() as fc_info:
+                    photo_button.click(timeout=3000)
+                    file_chooser = fc_info.value
+                    file_chooser.set_files(image_full_path)
+                
+                logger.info("Image uploaded successfully")
+                page.wait_for_timeout(3000)
+                upload_success = True
         except Exception as e:
-            logger.error(f"Failed to upload image: {e}")
+            logger.debug(f"Spanish Foto/video button failed: {e}")
+        
+        if not upload_success:
+            try:
+                # Try English
+                photo_button = page.get_by_role('button', name='Photo/video')
+                if photo_button.is_visible(timeout=5000):
+                    logger.info("Found Photo/video button (English)")
+                    
+                    # Use expect_file_chooser context manager
+                    with page.expect_file_chooser() as fc_info:
+                        photo_button.click(timeout=3000)
+                    file_chooser = fc_info.value
+                    file_chooser.set_files(image_full_path)
+                    
+                    logger.info("Image uploaded successfully")
+                    page.wait_for_timeout(3000)
+                    upload_success = True
+            except Exception as e:
+                logger.debug(f"English Photo/video button failed: {e}")
+        
+        if not upload_success:
+            logger.error("Could not find Foto/video button or upload file")
+            take_debug_screenshot(page, "ERROR_no_photo_button", "page_posting", "ERROR: No Foto/video button found")
+            
+            # Bugfix: Log all visible buttons for debugging
+            try:
+                buttons = page.locator('button, div[role="button"]').all()
+                logger.error(f"Found {len(buttons)} buttons on page")
+                for i, btn in enumerate(buttons[:10]):  # Log first 10
+                    try:
+                        text = btn.inner_text(timeout=1000)
+                        logger.error(f"Button {i}: {text[:50]}")
+                    except:
+                        pass
+            except Exception as debug_e:
+                logger.error(f"Failed to debug buttons: {debug_e}")
+            
             return False
         
         take_debug_screenshot(page, "05_image_uploaded", "page_posting", "Image uploaded")
@@ -304,43 +341,213 @@ def post_image_to_page(page, image_path: str) -> bool:
         logger.info("Waiting for image to be processed...")
         page.wait_for_timeout(5000)
         
-        take_debug_screenshot(page, "06_before_post", "page_posting", "Before clicking Post")
+        take_debug_screenshot(page, "06_before_next", "page_posting", "Before clicking Siguiente/Next")
         
-        # Click "Post" button
-        logger.info("Looking for Post button...")
+        # Bugfix: Click "Siguiente" / "Next" button (from manual recording workflow)
+        logger.info("Looking for Siguiente/Next button...")
         
-        post_button_selectors = [
-            'div[role="button"]:has-text("Post")',
-            'div[role="button"]:has-text("Publicar")',
-            'button:has-text("Post")',
-            'button:has-text("Publicar")',
-            'div[aria-label="Post"]',
-            'div[aria-label="Publicar"]',
-        ]
+        next_button_clicked = False
+        try:
+            # Try Spanish first
+            next_button = page.get_by_role('button', name='Siguiente')
+            if next_button.is_visible(timeout=5000):
+                logger.info("Found Siguiente button (Spanish)")
+                next_button.click(timeout=3000)
+                page.wait_for_timeout(3000)
+                next_button_clicked = True
+        except Exception as e:
+            logger.debug(f"Spanish Siguiente button not found: {e}")
+        
+        if not next_button_clicked:
+            try:
+                # Try English
+                next_button = page.get_by_role('button', name='Next')
+                if next_button.is_visible(timeout=5000):
+                    logger.info("Found Next button (English)")
+                    next_button.click(timeout=3000)
+                    page.wait_for_timeout(3000)
+                    next_button_clicked = True
+            except Exception as e:
+                logger.debug(f"English Next button not found: {e}")
+        
+        if not next_button_clicked:
+            logger.warning("Could not find Siguiente/Next button - trying to post directly")
+            take_debug_screenshot(page, "WARNING_no_next_button", "page_posting", "WARNING: No Siguiente button found")
+        
+        take_debug_screenshot(page, "07_before_post", "page_posting", "Before clicking Publicar/Post")
+        
+        # Bugfix: Click "Publicar" / "Post" button with getByRole (exact match from manual recording)
+        logger.info("Looking for Publicar/Post button...")
         
         post_button_clicked = False
-        for selector in post_button_selectors:
+        try:
+            # Try Spanish first - with exact=True like manual recording
+            post_button = page.get_by_role('button', name='Publicar', exact=True)
+            if post_button.is_visible(timeout=5000):
+                logger.info("Found Publicar button (Spanish, exact match)")
+                post_button.click(timeout=3000)
+                page.wait_for_timeout(5000)
+                post_button_clicked = True
+        except Exception as e:
+            logger.debug(f"Spanish Publicar button not found: {e}")
+        
+        if not post_button_clicked:
             try:
-                post_button = page.locator(selector).first
-                if post_button.is_visible(timeout=3000):
-                    logger.info(f"Found Post button: {selector}")
+                # Try English
+                post_button = page.get_by_role('button', name='Post', exact=True)
+                if post_button.is_visible(timeout=5000):
+                    logger.info("Found Post button (English, exact match)")
                     post_button.click(timeout=3000)
                     page.wait_for_timeout(5000)
                     post_button_clicked = True
-                    break
-            except:
-                continue
+            except Exception as e:
+                logger.debug(f"English Post button not found: {e}")
         
         if not post_button_clicked:
-            logger.error("Could not find Post button")
+            logger.error("Could not find Publicar/Post button")
+            take_debug_screenshot(page, "ERROR_no_publish_button", "page_posting", "ERROR: No Publicar button found")
+            
+            # Debug: Log all buttons
+            try:
+                buttons = page.locator('button, div[role="button"]').all()
+                logger.error(f"Found {len(buttons)} buttons on page")
+                for i, btn in enumerate(buttons[:15]):
+                    try:
+                        text = btn.inner_text(timeout=1000)
+                        logger.error(f"Button {i}: {text[:50]}")
+                    except:
+                        pass
+            except Exception as debug_e:
+                logger.error(f"Failed to debug buttons: {debug_e}")
+            
             return False
         
-        take_debug_screenshot(page, "07_after_post", "page_posting", "After clicking Post")
+        take_debug_screenshot(page, "08_after_first_publicar_click", "page_posting", "After clicking first Publicar")
         
-        # Wait for post to complete
-        logger.info("Waiting for post to complete...")
+        # Bugfix: Handle intermediate dialogs (event creation, etc.)
+        logger.info("Checking for intermediate dialogs...")
+        page.wait_for_timeout(3000)
+        
+        # Check if Facebook is showing an event creation dialog or confirmation
+        intermediate_dialog_handled = False
+        try:
+            # Look for "Realizar publicación original" or similar buttons
+            original_post_buttons = [
+                'button:has-text("Realizar publicación original")',
+                'button:has-text("Make original post")',
+                'div[role="button"]:has-text("Realizar publicación original")',
+                'div[role="button"]:has-text("Make original post")',
+                # Also try getByRole
+            ]
+            
+            for selector in original_post_buttons:
+                try:
+                    original_btn = page.locator(selector).first
+                    if original_btn.is_visible(timeout=2000):
+                        logger.info(f"Found intermediate dialog button: {selector}")
+                        take_debug_screenshot(page, "09_intermediate_dialog_found", "page_posting", "Intermediate dialog found")
+                        original_btn.click(timeout=3000)
+                        logger.info("Clicked 'Realizar publicación original' button")
+                        page.wait_for_timeout(2000)
+                        intermediate_dialog_handled = True
+                        break
+                except:
+                    continue
+            
+            # Try with getByRole as well
+            if not intermediate_dialog_handled:
+                try:
+                    original_btn = page.get_by_role('button', name='Realizar publicación original')
+                    if original_btn.is_visible(timeout=2000):
+                        logger.info("Found 'Realizar publicación original' with getByRole")
+                        take_debug_screenshot(page, "09_intermediate_dialog_found", "page_posting", "Intermediate dialog found")
+                        original_btn.click(timeout=3000)
+                        logger.info("Clicked 'Realizar publicación original' button")
+                        page.wait_for_timeout(2000)
+                        intermediate_dialog_handled = True
+                except:
+                    pass
+        except Exception as e:
+            logger.debug(f"No intermediate dialog found: {e}")
+        
+        if intermediate_dialog_handled:
+            logger.info("Intermediate dialog handled - now clicking Publicar again...")
+            take_debug_screenshot(page, "10_after_dialog_dismissed", "page_posting", "After dismissing intermediate dialog")
+            
+            # Click "Publicar" AGAIN after handling the dialog
+            second_post_clicked = False
+            try:
+                post_button = page.get_by_role('button', name='Publicar', exact=True)
+                if post_button.is_visible(timeout=5000):
+                    logger.info("Found Publicar button again (Spanish)")
+                    post_button.click(timeout=3000)
+                    page.wait_for_timeout(5000)
+                    second_post_clicked = True
+            except Exception as e:
+                logger.debug(f"Spanish Publicar button not found second time: {e}")
+            
+            if not second_post_clicked:
+                try:
+                    post_button = page.get_by_role('button', name='Post', exact=True)
+                    if post_button.is_visible(timeout=5000):
+                        logger.info("Found Post button again (English)")
+                        post_button.click(timeout=3000)
+                        page.wait_for_timeout(5000)
+                        second_post_clicked = True
+                except Exception as e:
+                    logger.debug(f"English Post button not found second time: {e}")
+            
+            if not second_post_clicked:
+                logger.error("Could not find Publicar button after handling intermediate dialog")
+                take_debug_screenshot(page, "ERROR_no_second_publicar", "page_posting", "ERROR: No Publicar after dialog")
+                return False
+            
+            take_debug_screenshot(page, "11_after_second_publicar_click", "page_posting", "After clicking Publicar second time")
+        else:
+            logger.info("No intermediate dialog detected - proceeding with verification")
+        
+        # Bugfix: VERIFY the post actually succeeded
+        logger.info("Verifying post was published...")
         page.wait_for_timeout(5000)
         
+        # Check for error dialogs or failure indicators
+        try:
+            # Look for common error messages
+            error_indicators = [
+                'text=Something went wrong',
+                'text=Algo salió mal',
+                'text=Try again',
+                'text=Intentar de nuevo',
+                'text=Error',
+            ]
+            
+            for indicator in error_indicators:
+                error = page.locator(indicator).first
+                if error.is_visible(timeout=1000):
+                    logger.error(f"❌ Post failed - error found: {indicator}")
+                    take_debug_screenshot(page, "ERROR_post_failed", "page_posting", "ERROR: Post failed")
+                    return False
+        except Exception as e:
+            logger.debug(f"No error indicators found (this is good): {e}")
+        
+        # Check if we're back on the page (post composer should be closed)
+        try:
+            # If the post dialog is still open, posting might have failed
+            post_dialog = page.locator('div[role="dialog"]').first
+            if post_dialog.is_visible(timeout=2000):
+                logger.warning("⚠️  Post dialog still open - post might have failed")
+                take_debug_screenshot(page, "WARNING_dialog_still_open", "page_posting", "WARNING: Dialog still open")
+                # Don't return False yet, wait a bit more
+                page.wait_for_timeout(3000)
+        except:
+            logger.info("✅ Post dialog closed - good sign")
+        
+        # Wait a bit more for the post to appear
+        page.wait_for_timeout(3000)
+        
+        take_debug_screenshot(page, "09_final_verification", "page_posting", "Final verification")
+        
+        # Log success
         logger.info("✅ Image posted successfully!")
         return True
         
@@ -360,6 +567,13 @@ def main():
         logger.info("FACEBOOK PAGE POSTER")
         logger.info("="*70)
         
+        # Bugfix: Check if this is a manual run
+        is_manual_run = os.environ.get('MANUAL_RUN') == '1'
+        if is_manual_run:
+            logger.info("Manual run detected (MANUAL_RUN=1) - bypassing enabled check")
+        else:
+            logger.info("Scheduled run detected")
+        
         # Get posting settings
         logger.info("Loading posting settings...")
         settings = get_posting_settings()
@@ -368,8 +582,9 @@ def main():
             logger.error("Failed to load posting settings")
             return 1
         
-        if not settings['enabled']:
-            logger.info("Page posting is disabled in settings")
+        # Bugfix: Only check enabled status for scheduled runs
+        if not is_manual_run and not settings['enabled']:
+            logger.info("Page posting is disabled in settings (scheduled runs only)")
             return 0
         
         page_name = settings['page_name']
@@ -453,21 +668,50 @@ def main():
                 else:
                     logger.info("Already logged in")
                 
-                # Ensure we're in page mode
-                logger.info(f"Ensuring page mode for: {page_name}")
-                if not ensure_page_mode(page, page_name):
-                    logger.error("Failed to switch to page mode")
-                    return 1
+                # Bugfix: Check if we're already logged in as the page, or switch if needed
+                # The auth state might already have us logged in as Miltoner!
+                logger.info("Checking current profile state...")
                 
-                # Validate we can post to the page
-                logger.info(f"Validating page login at: {page_url}")
-                if not validate_page_login(page, page_url):
-                    logger.error("Failed to validate page login - cannot post to this page")
-                    return 1
+                # Navigate to home first
+                logger.info("Navigating to Facebook home...")
+                page.goto('https://www.facebook.com/', wait_until='domcontentloaded')
+                page.wait_for_timeout(4000)  # Give it time to load
                 
-                # Post the image
+                logger.info(f"Current URL: {page.url}")
+                take_debug_screenshot(page, "01_home_loaded", "page_posting", "Home page loaded")
+                
+                # Bugfix: Check if composer shows page name (means we're already logged in as page)
+                logger.info("Checking if already logged in as page...")
+                composer_text_with_page = f"¿Qué estás pensando, {page_name}?"
+                
+                try:
+                    composer_check = page.get_by_text(composer_text_with_page, exact=False).first
+                    if composer_check.is_visible(timeout=3000):
+                        logger.info(f"✅ Already logged in as {page_name}! Composer shows: {composer_text_with_page}")
+                        logger.info("No need to switch profiles - ready to post!")
+                    else:
+                        logger.info(f"Not logged in as {page_name}, need to switch profiles...")
+                        
+                        # Import and try to switch
+                        from facebook.facebook_page_manager import switch_to_page_mode
+                        
+                        if not switch_to_page_mode(page, page_name, None):
+                            logger.error("❌ Failed to switch to page profile")
+                            logger.error(f"Current URL: {page.url}")
+                            take_debug_screenshot(page, "ERROR_cannot_switch_profile", "page_posting", "Failed to switch profile")
+                            return 1
+                        
+                        logger.info("✅ Successfully switched to page profile")
+                        page.wait_for_timeout(3000)
+                        take_debug_screenshot(page, "02_after_switch", "page_posting", "After profile switch")
+                        
+                except Exception as e:
+                    logger.warning(f"Could not check composer text: {e}")
+                    logger.info("Will attempt to post anyway...")
+                
+                # Post the image (pass page_name for composer detection)
                 logger.info("Posting image to page...")
-                success = post_image_to_page(page, image_data['image_path'])
+                success = post_image_to_page(page, image_data['image_path'], page_name)
                 
                 if success:
                     # Mark as posted

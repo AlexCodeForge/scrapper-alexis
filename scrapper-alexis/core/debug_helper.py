@@ -155,9 +155,9 @@ def take_debug_screenshot(page: "Page", step_name: str, category: str = "other",
     """
     Take a screenshot for debugging purposes.
     
-    ✅ IMPORTANT: Screenshots are saved in the RESPECTIVE RUN FOLDER!
-    - If a DebugSession is active, saves to: debug_output/run_TIMESTAMP_NAME/category/screenshot.png
-    - Each run gets its own isolated folder with all its screenshots organized by category
+    ✅ IMPORTANT: Screenshots are saved in TWO locations:
+    1. debug_output/run_TIMESTAMP_NAME/category/screenshot.png (organized by run)
+    2. pictures/ folder (accessible from web interface for debugging)
     - If DEBUG_OUTPUT_ENABLED=false, this function returns immediately without taking a screenshot
     
     Args:
@@ -207,6 +207,22 @@ def take_debug_screenshot(page: "Page", step_name: str, category: str = "other",
         # Take screenshot (viewport only to prevent crashes on heavy pages)
         # Using full_page=False is much more stable on VPS with limited resources
         page.screenshot(path=str(filepath), full_page=False)
+        
+        # ALSO save a copy to pictures/ folder for easy web access
+        try:
+            pictures_dir = Path('/pictures')  # Shared volume accessible from web
+            pictures_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Use simpler naming for pictures folder: category_timestamp_step.png
+            pictures_filename = f"{safe_category}_{timestamp}_{safe_step_name}.png"
+            pictures_path = pictures_dir / pictures_filename
+            
+            # Copy screenshot to pictures folder
+            import shutil
+            shutil.copy2(str(filepath), str(pictures_path))
+            logger.info(f"   📋 Also saved to: {pictures_path}")
+        except Exception as copy_err:
+            logger.warning(f"Failed to copy screenshot to pictures folder: {copy_err}")
         
         # Get current URL for context
         current_url = page.url

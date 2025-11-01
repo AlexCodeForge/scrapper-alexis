@@ -26,6 +26,7 @@ class Settings extends Component
     public $twitterDisplayName = '';
     public $twitterUsername = '';
     public $twitterAvatarUrl = '';
+    public $twitterVerified = false;
     public $proxyServer = '';
     public $proxyUsername = '';
     public $proxyPassword = '';
@@ -184,6 +185,9 @@ class Settings extends Component
                         case 'X_AVATAR_URL':
                             $this->twitterAvatarUrl = $value;
                             break;
+                        case 'X_VERIFIED':
+                            $this->twitterVerified = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+                            break;
                         case 'PROXY_SERVER':
                             $this->proxyServer = $value;
                             break;
@@ -270,15 +274,26 @@ class Settings extends Component
 
         try {
             $authPath = '/app/auth/auth_x.json';
+            $authDir = dirname($authPath);
+
+            // Bugfix: Ensure the auth directory exists before saving files
+            if (!is_dir($authDir)) {
+                \Log::info("uploadTwitterAuth: Creating auth directory", ['dir' => $authDir]);
+                mkdir($authDir, 0755, true);
+            }
 
             // Save uploaded file as auth_x.json
             $this->twitterAuthFile->storeAs('', 'auth_x.json', ['disk' => 'scraper_auth']);
 
-            // Bugfix: Ensure www-data owns the file so it can be deleted later
-            chown($authPath, 'www-data');
-            chgrp($authPath, 'www-data');
-
-            \Log::info("uploadTwitterAuth: File saved", ['auth' => $authPath]);
+            // Bugfix: Verify file exists before changing ownership
+            if (file_exists($authPath)) {
+                chown($authPath, 'www-data');
+                chgrp($authPath, 'www-data');
+                \Log::info("uploadTwitterAuth: File saved and ownership set", ['auth' => $authPath]);
+            } else {
+                \Log::error("uploadTwitterAuth: File not found after upload", ['auth' => $authPath]);
+                throw new \Exception("El archivo no se guardó correctamente en el servidor");
+            }
 
             // Create empty session file (will be populated on first run)
             $sessionPath = '/app/auth/auth_x_session.json';
@@ -290,11 +305,14 @@ class Settings extends Component
                 'success' => true
             ], JSON_PRETTY_PRINT));
 
-            // Bugfix: Ensure www-data owns the session file
-            chown($sessionPath, 'www-data');
-            chgrp($sessionPath, 'www-data');
-
-            \Log::info("uploadTwitterAuth: Session file created", ['session' => $sessionPath]);
+            // Bugfix: Verify session file exists before changing ownership
+            if (file_exists($sessionPath)) {
+                chown($sessionPath, 'www-data');
+                chgrp($sessionPath, 'www-data');
+                \Log::info("uploadTwitterAuth: Session file created and ownership set", ['session' => $sessionPath]);
+            } else {
+                \Log::warning("uploadTwitterAuth: Session file not created", ['session' => $sessionPath]);
+            }
 
             // Clear uploaded file property
             $this->reset(['twitterAuthFile']);
@@ -305,7 +323,7 @@ class Settings extends Component
             session()->flash('success', '✅ Archivo de autenticación de Twitter subido correctamente! Ejecuta el Twitter Poster para completar la configuración del perfil.');
 
         } catch (\Exception $e) {
-            \Log::error("uploadTwitterAuth: Failed", ['error' => $e->getMessage()]);
+            \Log::error("uploadTwitterAuth: Failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             session()->flash('error', 'Error al subir archivo de autenticación: ' . $e->getMessage());
         }
     }
@@ -349,15 +367,26 @@ class Settings extends Component
 
         try {
             $authPath = '/app/auth/auth_facebook.json';
+            $authDir = dirname($authPath);
+
+            // Bugfix: Ensure the auth directory exists before saving files
+            if (!is_dir($authDir)) {
+                \Log::info("uploadFacebookAuth: Creating auth directory", ['dir' => $authDir]);
+                mkdir($authDir, 0755, true);
+            }
 
             // Save uploaded file
             $this->facebookAuthFile->storeAs('', 'auth_facebook.json', ['disk' => 'scraper_auth']);
 
-            // Bugfix: Ensure www-data owns the file so it can be deleted later
-            chown($authPath, 'www-data');
-            chgrp($authPath, 'www-data');
-
-            \Log::info("uploadFacebookAuth: File saved", ['auth' => $authPath]);
+            // Bugfix: Verify file exists before changing ownership
+            if (file_exists($authPath)) {
+                chown($authPath, 'www-data');
+                chgrp($authPath, 'www-data');
+                \Log::info("uploadFacebookAuth: File saved and ownership set", ['auth' => $authPath]);
+            } else {
+                \Log::error("uploadFacebookAuth: File not found after upload", ['auth' => $authPath]);
+                throw new \Exception("El archivo no se guardó correctamente en el servidor");
+            }
 
             // Create empty session file (will be populated on first run)
             $sessionPath = '/app/auth/auth_facebook_session.json';
@@ -365,11 +394,14 @@ class Settings extends Component
                 'session_storage' => []
             ], JSON_PRETTY_PRINT));
 
-            // Bugfix: Ensure www-data owns the session file
-            chown($sessionPath, 'www-data');
-            chgrp($sessionPath, 'www-data');
-
-            \Log::info("uploadFacebookAuth: Session file created", ['session' => $sessionPath]);
+            // Bugfix: Verify session file exists before changing ownership
+            if (file_exists($sessionPath)) {
+                chown($sessionPath, 'www-data');
+                chgrp($sessionPath, 'www-data');
+                \Log::info("uploadFacebookAuth: Session file created and ownership set", ['session' => $sessionPath]);
+            } else {
+                \Log::warning("uploadFacebookAuth: Session file not created", ['session' => $sessionPath]);
+            }
 
             // Clear uploaded file property
             $this->reset(['facebookAuthFile']);
@@ -380,7 +412,7 @@ class Settings extends Component
             session()->flash('success', '✅ Archivo de autenticación de Facebook subido correctamente! El scraper usará esta sesión automáticamente.');
 
         } catch (\Exception $e) {
-            \Log::error("uploadFacebookAuth: Failed", ['error' => $e->getMessage()]);
+            \Log::error("uploadFacebookAuth: Failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             session()->flash('error', 'Error al subir archivo de autenticación: ' . $e->getMessage());
         }
     }
@@ -416,6 +448,11 @@ class Settings extends Component
 
     public function savePagePostingSettings()
     {
+        \Log::info('Settings: savePagePostingSettings called', ['page_name' => $this->pageName, 'enabled' => $this->pagePostingEnabled]);
+
+        // Small delay to ensure loading modal is visible to users
+        usleep(300000); // 300ms
+
         $this->validate([
             'pageName' => 'required|string|max:255',
             'pageUrl' => 'required|url:http,https|max:500',
@@ -437,9 +474,11 @@ class Settings extends Component
         ]);
 
         if ($result) {
-            session()->flash('success', 'Configuración de publicación en página guardada correctamente.');
+            \Log::info('Settings: savePagePostingSettings success');
+            $this->dispatch('settings-saved', message: 'Configuración de publicación en página guardada correctamente');
         } else {
-            session()->flash('error', 'Error al guardar la configuración de publicación en página.');
+            \Log::error('Settings: savePagePostingSettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar la configuración de publicación en página');
         }
     }
 
@@ -490,6 +529,11 @@ class Settings extends Component
 
     public function saveFacebookSettings()
     {
+        \Log::info('Settings: saveFacebookSettings called', ['email' => $this->facebookEmail, 'profiles_count' => count($this->facebookProfilesList)]);
+
+        // Small delay to ensure loading modal is visible to users
+        usleep(300000); // 300ms
+
         $profilesCommaSeparated = implode(',', $this->facebookProfilesList);
 
         $updates = [
@@ -500,34 +544,50 @@ class Settings extends Component
 
         foreach ($updates as $key => $value) {
             if (!updateEnvFile($key, $value)) {
-                session()->flash('error', 'Error al guardar configuración de Facebook');
+                \Log::error('Settings: saveFacebookSettings failed', ['key' => $key]);
+                $this->dispatch('settings-error', message: 'Error al guardar configuración de Facebook');
                 return;
             }
         }
 
-        session()->flash('success', 'Configuración de Facebook guardada correctamente');
+        \Log::info('Settings: saveFacebookSettings success');
+        $this->dispatch('settings-saved', message: 'Configuración de Facebook guardada correctamente');
     }
 
     public function saveTwitterSettings()
     {
+        \Log::info('Settings: saveTwitterSettings called', ['display_name' => $this->twitterDisplayName, 'username' => $this->twitterUsername, 'verified' => $this->twitterVerified]);
+
+        // Small delay to ensure loading modal is visible to users
+        usleep(300000); // 300ms
+
         $updates = [
             'X_EMAIL' => $this->twitterEmail,
             'X_PASSWORD' => $this->twitterPassword,
+            'X_DISPLAY_NAME' => $this->twitterDisplayName,
             'X_USERNAME' => $this->twitterUsername,
+            'X_VERIFIED' => $this->twitterVerified ? 'true' : 'false',
         ];
 
         foreach ($updates as $key => $value) {
             if (!updateEnvFile($key, $value)) {
-                session()->flash('error', 'Error al guardar configuración de Twitter');
+                \Log::error('Settings: saveTwitterSettings failed', ['key' => $key]);
+                $this->dispatch('settings-error', message: 'Error al guardar configuración de Twitter');
                 return;
             }
         }
 
-        session()->flash('success', 'Configuración de Twitter guardada correctamente');
+        \Log::info('Settings: saveTwitterSettings success');
+        $this->dispatch('settings-saved', message: 'Configuración de Twitter guardada correctamente');
     }
 
     public function saveCronSettings()
     {
+        \Log::info('Settings: saveCronSettings called', ['fb_min' => $this->facebookIntervalMin, 'tw_min' => $this->twitterIntervalMin]);
+
+        // Small delay to ensure loading modal is visible to users
+        usleep(300000); // 300ms
+
         $this->validate([
             'facebookIntervalMin' => 'required|integer|min:1|max:1440',
             'facebookIntervalMax' => 'required|integer|min:1|max:1440|gte:facebookIntervalMin',
@@ -544,7 +604,8 @@ class Settings extends Component
 
         foreach ($updates as $key => $value) {
             if (!updateEnvFile($key, $value)) {
-                session()->flash('error', 'Error al guardar intervalos de cron');
+                \Log::error('Settings: saveCronSettings failed', ['key' => $key]);
+                $this->dispatch('settings-error', message: 'Error al guardar intervalos de cron');
                 return;
             }
         }
@@ -557,11 +618,17 @@ class Settings extends Component
             $this->twitterEnabled
         );
 
-        session()->flash('success', 'Configuración de cron guardada correctamente');
+        \Log::info('Settings: saveCronSettings success');
+        $this->dispatch('settings-saved', message: 'Configuración de cron guardada correctamente');
     }
 
     public function saveProxySettings()
     {
+        \Log::info('Settings: saveProxySettings called', ['server' => $this->proxyServer ? 'set' : 'empty']);
+
+        // Small delay to ensure loading modal is visible to users
+        usleep(300000); // 300ms
+
         $updates = [
             'PROXY_SERVER' => $this->proxyServer,
             'PROXY_USERNAME' => $this->proxyUsername,
@@ -570,12 +637,14 @@ class Settings extends Component
 
         foreach ($updates as $key => $value) {
             if (!updateEnvFile($key, $value)) {
-                session()->flash('error', 'Error al guardar configuración de proxy');
+                \Log::error('Settings: saveProxySettings failed', ['key' => $key]);
+                $this->dispatch('settings-error', message: 'Error al guardar configuración de proxy');
                 return;
             }
         }
 
-        session()->flash('success', 'Configuración de proxy guardada correctamente');
+        \Log::info('Settings: saveProxySettings success');
+        $this->dispatch('settings-saved', message: 'Configuración de proxy guardada correctamente');
     }
 
     public function render()

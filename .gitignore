@@ -48,3 +48,4 @@ scrapper-alexis-web/package-lock.json
 scrapper-alexis-web/yarn.lock
 scrapper-alexis-web/pnpm-lock.yaml
 
+.playwright-mcp/

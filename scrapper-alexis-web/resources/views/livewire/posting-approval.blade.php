@@ -1,11 +1,7 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
     @pagination-changed.window="clearOnPagination()"
-    @page-reload.window="setTimeout(() => { window.location.reload(); }, 1000)"
     x-data="{
             localSelected: [],
-            deletedIds: [],
-            showProcessingModal: false,
-            processingAction: '',
             approvalFilter: @entangle('approvalFilter').live,
             perPage: @entangle('perPage').live,
 
@@ -45,7 +41,6 @@
             clearOnPagination() {
                 console.log('Alpine: Clearing selections due to pagination');
                 this.localSelected = [];
-                this.deletedIds = [];
                 this.$wire.set('selected', []);
             },
 
@@ -64,12 +59,6 @@
                 console.log('Alpine: Bulk approve', this.localSelected);
                 if (this.localSelected.length === 0) return;
 
-                // Show processing modal
-                this.processingAction = 'approve';
-                this.showProcessingModal = true;
-                console.log('Alpine: Showing processing modal for approve');
-
-                this.deletedIds.push(...this.localSelected);
                 const toApprove = [...this.localSelected];
                 this.localSelected = [];
 
@@ -81,12 +70,6 @@
                 if (this.localSelected.length === 0) return;
                 if (!confirm(`¿Estás seguro de que quieres rechazar ${this.localSelected.length} imágenes?`)) return;
 
-                // Show processing modal
-                this.processingAction = 'reject';
-                this.showProcessingModal = true;
-                console.log('Alpine: Showing processing modal for reject');
-
-                this.deletedIds.push(...this.localSelected);
                 const toReject = [...this.localSelected];
                 this.localSelected = [];
 
@@ -95,7 +78,6 @@
 
             approveImage(id) {
                 console.log('Alpine: Approve single image', id);
-                this.deletedIds.push(id);
                 this.localSelected = this.localSelected.filter(i => i !== id);
                 this.$wire.approveImage(id);
             },
@@ -103,7 +85,6 @@
             rejectImage(id) {
                 console.log('Alpine: Reject single image', id);
                 if (!confirm('¿Estás seguro de que quieres rechazar esta imagen?')) return;
-                this.deletedIds.push(id);
                 this.localSelected = this.localSelected.filter(i => i !== id);
                 this.$wire.rejectImage(id);
             },
@@ -112,9 +93,7 @@
                 console.log('Alpine: Delete single image', id);
                 if (!confirm('¿Estás seguro de que quieres eliminar esta imagen?')) return;
 
-                this.deletedIds.push(id);
                 this.localSelected = this.localSelected.filter(i => i !== id);
-
                 this.$wire.deleteImage(id);
             },
 
@@ -123,19 +102,15 @@
                 if (this.localSelected.length === 0) return;
                 if (!confirm(`¿Estás seguro de que quieres eliminar ${this.localSelected.length} imágenes?`)) return;
 
-                this.deletedIds.push(...this.localSelected);
                 const toDelete = [...this.localSelected];
                 this.localSelected = [];
 
-                this.$wire.deleteSelected().then(() => {
-                    console.log('Alpine: Bulk delete completed');
-                });
+                this.$wire.deleteSelected();
             },
 
             clearSelections() {
                 console.log('Alpine: Clearing selections');
                 this.localSelected = [];
-                this.deletedIds = [];
                 this.$wire.set('selected', []);
             }
         }">
@@ -260,9 +235,11 @@
                         <x-button @click="approveSelected()"
                             variant="outline"
                             size="sm"
+                            wire:loading.attr="disabled"
+                            wire:target="approveSelected"
                             class="cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all duration-150 bg-green-600 text-white hover:bg-green-700">
                             <x-lucide-check class="mr-2 h-4 w-4" />
-                            Aprobar
+                            Aprobar (<span x-text="localSelected.length"></span>)
                         </x-button>
                     </template>
 
@@ -270,9 +247,11 @@
                         <x-button @click="rejectSelected()"
                             variant="destructive"
                             size="sm"
+                            wire:loading.attr="disabled"
+                            wire:target="rejectSelected"
                             class="cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all duration-150">
                             <x-lucide-x class="mr-2 h-4 w-4" />
-                            Rechazar
+                            Rechazar (<span x-text="localSelected.length"></span>)
                         </x-button>
                     </template>
 
@@ -280,9 +259,11 @@
                         <x-button @click="deleteSelected()"
                             variant="destructive"
                             size="sm"
+                            wire:loading.attr="disabled"
+                            wire:target="deleteSelected"
                             class="cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all duration-150">
                             <x-lucide-trash-2 class="mr-2 h-4 w-4" />
-                            Eliminar
+                            Eliminar (<span x-text="localSelected.length"></span>)
                         </x-button>
                     </template>
                 </div>
@@ -336,11 +317,8 @@
     <div class="grid grid-cols-1 image-gallery-grid gap-6 mb-6" wire:loading.class="!hidden" wire:target="approvalFilter, perPage, gotoPage, nextPage, previousPage">
         @forelse ($messages as $message)
             <x-card
+                wire:key="message-{{ $message->id }}"
                 data-image-id="{{ $message->id }}"
-                x-show="!deletedIds.includes({{ $message->id }})"
-                x-transition:leave="transition ease-in duration-300"
-                x-transition:leave-start="opacity-100 scale-100"
-                x-transition:leave-end="opacity-0 scale-0"
                 class="hover:shadow-lg transition-all duration-200 cursor-pointer relative"
                 x-bind:class="localSelected.includes({{ $message->id }}) ? 'border-2 border-blue-500 bg-blue-50/50' : ''"
                 @click="toggleSelection({{ $message->id }})">
@@ -399,28 +377,61 @@
                     <!-- Actions -->
                     <div class="flex space-x-2">
                         @if (!$message->posted_to_page)
-                            <x-button @click.stop="localSelected.length === 0 ? approveImage({{ $message->id }}) : null"
-                                variant="outline"
-                                size="sm"
-                                x-bind:disabled="localSelected.length > 0"
-                                x-bind:class="localSelected.length > 0 ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-none' : 'cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98]'"
-                                class="flex-1 transition-all duration-150 bg-green-600 text-white hover:bg-green-700">
-                                <x-lucide-check class="mr-1 h-3 w-3" />
-                                Aprobar
-                            </x-button>
+                            {{-- Show Aprobar button only if NOT approved --}}
+                            @if (!$message->approved_for_posting)
+                                <x-button @click.stop="localSelected.length === 0 ? approveImage({{ $message->id }}) : null"
+                                    variant="outline"
+                                    size="sm"
+                                    x-bind:disabled="localSelected.length > 0"
+                                    wire:loading.attr="disabled"
+                                    wire:target="approveImage({{ $message->id }})"
+                                    x-bind:class="localSelected.length > 0 ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-none' : 'cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98]'"
+                                    class="flex-1 transition-all duration-150 bg-green-600 text-white hover:bg-green-700">
+                                    <span wire:loading.remove wire:target="approveImage({{ $message->id }})" class="inline-flex items-center">
+                                        <x-lucide-check class="mr-1 h-3 w-3" />
+                                        Aprobar
+                                    </span>
+                                    <span wire:loading wire:target="approveImage({{ $message->id }})" class="inline-flex items-center">
+                                        <svg class="animate-spin h-3 w-3 mr-1 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        ...
+                                    </span>
+                                </x-button>
+                            @endif
 
-                            <x-button @click.stop="rejectImage({{ $message->id }})"
-                                variant="destructive"
-                                size="sm"
-                                class="cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all duration-150">
-                                <x-lucide-x class="h-3 w-3" />
-                            </x-button>
+                            {{-- Show Rechazar button if approved OR if pending (not explicitly rejected) --}}
+                            @if ($message->approved_for_posting || (!$message->approved_at))
+                                <x-button @click.stop="rejectImage({{ $message->id }})"
+                                    variant="destructive"
+                                    size="sm"
+                                    wire:loading.attr="disabled"
+                                    wire:target="rejectImage({{ $message->id }})"
+                                    style="background-color: #dc2626 !important; color: white !important;"
+                                    class="cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all duration-150 {{ $message->approved_for_posting ? 'flex-1' : '' }}">
+                                    <span wire:loading.remove wire:target="rejectImage({{ $message->id }})" class="inline-flex items-center">
+                                        <x-lucide-x class="h-3 w-3 {{ $message->approved_for_posting ? 'mr-1' : '' }}" />
+                                        @if ($message->approved_for_posting)
+                                            Rechazar
+                                        @endif
+                                    </span>
+                                    <span wire:loading wire:target="rejectImage({{ $message->id }})" class="inline-flex items-center">
+                                        <svg class="animate-spin h-3 w-3 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </x-button>
+                            @endif
                         @endif
 
                         @if (!$message->posted_to_page || ($message->posted_to_page && $message->posted_to_page_at && $message->posted_to_page_at->lt(now()->subDays(7))))
                             <x-button @click.stop="deleteImage({{ $message->id }})"
                                 variant="destructive"
                                 size="sm"
+                                wire:loading.attr="disabled"
+                                wire:target="deleteImage({{ $message->id }})"
                                 class="cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all duration-150">
                                 <x-lucide-trash-2 class="h-3 w-3" />
                             </x-button>
@@ -487,23 +498,4 @@
         </x-card.content>
     </x-card>
 
-    <!-- Processing Modal -->
-    <template x-teleport="body">
-        <div x-show="showProcessingModal"
-             x-transition.opacity
-             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-             style="display: none;">
-            <div class="bg-white rounded-lg shadow-2xl p-8 flex flex-col items-center space-y-4 max-w-sm mx-4"
-                 x-transition.scale.80>
-                <div class="relative">
-                    <svg class="animate-spin h-16 w-16 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                </div>
-                <p class="text-xl font-semibold text-gray-900" x-text="processingAction === 'approve' ? 'Aprobando imágenes...' : 'Rechazando imágenes...'"></p>
-                <p class="text-sm text-gray-500">Por favor espera un momento</p>
-            </div>
-        </div>
-    </template>
 </div>

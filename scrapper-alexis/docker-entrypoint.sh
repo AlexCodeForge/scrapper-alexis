@@ -89,11 +89,11 @@ if [ "$FACEBOOK_SCRAPER_ENABLED" = "true" ]; then
     # For intervals > 59 minutes, use hourly cron with specific minute
     if [ "$FB_AVG" -gt 59 ]; then
         # Run once per hour at minute :02
-        echo "2 * * * * cd /app && /app/run_facebook_flow.sh >> /app/logs/facebook_cron.log 2>&1" >> $CRON_FILE
+        echo "2 * * * * cd /app && python3 relay_agent.py >> /app/logs/facebook_cron.log 2>&1" >> $CRON_FILE
         echo "✓ Facebook scraper scheduled: hourly at minute :02 (interval $FB_AVG exceeds 59)"
     else
         # Use standard */X syntax for intervals <= 59 minutes
-        echo "*/$FB_AVG * * * * cd /app && /app/run_facebook_flow.sh >> /app/logs/facebook_cron.log 2>&1" >> $CRON_FILE
+        echo "*/$FB_AVG * * * * cd /app && python3 relay_agent.py >> /app/logs/facebook_cron.log 2>&1" >> $CRON_FILE
         echo "✓ Facebook scraper scheduled: every $FB_AVG minutes"
     fi
 else
@@ -104,10 +104,10 @@ fi
 if [ "$TWITTER_POSTER_ENABLED" = "true" ]; then
     # For intervals > 59 minutes, use hourly cron
     if [ "$TW_AVG" -gt 59 ]; then
-        echo "5 * * * * cd /app && /app/run_twitter_flow.sh >> /app/logs/twitter_cron.log 2>&1" >> $CRON_FILE
+        echo "5 * * * * cd /app && python3 extract_twitter_profile.py >> /app/logs/twitter_cron.log 2>&1" >> $CRON_FILE
         echo "✓ Twitter poster scheduled: hourly at minute :05 (interval $TW_AVG exceeds 59)"
     else
-        echo "*/$TW_AVG * * * * cd /app && /app/run_twitter_flow.sh >> /app/logs/twitter_cron.log 2>&1" >> $CRON_FILE
+        echo "*/$TW_AVG * * * * cd /app && python3 extract_twitter_profile.py >> /app/logs/twitter_cron.log 2>&1" >> $CRON_FILE
         echo "✓ Twitter poster scheduled: every $TW_AVG minutes"
     fi
 else
@@ -115,10 +115,10 @@ else
 fi
 
 # Add Facebook Page Poster job (checks every 30 minutes if it's time to post)
-echo "*/30 * * * * cd /app && /app/run_page_poster.sh >> /app/logs/page_poster_cron.log 2>&1" >> $CRON_FILE
+echo "*/30 * * * * cd /app && python3 facebook_page_poster.py >> /app/logs/page_poster_cron.log 2>&1" >> $CRON_FILE
 echo "✓ Facebook Page Poster scheduled: checks every 30 minutes"
 
-# Note: Image generation runs automatically as part of Twitter flow (run_twitter_flow.sh)
+# Note: Image generation is triggered automatically by the Twitter flow
 # No separate cron job needed
 
 # Add empty line at end (required by cron)

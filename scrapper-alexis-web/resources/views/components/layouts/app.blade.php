@@ -138,6 +138,79 @@
         </main>
     </div>
 
+    <!-- Global Toast Notifications -->
+    <div wire:ignore
+         x-data="{
+        showToast: false,
+        toastType: 'success',
+        toastMessage: '',
+        init() {
+            console.log('Toast: Global component initialized');
+        }
+    }"
+         @settings-saved.window="
+            console.log('Toast: Settings saved event received', $event.detail);
+            toastType = 'success';
+            toastMessage = $event.detail.message;
+            showToast = true;
+            setTimeout(() => {
+                showToast = false;
+                console.log('Toast: Auto-dismissed');
+            }, 5000);
+         "
+         @settings-error.window="
+            console.log('Toast: Settings error event received', $event.detail);
+            toastType = 'error';
+            toastMessage = $event.detail.message;
+            showToast = true;
+            setTimeout(() => {
+                showToast = false;
+                console.log('Toast: Auto-dismissed');
+            }, 5000);
+         ">
+        <!-- Success/Error Toast -->
+        <div x-show="showToast"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform translate-x-full"
+             x-transition:enter-end="opacity-100 transform translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform translate-x-0"
+             x-transition:leave-end="opacity-0 transform translate-x-full"
+             style="z-index: 9999;"
+             class="fixed top-4 right-4 max-w-md shadow-2xl">
+            <div x-bind:class="toastType === 'success' ? 'border-2 border-green-500 bg-green-50' : 'border-2 border-red-500 bg-red-50'"
+                 class="rounded-lg p-4 pr-10 shadow-lg relative">
+                <div class="flex items-start gap-3">
+                    <template x-if="toastType === 'success'">
+                        <svg class="h-5 w-5 text-green-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </template>
+                    <template x-if="toastType === 'error'">
+                        <svg class="h-5 w-5 text-red-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </template>
+                    <div class="flex-1">
+                        <h5 x-bind:class="toastType === 'success' ? 'text-green-800' : 'text-red-800'"
+                            class="font-semibold mb-1"
+                            x-text="toastType === 'success' ? 'Éxito' : 'Error'"></h5>
+                        <p x-bind:class="toastType === 'success' ? 'text-green-700' : 'text-red-700'"
+                           class="text-sm"
+                           x-text="toastMessage"></p>
+                    </div>
+                </div>
+                <button @click="showToast = false; console.log('Toast: Manually closed');"
+                        x-bind:class="toastType === 'success' ? 'text-green-600 hover:text-green-800' : 'text-red-600 hover:text-red-800'"
+                        class="absolute top-3 right-3 transition-colors">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     @livewireScripts
 </body>
 </html>

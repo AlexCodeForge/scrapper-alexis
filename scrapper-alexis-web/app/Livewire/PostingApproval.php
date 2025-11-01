@@ -49,15 +49,19 @@ class PostingApproval extends Component
 
     public function approveImage($messageId)
     {
+        \Log::info('PostingApproval: Approve image', ['message_id' => $messageId, 'filter' => $this->approvalFilter]);
+
         $message = Message::find($messageId);
 
         if (!$message) {
+            \Log::error('PostingApproval: Image not found', ['message_id' => $messageId]);
             session()->flash('error', 'Imagen no encontrada');
             return;
         }
 
         // Prevent changes if already posted
         if ($message->posted_to_page) {
+            \Log::warning('PostingApproval: Cannot modify posted image', ['message_id' => $messageId]);
             session()->flash('error', 'No se puede modificar una imagen ya publicada');
             return;
         }
@@ -65,41 +69,42 @@ class PostingApproval extends Component
         $result = $this->postingService->approveImage($messageId);
 
         if ($result) {
+            \Log::info('PostingApproval: Image approved successfully', ['message_id' => $messageId]);
             session()->flash('success', 'Imagen aprobada correctamente');
+            // Livewire will auto-refresh after this method completes
         } else {
+            \Log::error('PostingApproval: Failed to approve image', ['message_id' => $messageId]);
             session()->flash('error', 'Error al aprobar la imagen');
         }
     }
 
     public function rejectImage($messageId)
     {
+        \Log::info('PostingApproval: Reject image', ['message_id' => $messageId, 'filter' => $this->approvalFilter]);
+
         $message = Message::find($messageId);
 
         if (!$message) {
+            \Log::error('PostingApproval: Image not found', ['message_id' => $messageId]);
             session()->flash('error', 'Imagen no encontrada');
             return;
         }
 
         // Prevent changes if already posted
         if ($message->posted_to_page) {
+            \Log::warning('PostingApproval: Cannot modify posted image', ['message_id' => $messageId]);
             session()->flash('error', 'No se puede modificar una imagen ya publicada');
             return;
         }
 
-        // Direct update with logging for debugging
-        \Log::info('Bugfix: Before reject', ['id' => $messageId, 'approved_at_before' => $message->approved_at]);
-
-        $result = $message->update([
-            'approved_for_posting' => false,
-            'approved_at' => now(),
-        ]);
-
-        $message->refresh();
-        \Log::info('Bugfix: After reject', ['id' => $messageId, 'approved_at_after' => $message->approved_at, 'result' => $result]);
+        $result = $this->postingService->rejectImage($messageId);
 
         if ($result) {
-            session()->flash('success', 'Imagen rechazada');
+            \Log::info('PostingApproval: Image rejected successfully', ['message_id' => $messageId]);
+            session()->flash('success', 'Imagen rechazada correctamente');
+            // Livewire will auto-refresh after this method completes
         } else {
+            \Log::error('PostingApproval: Failed to reject image', ['message_id' => $messageId]);
             session()->flash('error', 'Error al rechazar la imagen');
         }
     }
@@ -121,6 +126,8 @@ class PostingApproval extends Component
 
         $message->delete();
         session()->flash('success', 'Imagen eliminada correctamente');
+        // Bugfix: Refresh component to update UI without full page reload
+        $this->js('$wire.$refresh()');
     }
 
     public function deleteSelected()
@@ -158,6 +165,8 @@ class PostingApproval extends Component
 
     public function approveSelected()
     {
+        \Log::info('PostingApproval: Approve selected', ['count' => count($this->selected), 'filter' => $this->approvalFilter]);
+
         if (empty($this->selected)) {
             session()->flash('error', 'No hay imágenes seleccionadas');
             return;
@@ -170,15 +179,18 @@ class PostingApproval extends Component
             }
         }
 
+        \Log::info('PostingApproval: Bulk approve completed', ['approved_count' => $count]);
+
         $this->selected = [];
         session()->flash('success', "$count imágenes aprobadas correctamente");
 
-        // Force full page reload to refresh pagination
-        $this->js('window.location.href = window.location.href');
+        // Livewire will auto-refresh after this method completes
     }
 
     public function rejectSelected()
     {
+        \Log::info('PostingApproval: Reject selected', ['count' => count($this->selected), 'filter' => $this->approvalFilter]);
+
         if (empty($this->selected)) {
             session()->flash('error', 'No hay imágenes seleccionadas');
             return;
@@ -191,15 +203,18 @@ class PostingApproval extends Component
             }
         }
 
+        \Log::info('PostingApproval: Bulk reject completed', ['rejected_count' => $count]);
+
         $this->selected = [];
         session()->flash('success', "$count imágenes rechazadas");
 
-        // Force full page reload to refresh pagination
-        $this->js('window.location.href = window.location.href');
+        // Livewire will auto-refresh after this method completes
     }
 
     public function render()
     {
+        \Log::info('PostingApproval: Rendering', ['filter' => $this->approvalFilter, 'perPage' => $this->perPage]);
+
         // Build query based on filter
         $query = Message::withImages()->validWordCount();
 
@@ -223,6 +238,8 @@ class PostingApproval extends Component
 
         $messages = $query->latest('scraped_at')->paginate($this->perPage);
 
+        \Log::info('PostingApproval: Query results', ['total' => $messages->total(), 'current_page' => $messages->currentPage()]);
+
         // Calculate stats
         $stats = [
             'pending' => Message::withImages()->validWordCount()->pendingApproval()->notPostedToPage()->count(),
@@ -230,6 +247,8 @@ class PostingApproval extends Component
             'rejected' => Message::withImages()->validWordCount()->where('approved_for_posting', false)->whereNotNull('approved_at')->count(),
             'posted' => Message::withImages()->validWordCount()->postedToPage()->count(),
         ];
+
+        \Log::info('PostingApproval: Stats calculated', $stats);
 
         return view('livewire.posting-approval', [
             'stats' => $stats,

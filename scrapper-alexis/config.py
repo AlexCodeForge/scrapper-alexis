@@ -85,6 +85,7 @@ X_CHAR_LIMIT = 280
 X_DISPLAY_NAME = os.getenv('X_DISPLAY_NAME', 'Twitter User')
 X_USERNAME = os.getenv('X_USERNAME', '@username')
 X_AVATAR_URL = os.getenv('X_AVATAR_URL', '')
+X_VERIFIED = os.getenv('X_VERIFIED', 'false').lower() == 'true'
 
 # Validate required configuration
 def validate_config(phase: str = 'all'):

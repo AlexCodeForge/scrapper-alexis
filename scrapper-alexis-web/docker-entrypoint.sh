@@ -51,6 +51,14 @@ if [ ! -d "/app/data" ]; then
     echo "Warning: /app/data volume not mounted!"
 fi
 
+# Bugfix: Ensure /app/auth directory has correct permissions for file uploads
+if [ -d "/app/auth" ]; then
+    echo "Setting permissions for /app/auth..."
+    chown -R www-data:www-data /app/auth
+    chmod 755 /app/auth
+    echo "✓ /app/auth permissions set"
+fi
+
 # Set database path environment variable for Laravel
 export DB_DATABASE=/app/data/scraper.db
 

@@ -45,6 +45,7 @@ AVATAR_CACHE_DIR.mkdir(exist_ok=True)
 PROFILE_DISPLAY_NAME = config.X_DISPLAY_NAME if hasattr(config, 'X_DISPLAY_NAME') else os.getenv('X_DISPLAY_NAME', 'Twitter User')
 PROFILE_USERNAME = config.X_USERNAME if hasattr(config, 'X_USERNAME') else os.getenv('X_USERNAME', '@username')
 PROFILE_AVATAR_FALLBACK = config.X_AVATAR_URL if hasattr(config, 'X_AVATAR_URL') else os.getenv('X_AVATAR_URL', '')
+PROFILE_VERIFIED = config.X_VERIFIED if hasattr(config, 'X_VERIFIED') else os.getenv('X_VERIFIED', 'false').lower() == 'true'
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -167,6 +168,15 @@ def update_template(message_text: str, local_avatar_path: str) -> Optional[str]:
             'MESSAGE_TEXT_PLACEHOLDER',
             message_text
         )
+        
+        # Replace verified badge visibility
+        verified_display = 'inline-block' if PROFILE_VERIFIED else 'none'
+        updated_content = updated_content.replace(
+            'VERIFIED_DISPLAY_PLACEHOLDER',
+            verified_display
+        )
+        
+        logger.info(f"Twitter verified badge: {PROFILE_VERIFIED}")
         
         # Create temporary template file
         temp_template = Path('temp_message_template.html')

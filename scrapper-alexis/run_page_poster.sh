@@ -15,9 +15,10 @@ fi
 # Helper function to get settings from database
 get_setting() {
     local key=$1
-    local db_path="/var/www/html/database/database.sqlite"
+    local db_path="/app/data/scraper.db"
     
     if [ ! -f "$db_path" ]; then
+        echo "[ERROR] Database not found at $db_path" >> logs/page_poster_$(date +%Y%m%d).log
         echo ""
         return
     fi
@@ -25,11 +26,17 @@ get_setting() {
     sqlite3 "$db_path" "SELECT $key FROM posting_settings LIMIT 1" 2>/dev/null
 }
 
-# Check if page posting is enabled
-ENABLED=$(get_setting "enabled")
-if [ "$ENABLED" != "1" ]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Page posting disabled - skipping" >> logs/cron_execution.log
-    exit 0
+# Check if page posting is enabled (only for automatic cron runs, not manual runs)
+if [ -z "$SKIP_DELAY" ]; then
+    # This is a cron run, check if enabled
+    ENABLED=$(get_setting "enabled")
+    if [ "$ENABLED" != "1" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Page posting disabled - skipping" >> logs/cron_execution.log
+        exit 0
+    fi
+else
+    # This is a manual run, always proceed
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Manual page posting triggered - bypassing enabled check" >> logs/page_poster_$(date +%Y%m%d).log
 fi
 
 # Get interval settings
@@ -40,22 +47,30 @@ INTERVAL_MAX=$(get_setting "interval_max")
 INTERVAL_MIN=${INTERVAL_MIN:-60}
 INTERVAL_MAX=${INTERVAL_MAX:-120}
 
-# Check if we should post based on random interval
-# Store last post time in a file
+# Define last post file path (used by both manual and scheduled runs)
 LAST_POST_FILE="/tmp/last_page_post_time"
-CURRENT_TIME=$(date +%s)
 
-if [ -f "$LAST_POST_FILE" ]; then
-    LAST_POST_TIME=$(cat "$LAST_POST_FILE")
-    TIME_DIFF=$(( (CURRENT_TIME - LAST_POST_TIME) / 60 ))  # Convert to minutes
-    
-    # Calculate random interval for this run
-    RANDOM_INTERVAL=$(( RANDOM % (INTERVAL_MAX - INTERVAL_MIN + 1) + INTERVAL_MIN ))
-    
-    if [ $TIME_DIFF -lt $RANDOM_INTERVAL ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Too soon to post - only $TIME_DIFF minutes since last post (need $RANDOM_INTERVAL)" >> logs/cron_execution.log
-        exit 0
+# Check if we should post based on random interval (only for cron runs, not manual)
+if [ -z "$SKIP_DELAY" ]; then
+    # This is a cron run, check interval timing
+    CURRENT_TIME=$(date +%s)
+
+    if [ -f "$LAST_POST_FILE" ]; then
+        LAST_POST_TIME=$(cat "$LAST_POST_FILE")
+        TIME_DIFF=$(( (CURRENT_TIME - LAST_POST_TIME) / 60 ))  # Convert to minutes
+        
+        # Calculate random interval for this run
+        RANDOM_INTERVAL=$(( RANDOM % (INTERVAL_MAX - INTERVAL_MIN + 1) + INTERVAL_MIN ))
+        
+        if [ $TIME_DIFF -lt $RANDOM_INTERVAL ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Too soon to post - only $TIME_DIFF minutes since last post (need $RANDOM_INTERVAL)" >> logs/cron_execution.log
+            exit 0
+        fi
     fi
+else
+    # Manual run - no interval check, post immediately
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Manual run - skipping interval check" >> logs/page_poster_$(date +%Y%m%d).log
+    CURRENT_TIME=$(date +%s)
 fi
 
 # Time to post!
