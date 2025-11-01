@@ -402,6 +402,97 @@ Should show: `-e MANUAL_RUN=1`
 docker exec scraper-alexis-web php artisan optimize:clear
 ```
 
+### Configuration Save Errors (Twitter/Facebook Settings)
+
+**Error:** "Error al guardar configuración de Twitter"
+
+**Cause:** The `.env` file doesn't have write permissions for the web container (www-data user).
+
+**Solution:**
+```bash
+cd /home/alexis-scrapper-portable  # or your installation directory
+chmod 666 scrapper-alexis/.env
+```
+
+**Verify the fix:**
+```bash
+ls -la scrapper-alexis/.env
+# Should show: -rw-rw-rw- (666 permissions)
+```
+
+**Note:** This issue typically occurs after updates when the `.env` file ownership/permissions are reset. The web application needs write access to update configuration settings through the web interface.
+
+### Scraper/Browser Launch Failures
+
+**Error:** "Error: no DISPLAY environment variable specified" or "Target page, context or browser has been closed"
+
+**Symptoms:**
+- Facebook scraper fails to launch
+- Browser won't start in container
+- Error mentions "XServer" or "headless: true"
+
+**Cause:** `HEADLESS=false` in `.env` file tries to launch GUI browser in Docker environment.
+
+**Solution:**
+```bash
+cd /home/alexis-scrapper-portable  # or your installation directory
+
+# Fix HEADLESS setting
+sed -i 's/HEADLESS=false/HEADLESS=true/g' scrapper-alexis/.env
+
+# Restart scraper container
+docker compose restart scraper
+```
+
+**Verify the fix:**
+```bash
+grep "HEADLESS" scrapper-alexis/.env
+# Should show: HEADLESS=true
+
+# Test scraper
+docker exec scraper-alexis-scraper timeout 10 python3 /app/relay_agent.py
+# Should show: "Firefox launched (headless=True)"
+```
+
+**Note:** This issue commonly occurs after updates when old `.env` settings are preserved. Docker containers require headless mode for browser automation.
+
+### Twitter Posting Failures with Unicode Characters
+
+**Error:** "Could not read textarea value" or "Text was not entered" when posting to Twitter
+
+**Symptoms:**
+- Authentication works fine
+- Profile extraction succeeds
+- Posting fails with timeout errors
+- Affected messages contain fancy Unicode (𝑵, ღ, etc.)
+
+**Cause:** Twitter's textarea cannot accept certain Unicode characters via Playwright automation.
+
+**Solution:**
+```bash
+# Option 1: Delete the problematic message
+docker exec scraper-alexis-scraper sqlite3 /app/data/scraper.db \
+  "DELETE FROM messages WHERE id = [MESSAGE_ID];"
+
+# Option 2: Find messages with problematic Unicode
+docker exec scraper-alexis-scraper sqlite3 /app/data/scraper.db \
+  "SELECT id, substr(message_text, 1, 50) FROM messages 
+   WHERE message_text GLOB '*[𝑨-𝒛]*' OR message_text GLOB '*ღ*' 
+   AND posted_to_twitter = 0;"
+
+# Option 3: Mark as posted to skip them
+docker exec scraper-alexis-scraper sqlite3 /app/data/scraper.db \
+  "UPDATE messages SET posted_to_twitter = 1 WHERE id = [MESSAGE_ID];"
+```
+
+**Test with normal message:**
+```bash
+docker exec scraper-alexis-scraper bash /app/run_twitter_flow.sh
+# Should successfully post a message with ASCII/normal Spanish text
+```
+
+**Note:** Normal ASCII text and standard Spanish characters work fine. The issue only affects fancy Unicode decorative characters. The script will automatically skip to the next message after failures.
+
 ---
 
 ## 🔄 Maintenance Commands
@@ -438,6 +529,24 @@ docker compose down
 cd /var/www/alexis-scrapper-docker
 git pull
 docker compose up -d --build
+```
+
+**⚠️ Important after updates:**
+```bash
+# Fix .env permissions for web interface settings management
+chmod 666 scrapper-alexis/.env
+
+# Ensure HEADLESS mode is enabled for Docker
+sed -i 's/HEADLESS=false/HEADLESS=true/g' scrapper-alexis/.env
+
+# Restart containers
+docker compose restart
+
+# Verify containers are healthy
+docker ps
+
+# Check if HEADLESS is correctly set
+grep "HEADLESS" scrapper-alexis/.env
 ```
 
 ### Backup Database
@@ -520,6 +629,9 @@ docker exec scraper-alexis-scraper python3 /app/relay_agent.py
 - **"Database locked"**: Restart containers → `docker compose restart`
 - **Facebook login failing**: Update credentials in Settings
 - **Images not generating**: Check disk space and permissions on `images/` folder
+- **"Error al guardar configuración"**: Settings not saving → Fix `.env` permissions with `chmod 666 scrapper-alexis/.env`
+- **"no DISPLAY environment variable"**: Browser won't launch → Set `HEADLESS=true` in `.env` and restart container
+- **"Could not read textarea value"**: Twitter posting fails → Delete messages with fancy Unicode characters
 
 ### Debug Mode
 
