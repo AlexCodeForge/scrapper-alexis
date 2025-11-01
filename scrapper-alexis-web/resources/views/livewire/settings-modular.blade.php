@@ -173,11 +173,11 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-foreground mb-2">Mínimo (minutos)</label>
-                                <input type="number" wire:model="pageIntervalMin" min="10" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                <input type="number" wire:model="pageIntervalMin" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-foreground mb-2">Máximo (minutos)</label>
-                                <input type="number" wire:model="pageIntervalMax" min="10" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                <input type="number" wire:model="pageIntervalMax" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
                             </div>
                         </div>
 

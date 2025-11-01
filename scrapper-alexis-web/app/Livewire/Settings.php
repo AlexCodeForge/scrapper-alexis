@@ -448,7 +448,12 @@ class Settings extends Component
 
     public function savePagePostingSettings()
     {
-        \Log::info('Settings: savePagePostingSettings called', ['page_name' => $this->pageName, 'enabled' => $this->pagePostingEnabled]);
+        \Log::info('Settings: savePagePostingSettings called', [
+            'page_name' => $this->pageName,
+            'enabled' => $this->pagePostingEnabled,
+            'interval_min' => $this->pageIntervalMin,
+            'interval_max' => $this->pageIntervalMax
+        ]);
 
         // Small delay to ensure loading modal is visible to users
         usleep(300000); // 300ms
@@ -456,8 +461,8 @@ class Settings extends Component
         $this->validate([
             'pageName' => 'required|string|max:255',
             'pageUrl' => 'required|url:http,https|max:500',
-            'pageIntervalMin' => 'required|integer|min:10|max:1440',
-            'pageIntervalMax' => 'required|integer|min:10|max:1440|gte:pageIntervalMin',
+            'pageIntervalMin' => 'required|integer|min:1|max:1440',
+            'pageIntervalMax' => 'required|integer|min:1|max:1440|gte:pageIntervalMin',
             'cleanupDays' => 'required|integer|min:1|max:365',
         ]);
 
