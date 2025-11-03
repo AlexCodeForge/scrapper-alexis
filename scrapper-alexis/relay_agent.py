@@ -53,8 +53,9 @@ def main():
     os.environ['ACCESSIBILITY_ENABLED'] = '0'
     
     # Initialize debug session for this run (creates per-run folder)
+    # Debug is controlled via database settings at http://213.199.33.207:8006/settings
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    debug_session = DebugSession(f"multi_profile_scraper_{timestamp}")
+    debug_session = DebugSession(f"multi_profile_scraper_{timestamp}", script_type="facebook")
     
     try:
         # Initialize database
@@ -281,6 +282,14 @@ def main():
                         if i < len(profiles):  # Don't wait after the last profile
                             logger.info("⏳ Waiting 30 seconds before next profile...")
                             page.wait_for_timeout(30000)
+                    
+                    except NavigationError as e:
+                        logger.error(f"❌ Navigation error for profile {profile['username']}: {e}")
+                        logger.error(f"   🔗 Profile URL: {profile['url']}")
+                        logger.error(f"   ⚠️  This share URL may be invalid or inaccessible")
+                        logger.error(f"   💡 Check the URL at {profile['url']} in your browser")
+                        logger.error(f"   ⏭️  Skipping to next profile...")
+                        continue
                     
                     except Exception as e:
                         logger.error(f"❌ Error scraping profile {profile['username']}: {e}")

@@ -168,8 +168,9 @@
                             <div x-show="open"
                                  @click.away="open = false"
                                  x-transition
-                                 class="absolute z-10 mt-2 w-64 bg-white rounded-md shadow-lg border">
-                                <div class="py-1 max-h-64 overflow-y-auto">
+                                 class="absolute z-10 mt-2 w-64 bg-white rounded-md shadow-lg border"
+                                 style="max-height: 16rem; overflow-y: auto;">
+                                <div class="py-1">
                                     @foreach($manualLogs as $log)
                                         <button wire:click="selectManualLog('{{ $log['name'] }}')"
                                                 @click="open = false"

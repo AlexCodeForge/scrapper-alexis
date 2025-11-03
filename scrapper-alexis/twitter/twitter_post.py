@@ -838,9 +838,6 @@ def main():
     os.chdir(project_root)
     
     try:
-        from dotenv import load_dotenv
-        load_dotenv('copy.env')
-        
         # Force the correct database path
         import os
         os.environ['DATABASE_PATH'] = 'data/scraper.db'

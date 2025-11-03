@@ -32,6 +32,11 @@ class Settings extends Component
     public $proxyUsername = '';
     public $proxyPassword = '';
 
+    // Debug Output Settings (per script)
+    public $facebookDebugEnabled = false;
+    public $twitterDebugEnabled = false;
+    public $pagePostingDebugEnabled = false;
+
     // Facebook Page Posting Settings
     public $pageName = '';
     public $pageUrl = '';
@@ -91,9 +96,17 @@ class Settings extends Component
         $this->proxyUsername = $settings->proxy_username ?? '';
         $this->proxyPassword = $settings->proxy_password ?? '';
 
+        // Load debug settings
+        $this->facebookDebugEnabled = $settings->facebook_debug_enabled ?? false;
+        $this->twitterDebugEnabled = $settings->twitter_debug_enabled ?? false;
+        $this->pagePostingDebugEnabled = $settings->page_posting_debug_enabled ?? false;
+
         \Log::info('Settings: Loaded from database', [
             'facebook_enabled' => $this->facebookEnabled,
-            'twitter_enabled' => $this->twitterEnabled
+            'twitter_enabled' => $this->twitterEnabled,
+            'facebook_debug' => $this->facebookDebugEnabled,
+            'twitter_debug' => $this->twitterDebugEnabled,
+            'page_posting_debug' => $this->pagePostingDebugEnabled
         ]);
     }
 
@@ -156,6 +169,62 @@ class Settings extends Component
         session()->flash('success', '✓ Twitter poster ' . ($this->twitterEnabled ? 'activado' : 'desactivado'));
     }
 
+    public function toggleFacebookDebug()
+    {
+        $this->facebookDebugEnabled = !$this->facebookDebugEnabled;
+
+        // Update database
+        $result = ScraperSettings::updateSettings([
+            'facebook_debug_enabled' => $this->facebookDebugEnabled
+        ]);
+
+        if (!$result) {
+            session()->flash('error', 'Error: No se pudo actualizar el debug de Facebook.');
+            $this->facebookDebugEnabled = !$this->facebookDebugEnabled; // Revert
+            return;
+        }
+
+        \Log::info('Settings: Facebook debug toggled', ['enabled' => $this->facebookDebugEnabled]);
+        session()->flash('success', '✓ Debug de Facebook ' . ($this->facebookDebugEnabled ? 'activado' : 'desactivado'));
+    }
+
+    public function toggleTwitterDebug()
+    {
+        $this->twitterDebugEnabled = !$this->twitterDebugEnabled;
+
+        // Update database
+        $result = ScraperSettings::updateSettings([
+            'twitter_debug_enabled' => $this->twitterDebugEnabled
+        ]);
+
+        if (!$result) {
+            session()->flash('error', 'Error: No se pudo actualizar el debug de Twitter.');
+            $this->twitterDebugEnabled = !$this->twitterDebugEnabled; // Revert
+            return;
+        }
+
+        \Log::info('Settings: Twitter debug toggled', ['enabled' => $this->twitterDebugEnabled]);
+        session()->flash('success', '✓ Debug de Twitter ' . ($this->twitterDebugEnabled ? 'activado' : 'desactivado'));
+    }
+
+    public function togglePagePostingDebug()
+    {
+        $this->pagePostingDebugEnabled = !$this->pagePostingDebugEnabled;
+
+        // Update database
+        $result = ScraperSettings::updateSettings([
+            'page_posting_debug_enabled' => $this->pagePostingDebugEnabled
+        ]);
+
+        if (!$result) {
+            session()->flash('error', 'Error: No se pudo actualizar el debug de Page Posting.');
+            $this->pagePostingDebugEnabled = !$this->pagePostingDebugEnabled; // Revert
+            return;
+        }
+
+        \Log::info('Settings: Page posting debug toggled', ['enabled' => $this->pagePostingDebugEnabled]);
+        session()->flash('success', '✓ Debug de Page Posting ' . ($this->pagePostingDebugEnabled ? 'activado' : 'desactivado'));
+    }
 
     public function saveSettings()
     {

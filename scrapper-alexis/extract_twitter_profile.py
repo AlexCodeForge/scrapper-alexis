@@ -16,9 +16,6 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from dotenv import load_dotenv
-load_dotenv('copy.env')
-
 import config
 import logging
 

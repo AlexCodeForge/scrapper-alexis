@@ -429,7 +429,8 @@ def main():
     debug_session = None
     if args.debug:
         if DEBUG_HELPER_AVAILABLE:
-            debug_session = DebugSession("twitter_screenshots")
+            # Debug is controlled via database settings at http://213.199.33.207:8006/settings
+            debug_session = DebugSession("twitter_screenshots", script_type="twitter")
             logger = debug_session.logger
         else:
             logging.basicConfig(level=logging.DEBUG)

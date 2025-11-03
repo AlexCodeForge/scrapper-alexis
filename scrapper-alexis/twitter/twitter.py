@@ -101,9 +101,10 @@ def main():
     args = parser.parse_args()
     
     # Initialize debug session if requested
+    # Debug is controlled via database settings at http://213.199.33.207:8006/settings
     debug_session = None
     if args.debug:
-        debug_session = DebugSession("twitter_simple")
+        debug_session = DebugSession("twitter_simple", script_type="twitter")
         logger = debug_session.logger
     else:
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

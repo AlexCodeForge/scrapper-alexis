@@ -20,6 +20,94 @@ from core.message_deduplicator import get_message_deduplicator, MessageQualityFi
 logger = logging.getLogger(__name__)
 
 
+def _validate_page_after_navigation(page: Page, original_url: str, final_url: str) -> bool:
+    """
+    Validate that we landed on a valid Facebook profile/group page after navigation.
+    
+    Facebook share URLs redirect, but sometimes to invalid/inaccessible pages.
+    This function checks for common error indicators.
+    
+    Args:
+        page: Playwright Page instance
+        original_url: The URL we attempted to navigate to
+        final_url: The URL we actually landed on after redirects
+        
+    Returns:
+        True if the page is valid, False if it's an error/login/invalid page
+    """
+    try:
+        logger.info("Validating page after navigation...")
+        
+        # Wait a moment for page to render
+        page.wait_for_timeout(2000)
+        
+        # Check 1: Are we on a login page? (shouldn't happen if already logged in)
+        if '/login' in final_url.lower() or 'login.php' in final_url.lower():
+            logger.error("Validation FAILED: Redirected to login page")
+            return False
+        
+        # Check 2: Check page title for error indicators
+        try:
+            title = page.title()
+            if not title or title == "Facebook" or "error" in title.lower():
+                logger.warning(f"Suspicious page title: '{title}'")
+                # Continue checking other indicators
+        except:
+            pass
+        
+        # Check 3: Look for "Page Not Found" or error messages
+        error_indicators = [
+            'text=Página no disponible',
+            'text=Page Not Found',
+            'text=This content isn\'t available',
+            'text=Este contenido no está disponible',
+            'text=Sorry, this page isn\'t available',
+            'text=Lo sentimos, esta página no está disponible'
+        ]
+        
+        for indicator in error_indicators:
+            try:
+                error_elem = page.locator(indicator).first
+                if error_elem.is_visible(timeout=1000):
+                    logger.error(f"Validation FAILED: Found error indicator: {indicator}")
+                    return False
+            except:
+                pass  # Indicator not found, which is good
+        
+        # Check 4: Look for actual content (messages, posts, etc.)
+        # If we can find ANY div with text content, the page probably has data
+        try:
+            # Look for message containers
+            message_indicators = [
+                'div[dir="auto"]',  # Primary message selector
+                'article',  # Post containers
+                '[role="feed"]',  # Feed container
+                '[role="main"]'  # Main content area
+            ]
+            
+            for indicator in message_indicators:
+                try:
+                    elem = page.locator(indicator).first
+                    if elem.is_visible(timeout=2000):
+                        logger.info(f"✅ Validation PASSED: Found content indicator: {indicator}")
+                        return True
+                except:
+                    continue
+            
+            # If we got here, couldn't find any content indicators
+            logger.warning("No content indicators found, but no explicit errors either")
+            logger.warning("Assuming page is valid (may be empty group/profile)")
+            return True  # Be lenient - maybe it's just an empty profile
+            
+        except Exception as e:
+            logger.warning(f"Content check failed: {e}")
+            return True  # Be lenient
+        
+    except Exception as e:
+        logger.error(f"Page validation error: {e}")
+        return False  # Fail safe
+
+
 def navigate_to_message(page: Page, url: str, max_retries: int = 3) -> bool:
     """
     Navigate to Facebook message URL with retry logic.
@@ -51,13 +139,26 @@ def navigate_to_message(page: Page, url: str, max_retries: int = 3) -> bool:
             )
             
             logger.info(f"[OK] Navigation successful (attempt {attempt + 1})")
-            logger.info(f"Final URL: {page.url}")
+            final_url = page.url
+            logger.info(f"Final URL: {final_url}")
             
-            # DEBUG: Screenshot after navigation
-            take_debug_screenshot(page, "07_after_navigation", "navigation", f"Navigated to target")
-            log_page_state(page, "After navigation to target URL", "navigation")
-            
-            return True
+            # BUGFIX: Validate that we didn't land on an error/login page after redirect
+            # Facebook share URLs redirect, but sometimes to invalid pages
+            if _validate_page_after_navigation(page, url, final_url):
+                # DEBUG: Screenshot after navigation
+                take_debug_screenshot(page, "07_after_navigation", "navigation", f"Navigated to target")
+                log_page_state(page, "After navigation to target URL", "navigation")
+                return True
+            else:
+                # Invalid page after redirect - this profile URL is broken
+                logger.error(f"❌ Redirect validation failed!")
+                logger.error(f"   Original URL: {url}")
+                logger.error(f"   Final URL: {final_url}")
+                logger.error(f"   This share URL redirects to an invalid/inaccessible page")
+                take_debug_screenshot(page, "ERROR_invalid_redirect", "errors", "Invalid page after redirect")
+                raise NavigationError(
+                    f"Share URL redirected to invalid page. Original: {url}, Final: {final_url}"
+                )
             
         except PlaywrightTimeoutError as e:
             if attempt < max_retries - 1:

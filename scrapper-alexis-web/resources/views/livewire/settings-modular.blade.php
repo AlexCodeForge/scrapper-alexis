@@ -181,6 +181,24 @@
                             </div>
                         </div>
 
+                        <!-- Page Posting Debug Toggle -->
+                        <div class="border-t border-border pt-6">
+                            <div class="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
+                                <div>
+                                    <h4 class="font-semibold text-foreground flex items-center gap-2">
+                                        <x-lucide-bug class="h-5 w-5 text-orange-600" />
+                                        Debug Output
+                                    </h4>
+                                    <p class="text-sm text-muted-foreground mt-1">{{ $pagePostingDebugEnabled ? 'Activado - Screenshots y logs habilitados' : 'Desactivado - Sin screenshots' }}</p>
+                                </div>
+                                <button type="button" wire:click="togglePagePostingDebug"
+                                        style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $pagePostingDebugEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                        class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                    <span style="position: absolute; top: 3px; {{ $pagePostingDebugEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Auto-cleanup Section -->
                         <div class="border-t border-border pt-6">
                             <div class="flex items-center justify-between mb-4">
@@ -386,6 +404,24 @@
                             @endif
                         </div>
 
+                        <!-- Facebook Debug Toggle -->
+                        <div class="border-t border-border pt-6">
+                            <div class="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
+                                <div>
+                                    <h4 class="font-semibold text-foreground flex items-center gap-2">
+                                        <x-lucide-bug class="h-5 w-5 text-orange-600" />
+                                        Debug Output
+                                    </h4>
+                                    <p class="text-sm text-muted-foreground mt-1">{{ $facebookDebugEnabled ? 'Activado - Screenshots y logs habilitados' : 'Desactivado - Sin screenshots' }}</p>
+                                </div>
+                                <button type="button" wire:click="toggleFacebookDebug"
+                                        style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $facebookDebugEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                        class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                    <span style="position: absolute; top: 3px; {{ $facebookDebugEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Facebook Auth Section -->
                         <div class="border-t border-border pt-6">
                             <h4 class="font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -494,6 +530,24 @@
                                     </div>
                                 </div>
                                 <input type="checkbox" wire:model.live="twitterVerified" class="h-5 w-5 rounded text-primary focus:ring-primary cursor-pointer" />
+                            </div>
+                        </div>
+
+                        <!-- Twitter Debug Toggle -->
+                        <div class="border-t border-border pt-6">
+                            <div class="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
+                                <div>
+                                    <h4 class="font-semibold text-foreground flex items-center gap-2">
+                                        <x-lucide-bug class="h-5 w-5 text-orange-600" />
+                                        Debug Output
+                                    </h4>
+                                    <p class="text-sm text-muted-foreground mt-1">{{ $twitterDebugEnabled ? 'Activado - Screenshots y logs habilitados' : 'Desactivado - Sin screenshots' }}</p>
+                                </div>
+                                <button type="button" wire:click="toggleTwitterDebug"
+                                        style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $twitterDebugEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                        class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                    <span style="position: absolute; top: 3px; {{ $twitterDebugEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                </button>
                             </div>
                         </div>
 

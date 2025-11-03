@@ -14,6 +14,7 @@ class ScraperSettings extends Model
         'facebook_email',
         'facebook_password',
         'facebook_profiles',
+        'facebook_debug_enabled',
         'twitter_enabled',
         'twitter_interval_min',
         'twitter_interval_max',
@@ -23,19 +24,24 @@ class ScraperSettings extends Model
         'twitter_username',
         'twitter_avatar_url',
         'twitter_verified',
+        'twitter_debug_enabled',
         'proxy_server',
         'proxy_username',
         'proxy_password',
+        'page_posting_debug_enabled',
     ];
 
     protected $casts = [
         'facebook_enabled' => 'boolean',
         'facebook_interval_min' => 'integer',
         'facebook_interval_max' => 'integer',
+        'facebook_debug_enabled' => 'boolean',
         'twitter_enabled' => 'boolean',
         'twitter_interval_min' => 'integer',
         'twitter_interval_max' => 'integer',
         'twitter_verified' => 'boolean',
+        'twitter_debug_enabled' => 'boolean',
+        'page_posting_debug_enabled' => 'boolean',
     ];
 
     /**

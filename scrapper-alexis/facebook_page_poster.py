@@ -11,9 +11,6 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from dotenv import load_dotenv
-load_dotenv('copy.env')
-
 import logging
 from datetime import datetime
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
@@ -583,8 +580,9 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
 
 def main():
     """Main execution function."""
+    # Debug is controlled via database settings at http://213.199.33.207:8006/settings
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    debug_session = DebugSession(f"page_poster_{timestamp}")
+    debug_session = DebugSession(f"page_poster_{timestamp}", script_type="page_posting")
     
     try:
         logger.info("="*70)

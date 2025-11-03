@@ -30,42 +30,36 @@ class ProfileManager:
     
     def parse_profiles_from_env(self) -> Dict:
         """
-        Parse Facebook profiles from environment variables.
+        Parse Facebook profiles from database via config module.
         
         Returns:
             Dictionary containing parsed credentials and Facebook group URLs
         """
-        logger.info("Parsing profiles from environment variables")
+        logger.info("Loading profiles from database via config module")
         
-        # ALWAYS reload from .env file to avoid web app overrides
-        from dotenv import load_dotenv
-        import os
-        load_dotenv(override=True)  # Force reload from .env file
-        
-        # Get profiles directly from environment (freshly loaded)
-        raw_profiles = os.getenv('FACEBOOK_PROFILES', '')
-        profile_urls = [url.strip() for url in raw_profiles.split(',') if url.strip()]
+        # Use config module which loads from database (no .env fallback)
+        profile_urls = config.FACEBOOK_PROFILES
         
         if not profile_urls:
-            logger.error("No Facebook profiles found in FACEBOOK_PROFILES environment variable")
+            logger.error("No Facebook profiles found in database")
             return {}
         
-        logger.info(f"Found {len(profile_urls)} Facebook profiles in environment")
+        logger.info(f"Found {len(profile_urls)} Facebook profiles from database")
         
-        # Get Facebook credentials directly from freshly loaded environment
+        # Get Facebook credentials from config (loaded from database)
         facebook_credentials = {
-            'username': os.getenv('FACEBOOK_EMAIL'),
-            'password': os.getenv('FACEBOOK_PASSWORD')
+            'username': config.FACEBOOK_EMAIL,
+            'password': config.FACEBOOK_PASSWORD
         }
         
-        # Get Twitter credentials directly from freshly loaded environment  
+        # Get Twitter credentials from config (loaded from database)  
         twitter_credentials = {
-            'username': os.getenv('X_EMAIL'),
-            'password': os.getenv('X_PASSWORD')
+            'username': config.X_EMAIL,
+            'password': config.X_PASSWORD
         }
         
         if not facebook_credentials['username'] or not facebook_credentials['password']:
-            logger.error("Facebook credentials not found in environment variables")
+            logger.error("Facebook credentials not found in database")
             return {}
         
         logger.info("Found Facebook credentials")

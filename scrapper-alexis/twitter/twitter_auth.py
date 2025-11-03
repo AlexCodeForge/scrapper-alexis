@@ -339,9 +339,6 @@ if __name__ == "__main__":
     # Setup paths
     sys.path.insert(0, str(Path(__file__).parent.parent))
     
-    from dotenv import load_dotenv
-    load_dotenv('copy.env')
-    
     import config
     from playwright.sync_api import sync_playwright
     

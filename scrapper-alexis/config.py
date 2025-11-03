@@ -100,6 +100,11 @@ try:
     TWITTER_INTERVAL_MIN = int(_db_settings.get('twitter_interval_min', 8))
     TWITTER_INTERVAL_MAX = int(_db_settings.get('twitter_interval_max', 60))
     
+    # Debug output settings (per script type)
+    FACEBOOK_DEBUG_ENABLED = bool(_db_settings.get('facebook_debug_enabled', False))
+    TWITTER_DEBUG_ENABLED = bool(_db_settings.get('twitter_debug_enabled', False))
+    PAGE_POSTING_DEBUG_ENABLED = bool(_db_settings.get('page_posting_debug_enabled', False))
+    
 except Exception as e:
     import logging
     logging.critical("="*70)
@@ -113,6 +118,33 @@ except Exception as e:
 
 # Target URL (still from .env - not a dynamic setting)
 FACEBOOK_MESSAGE_URL = os.getenv('FACEBOOK_MESSAGE_URL')
+
+def get_debug_enabled(script_type: str = 'facebook') -> bool:
+    """
+    Get debug enabled status for a specific script type.
+    
+    Args:
+        script_type: One of 'facebook', 'twitter', 'page_posting'
+        
+    Returns:
+        bool: True if debug is enabled for this script type
+    """
+    try:
+        # Reload settings from database to get latest value
+        settings = get_settings_from_db()
+        
+        if script_type == 'facebook':
+            return bool(settings.get('facebook_debug_enabled', False))
+        elif script_type == 'twitter':
+            return bool(settings.get('twitter_debug_enabled', False))
+        elif script_type == 'page_posting':
+            return bool(settings.get('page_posting_debug_enabled', False))
+        else:
+            return False
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to get debug setting for {script_type}: {e}")
+        return False
 
 # Browser Configuration (static)
 HEADLESS = os.getenv('HEADLESS', 'false').lower() == 'true'

@@ -1,4 +1,13 @@
-"""Debug helper for tracking script execution with screenshots."""
+"""Debug helper for tracking script execution with screenshots.
+
+Debug output is now controlled per-script via database settings.
+Configure at http://213.199.33.207:8006/settings
+
+Supported script types:
+- 'facebook': Facebook scraper debug
+- 'twitter': Twitter poster debug
+- 'page_posting': Page posting debug
+"""
 import logging
 import os
 from pathlib import Path
@@ -11,12 +20,11 @@ if TYPE_CHECKING:
 # Global variables for current run
 _current_run_dir: Optional[Path] = None
 _run_logger: Optional[logging.Logger] = None
-_debug_enabled: bool = os.getenv('DEBUG_OUTPUT_ENABLED', 'false').lower() in ('true', '1', 'yes')
+_debug_enabled: bool = False  # Will be set dynamically per script
+_script_type: str = 'unknown'  # Track which script type is running
 
-# Base debug directory (only create if debug is enabled)
+# Base debug directory (created only when debug is enabled)
 BASE_DEBUG_DIR = Path('debug_output')
-if _debug_enabled:
-    BASE_DEBUG_DIR.mkdir(exist_ok=True)
 
 
 class NoOpDebugSession:
@@ -42,15 +50,30 @@ class NoOpDebugSession:
 
 
 class DebugSession:
-    """Manages a debug session with organized folders per run."""
+    """Manages a debug session with organized folders per run.
     
-    def __new__(cls, session_name: str = ""):
+    Debug is controlled per-script via database settings.
+    """
+    
+    def __new__(cls, session_name: str = "", script_type: str = "facebook"):
         """
-        Create a DebugSession or NoOpDebugSession based on environment variable.
+        Create a DebugSession or NoOpDebugSession based on database settings.
         
         Args:
             session_name: Optional name for the session (default: timestamp)
+            script_type: Script type ('facebook', 'twitter', 'page_posting')
         """
+        global _debug_enabled, _script_type
+        
+        # Check debug status from database
+        try:
+            from config import get_debug_enabled
+            _debug_enabled = get_debug_enabled(script_type)
+            _script_type = script_type
+        except Exception as e:
+            logging.error(f"Failed to get debug setting from database: {e}")
+            _debug_enabled = False
+        
         if not _debug_enabled:
             # Return a no-op session if debug is disabled
             return NoOpDebugSession(session_name)
@@ -59,16 +82,20 @@ class DebugSession:
         instance = super().__new__(cls)
         return instance
     
-    def __init__(self, session_name: str = ""):
+    def __init__(self, session_name: str = "", script_type: str = "facebook"):
         """
         Initialize a debug session.
         
         Args:
             session_name: Optional name for the session (default: timestamp)
+            script_type: Script type ('facebook', 'twitter', 'page_posting')
         """
         # Skip initialization if this is a NoOpDebugSession
         if isinstance(self, NoOpDebugSession):
             return
+        
+        # Create base debug directory if it doesn't exist
+        BASE_DEBUG_DIR.mkdir(exist_ok=True)
         
         # Create unique run directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
