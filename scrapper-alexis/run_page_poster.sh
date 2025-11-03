@@ -3,7 +3,10 @@
 # Posts approved images to Facebook page
 # CRITICAL: Uses xvfb-run to prevent VPS crashes
 
-cd /app
+cd /var/www/alexis-scrapper-docker/scrapper-alexis
+
+# Activate virtual environment
+source venv/bin/activate
 
 # Load environment variables
 if [ -f .env ]; then
@@ -15,10 +18,24 @@ fi
 # Helper function to get settings from database
 get_setting() {
     local key=$1
-    local db_path="/app/data/scraper.db"
     
-    if [ ! -f "$db_path" ]; then
-        echo "[ERROR] Database not found at $db_path" >> logs/page_poster_$(date +%Y%m%d).log
+    # Try multiple possible database paths
+    local possible_paths=(
+        "/var/www/scrapper-alexis/data/scraper.db"
+        "/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db"
+        "data/scraper.db"
+    )
+    
+    local db_path=""
+    for path in "${possible_paths[@]}"; do
+        if [ -f "$path" ]; then
+            db_path="$path"
+            break
+        fi
+    done
+    
+    if [ -z "$db_path" ]; then
+        echo "[ERROR] Database not found in any of: ${possible_paths[*]}" >> logs/page_poster_$(date +%Y%m%d).log
         echo ""
         return
     fi

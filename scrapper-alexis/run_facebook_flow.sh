@@ -3,7 +3,10 @@
 # Scrapes messages from configured Facebook profiles
 # CRITICAL: Uses xvfb-run to prevent VPS crashes (see VPS_CRASH_SOLUTION.md)
 
-cd /app
+cd /var/www/alexis-scrapper-docker/scrapper-alexis
+
+# Activate virtual environment
+source venv/bin/activate
 
 # Load environment variables (supports values with spaces)
 if [ -f .env ]; then
@@ -27,11 +30,6 @@ if [ ! -t 0 ] && [ -z "$SKIP_DELAY" ]; then
     sleep $RANDOM_DELAY
 else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Facebook manual run: Skipping random delay" >> logs/cron_execution.log
-fi
-
-# Activate virtual environment if it exists
-if [ -d "venv" ]; then
-    source venv/bin/activate
 fi
 
 # Run the Facebook scraper with Xvfb (virtual display)

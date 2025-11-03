@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\ScraperSettings;
 use App\Services\PostingService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -55,6 +56,47 @@ class Settings extends Component
         $this->checkAuthFiles();
     }
 
+    /**
+     * Load scraper settings from database (not .env anymore)
+     */
+    public function loadSettings()
+    {
+        $settings = ScraperSettings::getSettings();
+
+        $this->facebookIntervalMin = $settings->facebook_interval_min;
+        $this->facebookIntervalMax = $settings->facebook_interval_max;
+        $this->facebookEnabled = $settings->facebook_enabled;
+        $this->facebookEmail = $settings->facebook_email ?? '';
+        $this->facebookPassword = $settings->facebook_password ?? '';
+        
+        // Parse facebook_profiles (comma-separated or newline-separated)
+        if ($settings->facebook_profiles) {
+            $this->facebookProfiles = str_replace(',', "\n", $settings->facebook_profiles);
+            $this->facebookProfilesList = array_filter(
+                explode(',', str_replace("\n", ',', $settings->facebook_profiles))
+            );
+        }
+
+        $this->twitterIntervalMin = $settings->twitter_interval_min;
+        $this->twitterIntervalMax = $settings->twitter_interval_max;
+        $this->twitterEnabled = $settings->twitter_enabled;
+        $this->twitterEmail = $settings->twitter_email ?? '';
+        $this->twitterPassword = $settings->twitter_password ?? '';
+        $this->twitterDisplayName = $settings->twitter_display_name ?? '';
+        $this->twitterUsername = $settings->twitter_username ?? '';
+        $this->twitterAvatarUrl = $settings->twitter_avatar_url ?? '';
+        $this->twitterVerified = $settings->twitter_verified ?? false;
+
+        $this->proxyServer = $settings->proxy_server ?? '';
+        $this->proxyUsername = $settings->proxy_username ?? '';
+        $this->proxyPassword = $settings->proxy_password ?? '';
+
+        \Log::info('Settings: Loaded from database', [
+            'facebook_enabled' => $this->facebookEnabled,
+            'twitter_enabled' => $this->twitterEnabled
+        ]);
+    }
+
     public function loadPagePostingSettings()
     {
         $postingService = app(PostingService::class);
@@ -71,8 +113,8 @@ class Settings extends Component
 
     public function checkAuthFiles()
     {
-        $this->twitterAuthExists = file_exists('/app/auth/auth_x.json');
-        $this->facebookAuthExists = file_exists('/app/auth/auth_facebook.json');
+        $this->twitterAuthExists = file_exists('/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json');
+        $this->facebookAuthExists = file_exists('/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook.json');
     }
 
     // Bugfix: Explicit toggle methods (Livewire $toggle magic doesn't trigger updated* hooks)
@@ -80,128 +122,40 @@ class Settings extends Component
     {
         $this->facebookEnabled = !$this->facebookEnabled;
 
-        if (!updateEnvFile('FACEBOOK_SCRAPER_ENABLED', $this->facebookEnabled ? 'true' : 'false')) {
-            session()->flash('error', 'Error: No se pudo actualizar el estado del scraper de Facebook. Verifique los permisos del archivo .env.');
+        // Update database instead of .env file
+        $result = ScraperSettings::updateSettings([
+            'facebook_enabled' => $this->facebookEnabled
+        ]);
+
+        if (!$result) {
+            session()->flash('error', 'Error: No se pudo actualizar el estado del scraper de Facebook.');
             $this->facebookEnabled = !$this->facebookEnabled; // Revert
             return;
         }
 
-        updateCrontab(
-            $this->facebookIntervalMin,
-            $this->twitterIntervalMin,
-            $this->facebookEnabled,
-            $this->twitterEnabled
-        );
-
+        \Log::info('Settings: Facebook scraper toggled', ['enabled' => $this->facebookEnabled]);
         session()->flash('success', '✓ Facebook scraper ' . ($this->facebookEnabled ? 'activado' : 'desactivado'));
     }
 
     public function toggleTwitter()
     {
-        error_log("toggleTwitter: METHOD CALLED - START");
         $this->twitterEnabled = !$this->twitterEnabled;
-        error_log("toggleTwitter: twitterEnabled toggled to " . ($this->twitterEnabled ? 'true' : 'false'));
 
-        $result = updateEnvFile('TWITTER_POSTER_ENABLED', $this->twitterEnabled ? 'true' : 'false');
-        error_log("toggleTwitter: updateEnvFile returned: " . ($result ? 'true' : 'false'));
+        // Update database instead of .env file
+        $result = ScraperSettings::updateSettings([
+            'twitter_enabled' => $this->twitterEnabled
+        ]);
 
         if (!$result) {
-            error_log("toggleTwitter: Write FAILED - reverting state");
-            session()->flash('error', 'Error: No se pudo actualizar el estado del publicador de Twitter. Verifique los permisos del archivo .env.');
+            session()->flash('error', 'Error: No se pudo actualizar el estado del publicador de Twitter.');
             $this->twitterEnabled = !$this->twitterEnabled; // Revert
             return;
         }
 
-        error_log("toggleTwitter: Calling updateCrontab");
-        updateCrontab(
-            $this->facebookIntervalMin,
-            $this->twitterIntervalMin,
-            $this->facebookEnabled,
-            $this->twitterEnabled
-        );
-
-        error_log("toggleTwitter: SUCCESS - method complete");
+        \Log::info('Settings: Twitter poster toggled', ['enabled' => $this->twitterEnabled]);
         session()->flash('success', '✓ Twitter poster ' . ($this->twitterEnabled ? 'activado' : 'desactivado'));
     }
 
-    public function loadSettings()
-    {
-        // In Docker, scraper folder is mounted at /scraper
-        $envPath = '/scraper/.env';
-
-        if (file_exists($envPath)) {
-            $envContent = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
-            foreach ($envContent as $line) {
-                if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
-                    [$key, $value] = explode('=', $line, 2);
-                    $key = trim($key);
-                    $value = trim($value);
-
-                    switch ($key) {
-                        case 'FACEBOOK_INTERVAL_MIN':
-                            $this->facebookIntervalMin = (int) $value;
-                            break;
-                        case 'FACEBOOK_INTERVAL_MAX':
-                            $this->facebookIntervalMax = (int) $value;
-                            break;
-                        case 'TWITTER_INTERVAL_MIN':
-                            $this->twitterIntervalMin = (int) $value;
-                            break;
-                        case 'TWITTER_INTERVAL_MAX':
-                            $this->twitterIntervalMax = (int) $value;
-                            break;
-                        case 'FACEBOOK_SCRAPER_ENABLED':
-                            $this->facebookEnabled = filter_var($value, FILTER_VALIDATE_BOOLEAN);
-                            break;
-                        case 'TWITTER_POSTER_ENABLED':
-                            $this->twitterEnabled = filter_var($value, FILTER_VALIDATE_BOOLEAN);
-                            break;
-                        case 'FACEBOOK_EMAIL':
-                            $this->facebookEmail = $value;
-                            break;
-                        case 'FACEBOOK_PASSWORD':
-                            $this->facebookPassword = $value;
-                            break;
-                        case 'FACEBOOK_PROFILES':
-                            $this->facebookProfiles = str_replace(',', "\n", $value);
-                            // Convert to array for list display
-                            if (!empty($value)) {
-                                $this->facebookProfilesList = array_filter(explode(',', $value));
-                            }
-                            break;
-                        case 'X_EMAIL':
-                            $this->twitterEmail = $value;
-                            break;
-                        case 'X_PASSWORD':
-                            $this->twitterPassword = $value;
-                            break;
-                        case 'X_DISPLAY_NAME':
-                            $this->twitterDisplayName = $value;
-                            break;
-                        case 'X_USERNAME':
-                            $this->twitterUsername = $value;
-                            break;
-                        case 'X_AVATAR_URL':
-                            $this->twitterAvatarUrl = $value;
-                            break;
-                        case 'X_VERIFIED':
-                            $this->twitterVerified = filter_var($value, FILTER_VALIDATE_BOOLEAN);
-                            break;
-                        case 'PROXY_SERVER':
-                            $this->proxyServer = $value;
-                            break;
-                        case 'PROXY_USERNAME':
-                            $this->proxyUsername = $value;
-                            break;
-                        case 'PROXY_PASSWORD':
-                            $this->proxyPassword = $value;
-                            break;
-                    }
-                }
-            }
-        }
-    }
 
     public function saveSettings()
     {
@@ -215,52 +169,37 @@ class Settings extends Component
             'proxyServer' => 'required',
         ]);
 
-        // Update cron intervals and enabled status
-        $cronUpdated = updateCrontab(
-            $this->facebookIntervalMin,
-            $this->twitterIntervalMin,
-            $this->facebookEnabled,
-            $this->twitterEnabled
-        );
-
-        // Update environment variables
+        // Parse facebook_profiles (newline-separated to comma-separated)
         $profilesCommaSeparated = str_replace("\n", ',', trim($this->facebookProfiles));
 
-        $updates = [
-            'FACEBOOK_INTERVAL_MIN' => $this->facebookIntervalMin,
-            'FACEBOOK_INTERVAL_MAX' => $this->facebookIntervalMax,
-            'TWITTER_INTERVAL_MIN' => $this->twitterIntervalMin,
-            'TWITTER_INTERVAL_MAX' => $this->twitterIntervalMax,
-            'FACEBOOK_SCRAPER_ENABLED' => $this->facebookEnabled ? 'true' : 'false',
-            'TWITTER_POSTER_ENABLED' => $this->twitterEnabled ? 'true' : 'false',
-            'FACEBOOK_EMAIL' => $this->facebookEmail,
-            'FACEBOOK_PASSWORD' => $this->facebookPassword,
-            'FACEBOOK_PROFILES' => $profilesCommaSeparated,
-            'X_EMAIL' => $this->twitterEmail,
-            'X_PASSWORD' => $this->twitterPassword,
-            'X_DISPLAY_NAME' => $this->twitterDisplayName,
-            'X_USERNAME' => $this->twitterUsername,
-            'X_AVATAR_URL' => $this->twitterAvatarUrl,
-            'PROXY_SERVER' => $this->proxyServer,
-            'PROXY_USERNAME' => $this->proxyUsername,
-            'PROXY_PASSWORD' => $this->proxyPassword,
-        ];
+        // Update database instead of .env file
+        $result = ScraperSettings::updateSettings([
+            'facebook_interval_min' => $this->facebookIntervalMin,
+            'facebook_interval_max' => $this->facebookIntervalMax,
+            'facebook_enabled' => $this->facebookEnabled,
+            'facebook_email' => $this->facebookEmail,
+            'facebook_password' => $this->facebookPassword, // Encrypted by model
+            'facebook_profiles' => $profilesCommaSeparated,
+            'twitter_interval_min' => $this->twitterIntervalMin,
+            'twitter_interval_max' => $this->twitterIntervalMax,
+            'twitter_enabled' => $this->twitterEnabled,
+            'twitter_email' => $this->twitterEmail,
+            'twitter_password' => $this->twitterPassword, // Encrypted by model
+            'twitter_display_name' => $this->twitterDisplayName,
+            'twitter_username' => $this->twitterUsername,
+            'twitter_avatar_url' => $this->twitterAvatarUrl,
+            'twitter_verified' => $this->twitterVerified,
+            'proxy_server' => $this->proxyServer,
+            'proxy_username' => $this->proxyUsername,
+            'proxy_password' => $this->proxyPassword, // Encrypted by model
+        ]);
 
-        // Bugfix: Check for file write failures and report them to the user
-        $failedUpdates = [];
-        foreach ($updates as $key => $value) {
-            if (!updateEnvFile($key, $value)) {
-                $failedUpdates[] = $key;
-                \Log::error("Settings: Failed to update env key", ['key' => $key, 'value' => substr($value, 0, 50)]);
-            }
-        }
-
-        if (!empty($failedUpdates)) {
-            session()->flash('error', 'Error al guardar la configuración. No se pudieron actualizar: ' . implode(', ', $failedUpdates) . '. Verifique los permisos del archivo .env.');
-        } elseif ($cronUpdated) {
-            session()->flash('success', 'Configuración guardada y programación de cron actualizada exitosamente.');
+        if ($result) {
+            \Log::info('Settings: All settings saved to database successfully');
+            session()->flash('success', 'Configuración guardada exitosamente en la base de datos.');
         } else {
-            session()->flash('warning', 'Configuración guardada pero la actualización de cron falló. Es posible que deba actualizar crontab manualmente.');
+            \Log::error('Settings: Failed to save settings to database');
+            session()->flash('error', 'Error al guardar la configuración. Por favor, intente de nuevo.');
         }
     }
 
@@ -273,7 +212,7 @@ class Settings extends Component
         ]);
 
         try {
-            $authPath = '/app/auth/auth_x.json';
+            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json';
             $authDir = dirname($authPath);
 
             // Bugfix: Ensure the auth directory exists before saving files
@@ -296,7 +235,7 @@ class Settings extends Component
             }
 
             // Create empty session file (will be populated on first run)
-            $sessionPath = '/app/auth/auth_x_session.json';
+            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x_session.json';
             file_put_contents($sessionPath, json_encode([
                 'username' => '',
                 'display_name' => '',
@@ -333,8 +272,8 @@ class Settings extends Component
         \Log::info("deleteTwitterAuth: Method called");
 
         try {
-            $authPath = '/app/auth/auth_x.json';
-            $sessionPath = '/app/auth/auth_x_session.json';
+            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json';
+            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x_session.json';
 
             // Delete files
             if (file_exists($authPath)) {
@@ -366,7 +305,7 @@ class Settings extends Component
         ]);
 
         try {
-            $authPath = '/app/auth/auth_facebook.json';
+            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook.json';
             $authDir = dirname($authPath);
 
             // Bugfix: Ensure the auth directory exists before saving files
@@ -389,7 +328,7 @@ class Settings extends Component
             }
 
             // Create empty session file (will be populated on first run)
-            $sessionPath = '/app/auth/auth_facebook_session.json';
+            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook_session.json';
             file_put_contents($sessionPath, json_encode([
                 'session_storage' => []
             ], JSON_PRETTY_PRINT));
@@ -422,8 +361,8 @@ class Settings extends Component
         \Log::info("deleteFacebookAuth: Method called");
 
         try {
-            $authPath = '/app/auth/auth_facebook.json';
-            $sessionPath = '/app/auth/auth_facebook_session.json';
+            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook.json';
+            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook_session.json';
 
             // Delete files
             if (file_exists($authPath)) {
@@ -541,22 +480,20 @@ class Settings extends Component
 
         $profilesCommaSeparated = implode(',', $this->facebookProfilesList);
 
-        $updates = [
-            'FACEBOOK_EMAIL' => $this->facebookEmail,
-            'FACEBOOK_PASSWORD' => $this->facebookPassword,
-            'FACEBOOK_PROFILES' => $profilesCommaSeparated,
-        ];
+        // Update database instead of .env file
+        $result = ScraperSettings::updateSettings([
+            'facebook_email' => $this->facebookEmail,
+            'facebook_password' => $this->facebookPassword, // Encrypted by model
+            'facebook_profiles' => $profilesCommaSeparated,
+        ]);
 
-        foreach ($updates as $key => $value) {
-            if (!updateEnvFile($key, $value)) {
-                \Log::error('Settings: saveFacebookSettings failed', ['key' => $key]);
-                $this->dispatch('settings-error', message: 'Error al guardar configuración de Facebook');
-                return;
-            }
+        if ($result) {
+            \Log::info('Settings: saveFacebookSettings success');
+            $this->dispatch('settings-saved', message: 'Configuración de Facebook guardada correctamente');
+        } else {
+            \Log::error('Settings: saveFacebookSettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar configuración de Facebook');
         }
-
-        \Log::info('Settings: saveFacebookSettings success');
-        $this->dispatch('settings-saved', message: 'Configuración de Facebook guardada correctamente');
     }
 
     public function saveTwitterSettings()
@@ -566,24 +503,22 @@ class Settings extends Component
         // Small delay to ensure loading modal is visible to users
         usleep(300000); // 300ms
 
-        $updates = [
-            'X_EMAIL' => $this->twitterEmail,
-            'X_PASSWORD' => $this->twitterPassword,
-            'X_DISPLAY_NAME' => $this->twitterDisplayName,
-            'X_USERNAME' => $this->twitterUsername,
-            'X_VERIFIED' => $this->twitterVerified ? 'true' : 'false',
-        ];
+        // Update database instead of .env file
+        $result = ScraperSettings::updateSettings([
+            'twitter_email' => $this->twitterEmail,
+            'twitter_password' => $this->twitterPassword, // Encrypted by model
+            'twitter_display_name' => $this->twitterDisplayName,
+            'twitter_username' => $this->twitterUsername,
+            'twitter_verified' => $this->twitterVerified,
+        ]);
 
-        foreach ($updates as $key => $value) {
-            if (!updateEnvFile($key, $value)) {
-                \Log::error('Settings: saveTwitterSettings failed', ['key' => $key]);
-                $this->dispatch('settings-error', message: 'Error al guardar configuración de Twitter');
-                return;
-            }
+        if ($result) {
+            \Log::info('Settings: saveTwitterSettings success');
+            $this->dispatch('settings-saved', message: 'Configuración de Twitter guardada correctamente');
+        } else {
+            \Log::error('Settings: saveTwitterSettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar configuración de Twitter');
         }
-
-        \Log::info('Settings: saveTwitterSettings success');
-        $this->dispatch('settings-saved', message: 'Configuración de Twitter guardada correctamente');
     }
 
     public function saveCronSettings()
@@ -600,31 +535,21 @@ class Settings extends Component
             'twitterIntervalMax' => 'required|integer|min:1|max:1440|gte:twitterIntervalMin',
         ]);
 
-        $updates = [
-            'FACEBOOK_INTERVAL_MIN' => $this->facebookIntervalMin,
-            'FACEBOOK_INTERVAL_MAX' => $this->facebookIntervalMax,
-            'TWITTER_INTERVAL_MIN' => $this->twitterIntervalMin,
-            'TWITTER_INTERVAL_MAX' => $this->twitterIntervalMax,
-        ];
+        // Update database instead of .env file
+        $result = ScraperSettings::updateSettings([
+            'facebook_interval_min' => $this->facebookIntervalMin,
+            'facebook_interval_max' => $this->facebookIntervalMax,
+            'twitter_interval_min' => $this->twitterIntervalMin,
+            'twitter_interval_max' => $this->twitterIntervalMax,
+        ]);
 
-        foreach ($updates as $key => $value) {
-            if (!updateEnvFile($key, $value)) {
-                \Log::error('Settings: saveCronSettings failed', ['key' => $key]);
-                $this->dispatch('settings-error', message: 'Error al guardar intervalos de cron');
-                return;
-            }
+        if ($result) {
+            \Log::info('Settings: saveCronSettings success');
+            $this->dispatch('settings-saved', message: 'Configuración de cron guardada correctamente');
+        } else {
+            \Log::error('Settings: saveCronSettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar intervalos de cron');
         }
-
-        // Update crontab
-        updateCrontab(
-            $this->facebookIntervalMin,
-            $this->twitterIntervalMin,
-            $this->facebookEnabled,
-            $this->twitterEnabled
-        );
-
-        \Log::info('Settings: saveCronSettings success');
-        $this->dispatch('settings-saved', message: 'Configuración de cron guardada correctamente');
     }
 
     public function saveProxySettings()
@@ -634,22 +559,20 @@ class Settings extends Component
         // Small delay to ensure loading modal is visible to users
         usleep(300000); // 300ms
 
-        $updates = [
-            'PROXY_SERVER' => $this->proxyServer,
-            'PROXY_USERNAME' => $this->proxyUsername,
-            'PROXY_PASSWORD' => $this->proxyPassword,
-        ];
+        // Update database instead of .env file
+        $result = ScraperSettings::updateSettings([
+            'proxy_server' => $this->proxyServer,
+            'proxy_username' => $this->proxyUsername,
+            'proxy_password' => $this->proxyPassword, // Encrypted by model
+        ]);
 
-        foreach ($updates as $key => $value) {
-            if (!updateEnvFile($key, $value)) {
-                \Log::error('Settings: saveProxySettings failed', ['key' => $key]);
-                $this->dispatch('settings-error', message: 'Error al guardar configuración de proxy');
-                return;
-            }
+        if ($result) {
+            \Log::info('Settings: saveProxySettings success');
+            $this->dispatch('settings-saved', message: 'Configuración de proxy guardada correctamente');
+        } else {
+            \Log::error('Settings: saveProxySettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar configuración de proxy');
         }
-
-        \Log::info('Settings: saveProxySettings success');
-        $this->dispatch('settings-saved', message: 'Configuración de proxy guardada correctamente');
     }
 
     public function render()

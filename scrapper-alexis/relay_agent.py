@@ -1,12 +1,14 @@
 """Playwright Social Content Relay Agent - Main Script."""
 import logging
+import os
 from pathlib import Path
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
 
-# Load environment variables from copy.env
-load_dotenv('copy.env')
+# Load environment variables from .env
+# Note: We removed the dependency on copy.env as part of the migration to database-based configuration
+load_dotenv('.env')
 
 import config
 from core.exceptions import (
@@ -46,6 +48,10 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main execution function with multi-profile support."""
+    # Disable accessibility features at OS level for Firefox (fixes DBus timeout)
+    os.environ['NO_AT_BRIDGE'] = '1'
+    os.environ['ACCESSIBILITY_ENABLED'] = '0'
+    
     # Initialize debug session for this run (creates per-run folder)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     debug_session = DebugSession(f"multi_profile_scraper_{timestamp}")
@@ -87,16 +93,41 @@ def main():
             # Launch browser with crash-resistant options for VPS
             logger.info("\n=== Browser Launch ===")
             
-            # Use Firefox on Linux VPS (solves crash issues - see VPS_CRASH_SOLUTION.md)
-            use_firefox = True  # CRITICAL: Chromium crashes on VPS with complex pages!
+            # Use Firefox on Linux VPS (required for scraping to work properly)
+            use_firefox = True  # CRITICAL: Must use Firefox for proper functionality!
             
             if use_firefox:
                 logger.info("Launching Firefox (better stability for complex pages)...")
                 
-                # Build Firefox launch options
+                # Build Firefox launch options with server-optimized preferences
                 firefox_options = {
                     'headless': config.HEADLESS,
                     'slow_mo': config.SLOW_MO if not config.HEADLESS else 0,
+                    'firefox_user_prefs': {
+                        # Disable accessibility features (fixes DBus errors on servers)
+                        'accessibility.force_disabled': 1,
+                        'accessibility.handler.enabled': False,
+                        'accessibility.support.url': '',
+                        # Disable features that can hang Firefox
+                        'datareporting.policy.dataSubmissionEnabled': False,
+                        'datareporting.healthreport.uploadEnabled': False,
+                        'toolkit.telemetry.enabled': False,
+                        'toolkit.telemetry.unified': False,
+                        'toolkit.telemetry.archive.enabled': False,
+                        # Performance optimizations for server
+                        'browser.cache.disk.enable': False,
+                        'browser.cache.memory.enable': True,
+                        'browser.cache.offline.enable': False,
+                        'network.http.use-cache': False,
+                        # Disable unnecessary features
+                        'extensions.pocket.enabled': False,
+                        'browser.safebrowsing.downloads.enabled': False,
+                        'browser.safebrowsing.malware.enabled': False,
+                        'browser.safebrowsing.phishing.enabled': False,
+                        # Media settings
+                        'media.autoplay.default': 5,
+                        'media.autoplay.blocking_policy': 2,
+                    }
                 }
                 
                 # Add proxy configuration if available (CRITICAL!)
@@ -107,11 +138,11 @@ def main():
                     logger.warning("⚠️  No proxy configured - this may cause issues!")
                 
                 browser = p.firefox.launch(**firefox_options)
-                logger.info(f"Firefox launched (headless={config.HEADLESS})")
+                logger.info(f"Firefox launched (headless={config.HEADLESS}) with server-optimized preferences")
             else:
                 logger.info("Launching Chromium...")
                 
-                # Build launch options
+                # Build launch options with crashpad disabled for server stability
                 launch_options = {
                     'headless': config.HEADLESS,
                     'slow_mo': config.SLOW_MO if not config.HEADLESS else 0,
@@ -128,6 +159,8 @@ def main():
                         '--disable-sync',  # Disable sync
                         '--metrics-recording-only',  # Minimal metrics
                         '--mute-audio',  # No audio processing
+                        '--disable-crash-reporter',  # Disable crash reporter (fixes crashpad handler errors)
+                        '--crash-dumps-dir=/tmp',  # Set crash dumps directory
                     ]
                 }
                 

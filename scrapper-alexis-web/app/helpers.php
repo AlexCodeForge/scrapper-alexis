@@ -4,13 +4,15 @@ use App\Models\Message;
 use Illuminate\Support\Facades\File;
 
 /**
- * Update a key-value pair in the scraper's .env file
+ * DEPRECATED: Update a key-value pair in the scraper's .env file
+ * NOTE: This function is deprecated and should not be used.
+ * All dynamic settings should be stored in the database via ScraperSettings model.
  */
 function updateEnvFile(string $key, string $value): bool
 {
     error_log("updateEnvFile: CALLED with key={$key}, value={$value}");
-    // In Docker, scraper folder is mounted at /scraper
-    $envPath = '/scraper/.env';
+    // NOTE: Running on Nginx, not Docker
+    $envPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/.env';
 
     if (!file_exists($envPath)) {
         error_log("updateEnvFile: FILE NOT FOUND at {$envPath}");
@@ -84,23 +86,31 @@ function updateEnvFile(string $key, string $value): bool
 }
 
 /**
- * Update the crontab with new intervals and enabled/disabled status
- * In Docker, cron is managed by the scraper container's entrypoint
- * We just need to restart the scraper container to pick up .env changes
+ * DEPRECATED: Update the crontab with new intervals and enabled/disabled status
+ * NOTE: This function is deprecated. Cron jobs are now managed by Laravel Scheduler.
+ * All cron settings are stored in the database and checked dynamically.
+ * The scheduler runs via system crontab: * * * * * php artisan schedule:run
  */
 function updateCrontab(int $facebookIntervalMin, int $twitterIntervalMin, bool $facebookEnabled = true, bool $twitterEnabled = true): bool
 {
-    // In Docker environment, cron is managed by the scraper container
-    // The entrypoint script reads .env and sets up cron automatically
-    // We restart the scraper container to pick up changes
+    // NOTE: This function is deprecated
+    // Cron jobs are now managed by Laravel Scheduler in bootstrap/app.php
+    // Settings are stored in database and checked dynamically
 
     try {
         $output = [];
         $returnVar = 0;
 
-        // Restart the scraper container using docker restart (direct container name)
-        $command = 'docker restart scraper-alexis-scraper 2>&1';
-        exec($command, $output, $returnVar);
+        // DEPRECATED: This used to restart Docker container
+        // Now we just log a warning
+        \Log::warning('updateCrontab: Deprecated function called', [
+            'facebook_interval' => $facebookIntervalMin,
+            'twitter_interval' => $twitterIntervalMin,
+            'facebook_enabled' => $facebookEnabled,
+            'twitter_enabled' => $twitterEnabled
+        ]);
+        
+        return true; // Return true to avoid breaking existing code
 
         if ($returnVar === 0) {
             \Log::info('updateCrontab: Scraper container restarted successfully', ['output' => $output]);
@@ -202,105 +212,106 @@ function deleteImages(array $messageIds): int
  */
 function runScraperScript(string $script): array
 {
-    // In Docker, scripts run inside the scraper container at /app/
-    $scriptsMap = [
-        'facebook' => '/app/run_facebook_flow.sh',
-        'twitter' => '/app/run_twitter_flow.sh',
-        'images' => '/app/run_image_generation.sh',
-        'page_poster' => '/app/run_page_poster.sh',
+    // Map script names to Artisan commands (no Docker, running on Nginx)
+    $commandsMap = [
+        'facebook' => 'scraper:facebook',
+        'twitter' => 'scraper:twitter',
+        'page_poster' => 'scraper:page-poster',
     ];
 
-    if (!isset($scriptsMap[$script])) {
+    if (!isset($commandsMap[$script])) {
         return ['success' => false, 'message' => 'Invalid script name'];
     }
 
-    $scriptPath = $scriptsMap[$script];
+    $command = $commandsMap[$script];
 
-    // Create timestamped log file for this manual run (in scraper container)
+    // Create timestamped log file for this manual run
     $timestamp = date('YmdHis');
-    $logFile = "/app/logs/manual_{$script}_{$timestamp}.log";
+    $logDir = '/var/www/alexis-scrapper-docker/scrapper-alexis/logs';
+    $logFile = "{$logDir}/manual_{$script}_{$timestamp}.log";
 
-    // Execute script inside scraper container using docker exec
-    // SKIP_DELAY=1 ensures manual runs execute IMMEDIATELY without random delays
-    // MANUAL_RUN=1 signals to Python scripts this is a manual execution
-    // Run in background with output redirected to log file
-    // Note: We don't use escapeshellarg here because the paths are controlled by us
-    // and we need the environment variables to work properly in the bash -c context
-    $command = sprintf(
-        'docker exec -d -e SKIP_DELAY=1 -e MANUAL_RUN=1 scraper-alexis-scraper bash -c "%s > %s 2>&1"',
-        $scriptPath,
-        $logFile
-    );
+    // Ensure log directory exists
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
 
     // Log the command for debugging
-    \Log::info("Executing scraper command in Docker", [
+    \Log::info("Executing scraper command", [
         'command' => $command,
         'script' => $script,
-        'container' => 'scraper-alexis-scraper'
+        'log_file' => $logFile
     ]);
 
-    $output = [];
-    $returnVar = 0;
-    exec($command, $output, $returnVar);
+    try {
+        // Run Artisan command in background with --manual and --skip-delay flags
+        // This bypasses the enabled check and skips random delays for manual execution
+        $baseCommand = sprintf(
+            'cd /var/www/alexis-scrapper-docker/scrapper-alexis-web && php artisan %s --manual --skip-delay >> %s 2>&1 &',
+            escapeshellarg($command),
+            escapeshellarg($logFile)
+        );
+        
+        exec($baseCommand, $output, $returnVar);
 
-    \Log::info("Docker exec command executed", [
-        'return_code' => $returnVar,
-        'output' => $output
-    ]);
+        \Log::info("Manual script execution started", [
+            'return_code' => $returnVar,
+            'output' => $output,
+            'log' => $logFile
+        ]);
 
-    // Give script moment to start
-    usleep(500000); // 0.5 seconds
+        // Give script moment to start and write to log
+        usleep(500000); // 0.5 seconds
 
-    // Check if log was created (accessible via /scraper/ mount)
-    $hostLogPath = "/scraper/logs/manual_{$script}_{$timestamp}.log";
-
-    if ($returnVar === 0) {
-        return [
-            'success' => true,
-            'message' => ucfirst($script) . ' script started successfully in Docker container. Check log: manual_' . $script . '_' . $timestamp . '.log',
-        ];
-    } else {
+        if ($returnVar === 0 || file_exists($logFile)) {
+            return [
+                'success' => true,
+                'message' => '✅ ' . ucfirst($script) . ' script started successfully. Check log: manual_' . $script . '_' . $timestamp . '.log',
+            ];
+        } else {
+            return [
+                'success' => false,
+                'message' => '❌ Failed to start script. Check Laravel logs for details.',
+            ];
+        }
+    } catch (\Exception $e) {
+        \Log::error("Manual script execution failed", [
+            'script' => $script,
+            'error' => $e->getMessage()
+        ]);
+        
         return [
             'success' => false,
-            'message' => 'Failed to start script in Docker container. Check Docker daemon and container status.',
+            'message' => '❌ Error: ' . $e->getMessage(),
         ];
     }
 }
 
 /**
- * Get the enabled status of a cronjob from .env file
+ * Get the enabled status of a cronjob from database
+ * No longer uses .env file - database is the single source of truth
  */
 function getJobStatus(string $job): bool
 {
-    // In Docker, scraper folder is mounted at /scraper
-    $envPath = '/scraper/.env';
+    try {
+        $jobMap = [
+            'facebook' => ['model' => \App\Models\ScraperSettings::class, 'field' => 'facebook_enabled'],
+            'twitter' => ['model' => \App\Models\ScraperSettings::class, 'field' => 'twitter_enabled'],
+            'page-poster' => ['model' => \App\Models\PostingSetting::class, 'field' => 'enabled'],
+        ];
 
-    if (!file_exists($envPath)) {
-        return true; // Default to enabled if .env doesn't exist
-    }
-
-    $jobMap = [
-        'facebook' => 'FACEBOOK_SCRAPER_ENABLED',
-        'twitter' => 'TWITTER_POSTER_ENABLED',
-    ];
-
-    if (!isset($jobMap[$job])) {
-        return false;
-    }
-
-    $key = $jobMap[$job];
-    $envContent = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
-    foreach ($envContent as $line) {
-        if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
-            [$envKey, $value] = explode('=', $line, 2);
-            if (trim($envKey) === $key) {
-                return filter_var(trim($value), FILTER_VALIDATE_BOOLEAN);
-            }
+        if (!isset($jobMap[$job])) {
+            return false;
         }
-    }
 
-    return true; // Default to enabled if key not found
+        $modelClass = $jobMap[$job]['model'];
+        $field = $jobMap[$job]['field'];
+        $settings = $modelClass::getSettings();
+        
+        return (bool) $settings->$field;
+    } catch (\Exception $e) {
+        \Log::error('getJobStatus failed', ['job' => $job, 'error' => $e->getMessage()]);
+        return false; // Default to disabled if database read fails
+    }
 }
 
 /**
@@ -308,10 +319,11 @@ function getJobStatus(string $job): bool
  */
 function getJobLogs(string $job, int $lines = 100): string
 {
-    // In Docker, logs are mounted at /scraper/logs/
+    // Logs directory
     $logMap = [
         'facebook' => '/scraper/logs/facebook_cron.log',
         'twitter' => '/scraper/logs/twitter_cron.log',
+        'page-poster' => '/scraper/logs/page_poster_' . date('Ymd') . '.log',
         'execution' => '/scraper/logs/cron_execution.log',
     ];
 
@@ -346,8 +358,8 @@ function getJobLogs(string $job, int $lines = 100): string
  */
 function getManualLogFiles(): array
 {
-    // In Docker, logs are mounted at /scraper/logs/
-    $logsDir = '/scraper/logs';
+    // Manual logs are stored in scraper logs directory
+    $logsDir = '/var/www/alexis-scrapper-docker/scrapper-alexis/logs';
 
     if (!is_dir($logsDir)) {
         return [];
@@ -379,8 +391,8 @@ function getManualLogFiles(): array
  */
 function getLogFileContent(string $filename, int $lines = 500): string
 {
-    // In Docker, logs are mounted at /scraper/logs/
-    $logFile = '/scraper/logs/' . basename($filename);
+    // Manual logs are stored in scraper logs directory
+    $logFile = '/var/www/alexis-scrapper-docker/scrapper-alexis/logs/' . basename($filename);
 
     if (!file_exists($logFile)) {
         return "Log file not found: {$filename}";

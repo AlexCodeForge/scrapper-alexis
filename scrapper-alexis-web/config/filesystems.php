@@ -71,7 +71,7 @@ return [
 
         'scraper_auth' => [
             'driver' => 'local',
-            'root' => '/app/auth',
+            'root' => '/var/www/alexis-scrapper-docker/scrapper-alexis/auth',
         ],
 
     ],

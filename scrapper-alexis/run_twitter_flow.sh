@@ -3,7 +3,10 @@
 # Posts one unposted message to Twitter
 # CRITICAL: Uses xvfb-run to prevent VPS crashes (see VPS_CRASH_SOLUTION.md)
 
-cd /app
+cd /var/www/alexis-scrapper-docker/scrapper-alexis
+
+# Activate virtual environment
+source venv/bin/activate
 
 # Load environment variables (supports values with spaces)
 if [ -f .env ]; then
@@ -29,11 +32,6 @@ else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Twitter manual run: Skipping random delay" >> logs/cron_execution.log
 fi
 
-# Activate virtual environment if it exists
-if [ -d "venv" ]; then
-    source venv/bin/activate
-fi
-
 # STEP 1: Extract Twitter profile info (username, display name, avatar)
 # This ensures .env files are always up-to-date for image generation
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Extracting Twitter profile info..." >> logs/cron_execution.log
@@ -52,7 +50,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Twitter posting completed" >> logs/cron_exe
 
 # STEP 3: Run image generation after posting (uses profile info from .env)
 sleep 2
-/app/run_image_generation.sh
+./run_image_generation.sh
 
 # STEP 4: Update posting log after everything
 python3 generate_posting_log.py > /dev/null 2>&1

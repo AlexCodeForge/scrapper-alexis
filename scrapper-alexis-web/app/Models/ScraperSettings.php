@@ -1,0 +1,139 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+
+class ScraperSettings extends Model
+{
+    protected $fillable = [
+        'facebook_enabled',
+        'facebook_interval_min',
+        'facebook_interval_max',
+        'facebook_email',
+        'facebook_password',
+        'facebook_profiles',
+        'twitter_enabled',
+        'twitter_interval_min',
+        'twitter_interval_max',
+        'twitter_email',
+        'twitter_password',
+        'twitter_display_name',
+        'twitter_username',
+        'twitter_avatar_url',
+        'twitter_verified',
+        'proxy_server',
+        'proxy_username',
+        'proxy_password',
+    ];
+
+    protected $casts = [
+        'facebook_enabled' => 'boolean',
+        'facebook_interval_min' => 'integer',
+        'facebook_interval_max' => 'integer',
+        'twitter_enabled' => 'boolean',
+        'twitter_interval_min' => 'integer',
+        'twitter_interval_max' => 'integer',
+        'twitter_verified' => 'boolean',
+    ];
+
+    /**
+     * Encrypt sensitive password fields using Laravel's encryption.
+     * Best practice from Laravel 12 docs: Use Attribute for encryption with DecryptException handling
+     */
+    protected function facebookPassword(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                try {
+                    return decrypt($value);
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    // Value is not encrypted (legacy data), return as-is
+                    return $value;
+                }
+            },
+            set: fn (?string $value) => $value ? encrypt($value) : null,
+        );
+    }
+
+    protected function twitterPassword(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                try {
+                    return decrypt($value);
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    // Value is not encrypted (legacy data), return as-is
+                    return $value;
+                }
+            },
+            set: fn (?string $value) => $value ? encrypt($value) : null,
+        );
+    }
+
+    protected function proxyPassword(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                try {
+                    return decrypt($value);
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    // Value is not encrypted (legacy data), return as-is
+                    return $value;
+                }
+            },
+            set: fn (?string $value) => $value ? encrypt($value) : null,
+        );
+    }
+
+    /**
+     * Get the singleton settings instance.
+     * Follows the same pattern as PostingSetting model.
+     */
+    public static function getSettings(): self
+    {
+        return self::firstOrCreate([], [
+            'facebook_enabled' => false,
+            'facebook_interval_min' => 45,
+            'facebook_interval_max' => 80,
+            'twitter_enabled' => false,
+            'twitter_interval_min' => 8,
+            'twitter_interval_max' => 60,
+            'twitter_verified' => false,
+        ]);
+    }
+
+    /**
+     * Update the settings (singleton).
+     */
+    public static function updateSettings(array $data): bool
+    {
+        $settings = self::getSettings();
+        return $settings->update($data);
+    }
+
+    /**
+     * Export settings to array format for Python scripts.
+     * Decrypts passwords for external consumption.
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+
+        // Parse facebook_profiles from comma-separated to array
+        if (isset($array['facebook_profiles']) && $array['facebook_profiles']) {
+            $array['facebook_profiles_array'] = array_filter(
+                explode(',', str_replace("\n", ',', $array['facebook_profiles']))
+            );
+        } else {
+            $array['facebook_profiles_array'] = [];
+        }
+
+        return $array;
+    }
+}
+

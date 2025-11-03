@@ -51,10 +51,21 @@ def get_posting_settings():
     try:
         import sqlite3
         
-        # Connect to shared database (Docker volume)
-        db_path = '/app/data/scraper.db'
-        if not os.path.exists(db_path):
-            logger.error(f"Database not found at {db_path}")
+        # Connect to shared database
+        possible_paths = [
+            '/var/www/scrapper-alexis/data/scraper.db',
+            '/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db',
+            'data/scraper.db',
+        ]
+        
+        db_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                db_path = path
+                break
+        
+        if not db_path:
+            logger.error(f"Database not found in any of: {possible_paths}")
             return None
         
         conn = sqlite3.connect(db_path)
@@ -262,7 +273,20 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
         
         # Get the full path to the image first
         if not os.path.isabs(image_path):
-            image_full_path = os.path.join('/app/data/message_images', os.path.basename(image_path))
+            # Try multiple possible data directories
+            possible_data_dirs = [
+                '/var/www/alexis-scrapper-docker/scrapper-alexis/data',
+                '/var/www/scrapper-alexis/data',
+                'data',
+            ]
+            
+            for data_dir in possible_data_dirs:
+                potential_path = os.path.join(data_dir, 'message_images', os.path.basename(image_path))
+                if os.path.exists(potential_path):
+                    image_full_path = potential_path
+                    break
+            else:
+                image_full_path = os.path.join(possible_data_dirs[0], 'message_images', os.path.basename(image_path))
         else:
             image_full_path = image_path
         
