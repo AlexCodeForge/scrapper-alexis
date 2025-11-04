@@ -225,15 +225,75 @@ def _smart_scroll_and_extract(page: Page, selector: str, target_messages: int, m
                 logger.error("Page was closed unexpectedly")
                 break
             
-            # Extract text directly using JavaScript evaluation (lighter than page.content())
-            logger.debug(f"Extracting text via JavaScript...")
+            # BUGFIX: Add diagnostic logging and try multiple selectors
+            # Facebook's DOM structure varies by page type (profile, group, post)
+            logger.debug(f"Extracting text via JavaScript with smart selector detection...")
             
             messages_on_page = page.evaluate('''
                 () => {
-                    const elements = document.querySelectorAll('div[dir="auto"]');
+                    // BUGFIX V4: Target ONLY actual post content, NOT comments
+                    // POST: <div class="xdj266r x14z9mp xat24cr x1lziwak x1vvkbs">
+                    // COMMENT: <div class="xwib8y2 ..."> (must ignore)
+                    // Key: Posts have x1vvkbs class, comments don't!
+                    const selectors = [
+                        'div.xdj266r.x1vvkbs',                       // PRIMARY: Posts have x1vvkbs class
+                        'div.xdj266r.x14z9mp.xat24cr.x1lziwak.x1vvkbs',  // Full post content selector
+                        'div[data-ad-comet-preview="message"]',      // Fallback
+                    ];
+                    
+                    let bestSelector = null;
+                    let maxElements = 0;
+                    
+                    // Find which selector returns the most elements
+                    for (const selector of selectors) {
+                        const count = document.querySelectorAll(selector).length;
+                        console.log('[SCRAPER DEBUG] Selector "' + selector + '" found ' + count + ' elements');
+                        if (count > maxElements) {
+                            maxElements = count;
+                            bestSelector = selector;
+                        }
+                    }
+                    
+                    console.log('[SCRAPER DEBUG] Best selector: "' + bestSelector + '" with ' + maxElements + ' elements');
+                    
+                    if (!bestSelector || maxElements === 0) {
+                        console.log('[SCRAPER ERROR] No valid selector found! Page may not have loaded or DOM structure changed.');
+                        console.log('[SCRAPER ERROR] Forcing div[role="article"] div.xdj266r...');
+                        bestSelector = 'div[role="article"] div.xdj266r';  // Force article context
+                    }
+                    
+                    const elements = document.querySelectorAll(bestSelector);
                     const texts = [];
-                    for (let i = 0; i < Math.min(elements.length, 50); i++) {
+                    const seen = new Set();  // Deduplicate within same extraction
+                    
+                    // BUGFIX V2: Enhanced filtering to exclude UI elements
+                    const uiPatterns = [
+                        /notificación/i,
+                        /notification/i,
+                        /número de/i,
+                        /push están/i,
+                        /^(Compartir|Comentar|Me gusta|Reaccionar|Share|Comment|Like|Ver más|See more|Responder|Reply|Seguir|Follow|Todas|No leídas|Unread|All)$/i,
+                        /^[^a-záéíóúñ\s]{10,}$/,  // Skip text with no letters (likely obfuscated classes)
+                        /^activa las notificaciones/i,
+                        /^las notificaciones/i,
+                    ];
+                    
+                    for (let i = 0; i < Math.min(elements.length, 100); i++) {
                         const element = elements[i];
+                        
+                        // BUGFIX V4: Skip comments - they're inside div.xwib8y2 containers
+                        const commentContainer = element.closest('div.xwib8y2');
+                        if (commentContainer) {
+                            console.log('[SCRAPER DEBUG] Skipping comment element');
+                            continue;
+                        }
+                        
+                        // Skip if element is inside a navigation or notification area
+                        const parent = element.closest('[role="navigation"], [role="banner"], [aria-label*="notif"], [aria-label*="Notif"]');
+                        if (parent) {
+                            continue;
+                        }
+                        
                         // Get text with proper Unicode handling
                         let text = element.innerText || element.textContent || '';
                         
@@ -241,16 +301,43 @@ def _smart_scroll_and_extract(page: Page, selector: str, target_messages: int, m
                         text = text.normalize('NFC');
                         
                         const cleaned = text.trim();
-                        // Filter out short texts and UI elements
-                        if (cleaned.length >= 5 && 
-                            !cleaned.match(/^(Compartir|Comentar|Me gusta|Reaccionar|Share|Comment|Like)$/)) {
-                            texts.push(cleaned);
+                        
+                        // BUGFIX V3: Remove author metadata lines (Autor, Hypeonmx, etc.)
+                        // If text has multiple lines starting with "Autor", take the last line
+                        let lines = cleaned.split('\\n');
+                        let finalText = cleaned;
+                        if (lines.length > 1 && lines[0].match(/^Autor/i)) {
+                            // Skip author metadata lines, keep the actual content
+                            finalText = lines.slice(1).filter(l => !l.match(/^[A-Z][a-z]+$/)).join(' ').trim();
+                        }
+                        
+                        // Filter out metadata and page info, keep actual posts (20+ chars)
+                        if (finalText.length >= 20 && !seen.has(finalText) && 
+                            !finalText.match(/^(Centro de|Detalles|Páginas de|Página ·|Creador digital|Blog personal|Colaboraciones)/i)) {
+                            let isUIElement = false;
+                            for (const pattern of uiPatterns) {
+                                if (pattern.test(finalText)) {
+                                    isUIElement = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!isUIElement) {
+                                texts.push(finalText);
+                                seen.add(finalText);
+                            }
                         }
                     }
+                    
+                    console.log('[SCRAPER DEBUG] Extracted ' + texts.length + ' unique messages from ' + elements.length + ' elements');
                     return texts;
                 }
             ''')
             
+            # BUGFIX: Add comprehensive logging for debugging
+            logger.info(f"Bugfix: JavaScript extraction returned {len(messages_on_page)} messages")
+            if len(messages_on_page) == 0:
+                logger.warning("Bugfix: No messages found - selector detection may have failed or page structure changed")
             logger.debug(f"Found {len(messages_on_page)} potential messages via JS")
             
             # Add to our set (auto-deduplicates)
@@ -671,15 +758,75 @@ def _smart_scroll_and_extract_with_db(page: Page, selector: str, profile_id: int
                 logger.error("Page was closed unexpectedly")
                 break
             
-            # Extract text directly using JavaScript evaluation
-            logger.debug(f"Extracting text via JavaScript...")
+            # BUGFIX: Add diagnostic logging and try multiple selectors
+            # Facebook's DOM structure varies by page type (profile, group, post)
+            logger.debug(f"Extracting text via JavaScript with smart selector detection...")
             
             messages_on_page = page.evaluate('''
                 () => {
-                    const elements = document.querySelectorAll('div[dir="auto"]');
+                    // BUGFIX V4: Target ONLY actual post content, NOT comments
+                    // POST: <div class="xdj266r x14z9mp xat24cr x1lziwak x1vvkbs">
+                    // COMMENT: <div class="xwib8y2 ..."> (must ignore)
+                    // Key: Posts have x1vvkbs class, comments don't!
+                    const selectors = [
+                        'div.xdj266r.x1vvkbs',                       // PRIMARY: Posts have x1vvkbs class
+                        'div.xdj266r.x14z9mp.xat24cr.x1lziwak.x1vvkbs',  // Full post content selector
+                        'div[data-ad-comet-preview="message"]',      // Fallback
+                    ];
+                    
+                    let bestSelector = null;
+                    let maxElements = 0;
+                    
+                    // Find which selector returns the most elements
+                    for (const selector of selectors) {
+                        const count = document.querySelectorAll(selector).length;
+                        console.log('[SCRAPER DEBUG] Selector "' + selector + '" found ' + count + ' elements');
+                        if (count > maxElements) {
+                            maxElements = count;
+                            bestSelector = selector;
+                        }
+                    }
+                    
+                    console.log('[SCRAPER DEBUG] Best selector: "' + bestSelector + '" with ' + maxElements + ' elements');
+                    
+                    if (!bestSelector || maxElements === 0) {
+                        console.log('[SCRAPER ERROR] No valid selector found! Page may not have loaded or DOM structure changed.');
+                        console.log('[SCRAPER ERROR] Forcing div[role="article"] div.xdj266r...');
+                        bestSelector = 'div[role="article"] div.xdj266r';  // Force article context
+                    }
+                    
+                    const elements = document.querySelectorAll(bestSelector);
                     const texts = [];
-                    for (let i = 0; i < Math.min(elements.length, 50); i++) {
+                    const seen = new Set();  // Deduplicate within same extraction
+                    
+                    // BUGFIX V2: Enhanced filtering to exclude UI elements
+                    const uiPatterns = [
+                        /notificación/i,
+                        /notification/i,
+                        /número de/i,
+                        /push están/i,
+                        /^(Compartir|Comentar|Me gusta|Reaccionar|Share|Comment|Like|Ver más|See more|Responder|Reply|Seguir|Follow|Todas|No leídas|Unread|All)$/i,
+                        /^[^a-záéíóúñ\s]{10,}$/,  // Skip text with no letters (likely obfuscated classes)
+                        /^activa las notificaciones/i,
+                        /^las notificaciones/i,
+                    ];
+                    
+                    for (let i = 0; i < Math.min(elements.length, 100); i++) {
                         const element = elements[i];
+                        
+                        // BUGFIX V4: Skip comments - they're inside div.xwib8y2 containers
+                        const commentContainer = element.closest('div.xwib8y2');
+                        if (commentContainer) {
+                            console.log('[SCRAPER DEBUG] Skipping comment element');
+                            continue;
+                        }
+                        
+                        // Skip if element is inside a navigation or notification area
+                        const parent = element.closest('[role="navigation"], [role="banner"], [aria-label*="notif"], [aria-label*="Notif"]');
+                        if (parent) {
+                            continue;
+                        }
+                        
                         // Get text with proper Unicode handling
                         let text = element.innerText || element.textContent || '';
                         
@@ -687,16 +834,48 @@ def _smart_scroll_and_extract_with_db(page: Page, selector: str, profile_id: int
                         text = text.normalize('NFC');
                         
                         const cleaned = text.trim();
-                        // Filter out short texts and UI elements
-                        if (cleaned.length >= 5 && 
-                            !cleaned.match(/^(Compartir|Comentar|Me gusta|Reaccionar|Share|Comment|Like)$/)) {
-                            texts.push(cleaned);
+                        
+                        // BUGFIX V3: Remove author metadata lines (Autor, Hypeonmx, etc.)
+                        // If text has multiple lines starting with "Autor", take the last line
+                        let lines = cleaned.split('\\n');
+                        let finalText = cleaned;
+                        if (lines.length > 1 && lines[0].match(/^Autor/i)) {
+                            // Skip author metadata lines, keep the actual content
+                            finalText = lines.slice(1).filter(l => !l.match(/^[A-Z][a-z]+$/)).join(' ').trim();
+                        }
+                        
+                        // Filter out metadata and page info, keep actual posts (20+ chars)
+                        if (finalText.length >= 20 && !seen.has(finalText) && 
+                            !finalText.match(/^(Centro de|Detalles|Páginas de|Página ·|Creador digital|Blog personal|Colaboraciones)/i)) {
+                            let isUIElement = false;
+                            for (const pattern of uiPatterns) {
+                                if (pattern.test(finalText)) {
+                                    isUIElement = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!isUIElement) {
+                                texts.push(finalText);
+                                seen.add(finalText);
+                            }
                         }
                     }
+                    
+                    console.log('[SCRAPER DEBUG] Extracted ' + texts.length + ' unique messages from ' + elements.length + ' elements');
                     return texts;
                 }
             ''')
             
+            # BUGFIX: Add comprehensive logging for debugging
+            logger.info(f"Bugfix: JavaScript extraction returned {len(messages_on_page)} messages")
+            if len(messages_on_page) == 0:
+                logger.warning("Bugfix: No messages found - selector detection may have failed or page structure changed")
+            elif len(messages_on_page) > 0 and scroll_count == 0:
+                # Log first few messages on first scroll for debugging
+                logger.info(f"Bugfix: Sample messages extracted (first 3):")
+                for idx, msg in enumerate(messages_on_page[:3], 1):
+                    logger.info(f"  {idx}. {msg[:100]}...")
             logger.debug(f"Found {len(messages_on_page)} potential messages via JS")
             stats['total_scraped'] += len(messages_on_page)
             
@@ -705,8 +884,14 @@ def _smart_scroll_and_extract_with_db(page: Page, selector: str, profile_id: int
             duplicates_this_scroll = 0
             
             for i, message_text in enumerate(messages_on_page):
+                # BUGFIX V2: Enhanced logging for duplicate detection and quality filtering
                 # Check if this message is a duplicate
-                if deduplicator.is_duplicate(message_text, profile_id):
+                is_dup = deduplicator.is_duplicate(message_text, profile_id)
+                if scroll_count == 0 and i < 3:
+                    # Log first few checks for debugging
+                    logger.info(f"Bugfix: Message {i+1} is_duplicate={is_dup}, length={len(message_text)}, words={len(message_text.split())}")
+                
+                if is_dup:
                     stats['duplicates_found'] += 1
                     duplicates_this_scroll += 1
                     
@@ -723,6 +908,8 @@ def _smart_scroll_and_extract_with_db(page: Page, selector: str, profile_id: int
                         stats['new_messages'] += 1
                         new_messages_this_scroll += 1
                         logger.debug(f"Added new message {message_id}: {message_text[:50]}...")
+                    else:
+                        logger.warning(f"Bugfix: Failed to add message to database: {message_text[:100]}...")
             
             # Check if we should stop due to too many duplicates in a row
             if duplicates_this_scroll > 0 and new_messages_this_scroll == 0:

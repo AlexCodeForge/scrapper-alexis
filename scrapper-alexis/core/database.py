@@ -190,9 +190,16 @@ class DatabaseManager:
     # Message Management
     @staticmethod
     def generate_message_hash(message_text: str) -> str:
-        """Generate a hash for message deduplication."""
-        # Normalize text for consistent hashing
-        normalized = message_text.strip().lower()
+        """
+        Generate a hash for message deduplication.
+        
+        BUGFIX: Must use same normalization as MessageDeduplicator
+        to avoid hash mismatches between deduplicator checks and database inserts.
+        """
+        # BUGFIX: Import and use the same normalization as MessageDeduplicator
+        # This ensures hash consistency across the entire system
+        from core.message_deduplicator import MessageDeduplicator
+        normalized = MessageDeduplicator.normalize_message_text(message_text)
         return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
     
     def message_exists(self, message_text: str) -> bool:
@@ -222,18 +229,30 @@ class DatabaseManager:
         
         with self.get_connection() as conn:
             try:
+                # BUGFIX: Include scraped_at timestamp (required NOT NULL field)
+                from datetime import datetime
+                scraped_at = datetime.now().isoformat()
+                
                 cursor = conn.execute(
-                    '''INSERT INTO messages (profile_id, message_text, message_hash) 
-                       VALUES (?, ?, ?)''',
-                    (profile_id, message_text, message_hash)
+                    '''INSERT INTO messages (profile_id, message_text, message_hash, scraped_at) 
+                       VALUES (?, ?, ?, ?)''',
+                    (profile_id, message_text, message_hash, scraped_at)
                 )
                 conn.commit()
                 message_id = cursor.lastrowid
                 logger.debug(f"Added message {message_id} for profile {profile_id}")
                 return message_id
-            except sqlite3.IntegrityError:
+            except sqlite3.IntegrityError as e:
+                # BUGFIX: Enhanced logging to understand why insert is failing
                 # Message already exists (duplicate hash)
-                logger.debug(f"Duplicate message detected for profile {profile_id}")
+                logger.warning(f"Bugfix: IntegrityError inserting message for profile {profile_id}: {e}")
+                logger.warning(f"Bugfix: Message text: {message_text[:100]}...")
+                logger.warning(f"Bugfix: Message hash: {message_hash[:16]}...")
+                # Check if this hash really exists
+                check_cursor = conn.execute('SELECT id, message_text FROM messages WHERE message_hash = ?', (message_hash,))
+                existing = check_cursor.fetchone()
+                if existing:
+                    logger.warning(f"Bugfix: Existing message ID {existing[0]}: {existing[1][:100]}...")
                 return None
     
     def add_messages_batch(self, profile_id: int, messages: List[str]) -> Tuple[int, int]:
