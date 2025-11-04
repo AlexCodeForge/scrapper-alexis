@@ -47,11 +47,12 @@ class Settings extends Component
     public $cleanupDays = 7;
 
     // File uploads for auth
-    public $twitterAuthFile;
     public $facebookAuthFile;
+    
+    // Avatar upload for image generator
+    public $avatarUpload;
 
     // Track if auth files exist
-    public $twitterAuthExists = false;
     public $facebookAuthExists = false;
 
     public function mount()
@@ -126,7 +127,6 @@ class Settings extends Component
 
     public function checkAuthFiles()
     {
-        $this->twitterAuthExists = file_exists('/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json');
         $this->facebookAuthExists = file_exists('/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook.json');
     }
 
@@ -272,98 +272,83 @@ class Settings extends Component
         }
     }
 
-    public function uploadTwitterAuth()
-    {
-        \Log::info("uploadTwitterAuth: Method called");
+    /**
+     * =============================================================================
+     * ⚠️  DEPRECATED METHODS - NO LONGER USED ⚠️
+     * =============================================================================
+     * Twitter authentication upload/delete methods are no longer used.
+     * The app now uses user-provided profile info instead of Twitter authentication.
+     * 
+     * These methods are kept commented out for reference only.
+     * =============================================================================
+     */
+    
+    // public function uploadTwitterAuth()
+    // {
+    //     \Log::info("uploadTwitterAuth: Method called");
+    //     $this->validate([
+    //         'twitterAuthFile' => 'required|file|mimes:json|max:2048',
+    //     ]);
+    //     try {
+    //         $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json';
+    //         $authDir = dirname($authPath);
+    //         if (!is_dir($authDir)) {
+    //             \Log::info("uploadTwitterAuth: Creating auth directory", ['dir' => $authDir]);
+    //             mkdir($authDir, 0755, true);
+    //         }
+    //         $this->twitterAuthFile->storeAs('', 'auth_x.json', ['disk' => 'scraper_auth']);
+    //         if (file_exists($authPath)) {
+    //             chown($authPath, 'www-data');
+    //             chgrp($authPath, 'www-data');
+    //             \Log::info("uploadTwitterAuth: File saved and ownership set", ['auth' => $authPath]);
+    //         } else {
+    //             \Log::error("uploadTwitterAuth: File not found after upload", ['auth' => $authPath]);
+    //             throw new \Exception("El archivo no se guardó correctamente en el servidor");
+    //         }
+    //         $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x_session.json';
+    //         file_put_contents($sessionPath, json_encode([
+    //             'username' => '',
+    //             'display_name' => '',
+    //             'avatar_url' => '',
+    //             'login_time' => time(),
+    //             'success' => true
+    //         ], JSON_PRETTY_PRINT));
+    //         if (file_exists($sessionPath)) {
+    //             chown($sessionPath, 'www-data');
+    //             chgrp($sessionPath, 'www-data');
+    //             \Log::info("uploadTwitterAuth: Session file created and ownership set", ['session' => $sessionPath]);
+    //         } else {
+    //             \Log::warning("uploadTwitterAuth: Session file not created", ['session' => $sessionPath]);
+    //         }
+    //         $this->reset(['twitterAuthFile']);
+    //         $this->checkAuthFiles();
+    //         session()->flash('success', '✅ Archivo de autenticación de Twitter subido correctamente! Ejecuta el Twitter Poster para completar la configuración del perfil.');
+    //     } catch (\Exception $e) {
+    //         \Log::error("uploadTwitterAuth: Failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+    //         session()->flash('error', 'Error al subir archivo de autenticación: ' . $e->getMessage());
+    //     }
+    // }
 
-        $this->validate([
-            'twitterAuthFile' => 'required|file|mimes:json|max:2048',
-        ]);
-
-        try {
-            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json';
-            $authDir = dirname($authPath);
-
-            // Bugfix: Ensure the auth directory exists before saving files
-            if (!is_dir($authDir)) {
-                \Log::info("uploadTwitterAuth: Creating auth directory", ['dir' => $authDir]);
-                mkdir($authDir, 0755, true);
-            }
-
-            // Save uploaded file as auth_x.json
-            $this->twitterAuthFile->storeAs('', 'auth_x.json', ['disk' => 'scraper_auth']);
-
-            // Bugfix: Verify file exists before changing ownership
-            if (file_exists($authPath)) {
-                chown($authPath, 'www-data');
-                chgrp($authPath, 'www-data');
-                \Log::info("uploadTwitterAuth: File saved and ownership set", ['auth' => $authPath]);
-            } else {
-                \Log::error("uploadTwitterAuth: File not found after upload", ['auth' => $authPath]);
-                throw new \Exception("El archivo no se guardó correctamente en el servidor");
-            }
-
-            // Create empty session file (will be populated on first run)
-            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x_session.json';
-            file_put_contents($sessionPath, json_encode([
-                'username' => '',
-                'display_name' => '',
-                'avatar_url' => '',
-                'login_time' => time(),
-                'success' => true
-            ], JSON_PRETTY_PRINT));
-
-            // Bugfix: Verify session file exists before changing ownership
-            if (file_exists($sessionPath)) {
-                chown($sessionPath, 'www-data');
-                chgrp($sessionPath, 'www-data');
-                \Log::info("uploadTwitterAuth: Session file created and ownership set", ['session' => $sessionPath]);
-            } else {
-                \Log::warning("uploadTwitterAuth: Session file not created", ['session' => $sessionPath]);
-            }
-
-            // Clear uploaded file property
-            $this->reset(['twitterAuthFile']);
-
-            // Update status
-            $this->checkAuthFiles();
-
-            session()->flash('success', '✅ Archivo de autenticación de Twitter subido correctamente! Ejecuta el Twitter Poster para completar la configuración del perfil.');
-
-        } catch (\Exception $e) {
-            \Log::error("uploadTwitterAuth: Failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            session()->flash('error', 'Error al subir archivo de autenticación: ' . $e->getMessage());
-        }
-    }
-
-    public function deleteTwitterAuth()
-    {
-        \Log::info("deleteTwitterAuth: Method called");
-
-        try {
-            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json';
-            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x_session.json';
-
-            // Delete files
-            if (file_exists($authPath)) {
-                unlink($authPath);
-            }
-            if (file_exists($sessionPath)) {
-                unlink($sessionPath);
-            }
-
-            \Log::info("deleteTwitterAuth: Files deleted");
-
-            // Update status
-            $this->checkAuthFiles();
-
-            session()->flash('success', '✅ Autenticación de Twitter eliminada correctamente.');
-
-        } catch (\Exception $e) {
-            \Log::error("deleteTwitterAuth: Failed", ['error' => $e->getMessage()]);
-            session()->flash('error', 'Error al eliminar autenticación: ' . $e->getMessage());
-        }
-    }
+    // public function deleteTwitterAuth()
+    // {
+    //     \Log::info("deleteTwitterAuth: Method called");
+    //     try {
+    //         $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x.json';
+    //         $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_x_session.json';
+    //         if (file_exists($authPath)) {
+    //             unlink($authPath);
+    //         }
+    //         if (file_exists($sessionPath)) {
+    //             unlink($sessionPath);
+    //         }
+    //         \Log::info("deleteTwitterAuth: Files deleted");
+    //         $this->checkAuthFiles();
+    //         session()->flash('success', '✅ Autenticación de Twitter eliminada correctamente.');
+    //     } catch (\Exception $e) {
+    //         \Log::error("deleteTwitterAuth: Failed", ['error' => $e->getMessage()]);
+    //         session()->flash('error', 'Error al eliminar autenticación: ' . $e->getMessage());
+    //     }
+    // }
 
     public function uploadFacebookAuth()
     {
@@ -565,29 +550,94 @@ class Settings extends Component
         }
     }
 
-    public function saveTwitterSettings()
+    /**
+     * Save Image Generator Settings (reusing Twitter fields for minimal changes)
+     * - Display name, username, verified badge, and avatar upload
+     */
+    public function saveImageGeneratorSettings()
     {
-        \Log::info('Settings: saveTwitterSettings called', ['display_name' => $this->twitterDisplayName, 'username' => $this->twitterUsername, 'verified' => $this->twitterVerified]);
+        \Log::info('Settings: saveImageGeneratorSettings called', [
+            'display_name' => $this->twitterDisplayName, 
+            'username' => $this->twitterUsername, 
+            'verified' => $this->twitterVerified
+        ]);
 
         // Small delay to ensure loading modal is visible to users
         usleep(300000); // 300ms
 
-        // Update database instead of .env file
-        $result = ScraperSettings::updateSettings([
-            'twitter_email' => $this->twitterEmail,
-            'twitter_password' => $this->twitterPassword, // Encrypted by model
+        // Validate avatar upload if provided
+        if ($this->avatarUpload) {
+            $this->validate([
+                'avatarUpload' => 'image|mimes:jpeg,jpg,png|max:2048',
+            ]);
+        }
+
+        // Prepare data for update
+        $updateData = [
             'twitter_display_name' => $this->twitterDisplayName,
             'twitter_username' => $this->twitterUsername,
             'twitter_verified' => $this->twitterVerified,
-        ]);
+        ];
+
+        // Handle avatar upload
+        if ($this->avatarUpload) {
+            try {
+                // Store avatar in public/storage/avatars/
+                $avatarPath = $this->avatarUpload->store('avatars', 'public');
+                $updateData['twitter_avatar_url'] = $avatarPath;
+                
+                // Copy avatar to Python project for image generation
+                $publicAvatarPath = storage_path('app/public/' . $avatarPath);
+                $pythonAvatarPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/avatar_cache/user_avatar.jpg';
+                
+                // Ensure avatar_cache directory exists
+                $pythonAvatarDir = dirname($pythonAvatarPath);
+                if (!is_dir($pythonAvatarDir)) {
+                    mkdir($pythonAvatarDir, 0755, true);
+                }
+                
+                // Copy file
+                if (file_exists($publicAvatarPath)) {
+                    copy($publicAvatarPath, $pythonAvatarPath);
+                    chmod($pythonAvatarPath, 0644);
+                    \Log::info('Settings: Avatar copied to Python project', [
+                        'from' => $publicAvatarPath,
+                        'to' => $pythonAvatarPath
+                    ]);
+                }
+                
+                // Clear the upload property
+                $this->reset(['avatarUpload']);
+                
+            } catch (\Exception $e) {
+                \Log::error('Settings: Avatar upload failed', ['error' => $e->getMessage()]);
+                $this->dispatch('settings-error', message: 'Error al subir el avatar: ' . $e->getMessage());
+                return;
+            }
+        }
+
+        // Update database
+        $result = ScraperSettings::updateSettings($updateData);
 
         if ($result) {
-            \Log::info('Settings: saveTwitterSettings success');
-            $this->dispatch('settings-saved', message: 'Configuración de Twitter guardada correctamente');
+            \Log::info('Settings: saveImageGeneratorSettings success');
+            $this->dispatch('settings-saved', message: 'Configuración del generador de imágenes guardada correctamente');
+            
+            // Reload settings to show updated avatar URL
+            $this->loadSettings();
         } else {
-            \Log::error('Settings: saveTwitterSettings failed');
-            $this->dispatch('settings-error', message: 'Error al guardar configuración de Twitter');
+            \Log::error('Settings: saveImageGeneratorSettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar configuración del generador de imágenes');
         }
+    }
+    
+    /**
+     * Legacy method - kept for backwards compatibility but redirects to new method
+     * @deprecated Use saveImageGeneratorSettings() instead
+     */
+    public function saveTwitterSettings()
+    {
+        return $this->saveImageGeneratorSettings();
     }
 
     public function saveCronSettings()

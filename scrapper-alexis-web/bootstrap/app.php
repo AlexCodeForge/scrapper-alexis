@@ -30,16 +30,22 @@ return Application::configure(basePath: dirname(__DIR__))
             ->runInBackground()
             ->onOneServer();
         
-        // Twitter Poster - Hourly with 15min offset
-        $schedule->command('scraper:twitter')
-            ->hourly()
-            ->at(':15')
-            ->when(function () {
-                return ScraperSettings::getSettings()->twitter_enabled;
-            })
-            ->withoutOverlapping()
-            ->runInBackground()
-            ->onOneServer();
+        // =============================================================================
+        // Twitter Poster - COMMENTED OUT (NO LONGER USED)
+        // =============================================================================
+        // Twitter posting functionality has been removed from the application.
+        // The app now focuses on image generation only.
+        // =============================================================================
+        //
+        // $schedule->command('scraper:twitter')
+        //     ->hourly()
+        //     ->at(':15')
+        //     ->when(function () {
+        //         return ScraperSettings::getSettings()->twitter_enabled;
+        //     })
+        //     ->withoutOverlapping()
+        //     ->runInBackground()
+        //     ->onOneServer();
         
         // Facebook Page Poster - Every 30 minutes
         $schedule->command('scraper:page-poster')

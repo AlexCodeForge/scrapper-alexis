@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
 Message Image Generator
-Generates images for posted messages using the tweet template.
+Generates images for messages using the HTML template.
 Updates database with image generation status.
+
+Profile information (display name, username, avatar, verified badge) is configured
+by users through the web interface settings page.
 """
 
 import sys
@@ -63,15 +66,30 @@ def sanitize_filename(text: str, max_length: int = 50) -> str:
 
 
 def download_avatar_through_proxy(avatar_url: str, use_proxy: bool = True) -> Optional[str]:
-    """Download avatar image through proxy and return local path."""
+    """
+    Get avatar image path. Prioritizes user-uploaded avatar over downloaded ones.
+    
+    Order of priority:
+    1. User-uploaded avatar (avatar_cache/user_avatar.jpg) - from web interface
+    2. Cached downloaded avatar (if avatar_url provided)
+    3. Download new avatar through proxy (if avatar_url provided)
+    4. Fallback avatar from environment
+    """
     try:
+        # PRIORITY 1: Check for user-uploaded avatar first
+        user_avatar_path = AVATAR_CACHE_DIR / 'user_avatar.jpg'
+        if user_avatar_path.exists():
+            logger.info(f"Using user-uploaded avatar from web interface: {user_avatar_path}")
+            return str(user_avatar_path)
+        
+        # PRIORITY 2-4: Original logic for downloaded avatars (fallback)
         if not avatar_url:
-            logger.warning("No avatar URL provided")
+            logger.warning("No avatar URL provided and no user-uploaded avatar found")
             return None
         
         # Get high-quality version
         hq_avatar_url = get_high_quality_avatar_url(avatar_url)
-        logger.info(f"Downloading avatar: {hq_avatar_url}")
+        logger.info(f"No user avatar found, downloading from URL: {hq_avatar_url}")
         
         # Create filename from URL
         url_hash = hashlib.md5(hq_avatar_url.encode()).hexdigest()
@@ -80,12 +98,12 @@ def download_avatar_through_proxy(avatar_url: str, use_proxy: bool = True) -> Op
         
         # Check if already cached
         if local_avatar_path.exists():
-            logger.info(f"Using cached avatar: {local_avatar_path}")
+            logger.info(f"Using cached downloaded avatar: {local_avatar_path}")
             return str(local_avatar_path)
         
         # Setup requests session with proxy
         session = requests.Session()
-        if use_proxy:
+        if use_proxy and PROXY_CONFIG:
             proxies = {
                 'http': f"http://{PROXY_CONFIG['username']}:{PROXY_CONFIG['password']}@{PROXY_CONFIG['server'].replace('http://', '')}",
                 'https': f"http://{PROXY_CONFIG['username']}:{PROXY_CONFIG['password']}@{PROXY_CONFIG['server'].replace('http://', '')}"
@@ -109,7 +127,7 @@ def download_avatar_through_proxy(avatar_url: str, use_proxy: bool = True) -> Op
         return str(local_avatar_path)
         
     except Exception as e:
-        logger.error(f"Failed to download avatar: {e}")
+        logger.error(f"Failed to get/download avatar: {e}")
         return None
 
 

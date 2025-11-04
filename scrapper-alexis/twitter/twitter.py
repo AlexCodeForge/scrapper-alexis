@@ -6,6 +6,19 @@ Uses only 3 scripts: twitter_auth.py, twitter_post.py, and debug_helper.py
 Usage:
     python twitter.py "Your message here"
     python twitter.py "Your message here" --debug
+
+=============================================================================
+⚠️  DEPRECATED - NO LONGER USED ⚠️
+=============================================================================
+This script is no longer used. The app now focuses on IMAGE GENERATION ONLY.
+Twitter posting functionality has been removed to simplify the application.
+
+The image generator (generate_message_images.py) now uses user-provided
+profile information (display name, username, avatar) configured in the
+web interface settings.
+
+This file is kept for reference only.
+=============================================================================
 """
 
 import sys

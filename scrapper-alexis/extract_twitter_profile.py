@@ -5,6 +5,18 @@ Extracts username, display name, and avatar URL from logged-in Twitter session
 and saves to .env files for use in image generation.
 
 This script MUST run before image generation to ensure correct profile info.
+
+=============================================================================
+⚠️  DEPRECATED - NO LONGER USED ⚠️
+=============================================================================
+This script is no longer used. The app now focuses on IMAGE GENERATION ONLY.
+Profile information is now provided by users through the web interface
+settings page instead of being extracted from Twitter.
+
+Users upload their avatar and provide display name/username directly.
+
+This file is kept for reference only.
+=============================================================================
 """
 
 import sys

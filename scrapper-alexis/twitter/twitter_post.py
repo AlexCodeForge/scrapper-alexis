@@ -3,6 +3,19 @@
 Twitter Post Script with Database Integration
 Posts messages from database and updates their posted status.
 Works with debug_helper.py for comprehensive logging.
+
+=============================================================================
+⚠️  DEPRECATED - NO LONGER USED ⚠️
+=============================================================================
+This script is no longer used. The app now focuses on IMAGE GENERATION ONLY.
+Twitter posting functionality has been removed to simplify the application.
+
+The image generator (generate_message_images.py) now uses user-provided
+profile information (display name, username, avatar) configured in the
+web interface settings.
+
+This file is kept for reference only.
+=============================================================================
 """
 
 import sys

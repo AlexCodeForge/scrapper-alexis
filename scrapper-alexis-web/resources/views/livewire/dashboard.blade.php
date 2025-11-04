@@ -33,21 +33,6 @@
                     </x-card.content>
                 </x-card>
 
-                <!-- Posted to Twitter -->
-                <x-card class="hover:shadow-md transition-shadow">
-                    <x-card.content class="p-4">
-                        <div class="flex items-center justify-between space-x-3">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-medium text-muted-foreground truncate">Publicados en Twitter</p>
-                                <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['posted_to_twitter']) }}</p>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <x-lucide-send class="h-8 w-8 text-blue-500" />
-                            </div>
-                        </div>
-                    </x-card.content>
-                </x-card>
-
                 <!-- Images Generated -->
                 <x-card class="hover:shadow-md transition-shadow">
                     <x-card.content class="p-4">
@@ -120,11 +105,6 @@
                         <x-button wire:click="runScript('facebook')" class="flex-1 h-14 text-base bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl">
                             <x-lucide-facebook class="mr-3 h-6 w-6" />
                             Ejecutar Scraper Facebook
-                        </x-button>
-
-                        <x-button wire:click="runScript('twitter')" class="flex-1 h-14 text-base bg-sky-500 hover:bg-sky-600 text-white shadow-lg hover:shadow-xl">
-                            <x-lucide-twitter class="mr-3 h-6 w-6" />
-                            Ejecutar Publicador Twitter
                         </x-button>
 
                         <x-button wire:click="postToPage" class="flex-1 h-14 text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl">

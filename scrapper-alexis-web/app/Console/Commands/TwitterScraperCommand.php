@@ -5,10 +5,25 @@ namespace App\Console\Commands;
 use App\Models\ScraperSettings;
 use Illuminate\Console\Command;
 
+/**
+ * =============================================================================
+ * ⚠️  DEPRECATED - NO LONGER USED ⚠️
+ * =============================================================================
+ * This command is no longer used. Twitter posting functionality has been
+ * removed from the application to simplify it to IMAGE GENERATION ONLY.
+ * 
+ * Users now configure profile information (display name, username, avatar)
+ * directly in the web interface settings page instead of posting to Twitter.
+ * 
+ * The cron schedule for this command has been commented out in bootstrap/app.php
+ * 
+ * This file is kept for reference only.
+ * =============================================================================
+ */
 class TwitterScraperCommand extends Command
 {
     protected $signature = 'scraper:twitter {--skip-delay : Skip random delay for testing} {--manual : Manual execution bypasses enabled check}';
-    protected $description = 'Run Twitter poster with database credentials and dynamic delays';
+    protected $description = '[DEPRECATED] Run Twitter poster with database credentials and dynamic delays';
 
     public function handle()
     {

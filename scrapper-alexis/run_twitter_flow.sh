@@ -1,6 +1,14 @@
 #!/bin/bash
-# Twitter Posting Flow
-# Posts one unposted message to Twitter
+# =============================================================================
+# ⚠️  MODIFIED - Twitter Posting DISABLED ⚠️
+# =============================================================================
+# This script originally handled Twitter posting + image generation.
+# Twitter posting has been disabled. Now only runs image generation.
+# Profile info comes from web interface instead of Twitter extraction.
+# =============================================================================
+#
+# Image Generation Flow
+# Generates images for posted messages using user-provided profile info
 # CRITICAL: Uses xvfb-run to prevent VPS crashes (see VPS_CRASH_SOLUTION.md)
 
 cd /var/www/alexis-scrapper-docker/scrapper-alexis
@@ -32,26 +40,35 @@ else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Twitter manual run: Skipping random delay" >> logs/cron_execution.log
 fi
 
-# STEP 1: Extract Twitter profile info (username, display name, avatar)
-# This ensures .env files are always up-to-date for image generation
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Extracting Twitter profile info..." >> logs/cron_execution.log
-xvfb-run -a python3 extract_twitter_profile.py >> logs/profile_extraction.log 2>&1
-PROFILE_EXIT_CODE=$?
+# =============================================================================
+# TWITTER POSTING STEPS - COMMENTED OUT (NO LONGER USED)
+# =============================================================================
+# Profile info now comes from web interface settings, not Twitter extraction
+# Users configure display name, username, and upload avatar in settings page
+# =============================================================================
+#
+# # STEP 1: Extract Twitter profile info (username, display name, avatar)
+# # This ensures .env files are always up-to-date for image generation
+# echo "[$(date '+%Y-%m-%d %H:%M:%S')] Extracting Twitter profile info..." >> logs/cron_execution.log
+# xvfb-run -a python3 extract_twitter_profile.py >> logs/profile_extraction.log 2>&1
+# PROFILE_EXIT_CODE=$?
+#
+# if [ $PROFILE_EXIT_CODE -ne 0 ]; then
+#     echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Profile extraction failed, using existing .env values" >> logs/cron_execution.log
+# fi
+#
+# # STEP 2: Run the Twitter poster with Xvfb (virtual display)
+# xvfb-run -a python3 -m twitter.twitter_post
+#
+# # Log execution
+# echo "[$(date '+%Y-%m-%d %H:%M:%S')] Twitter posting completed" >> logs/cron_execution.log
+#
+# =============================================================================
 
-if [ $PROFILE_EXIT_CODE -ne 0 ]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Profile extraction failed, using existing .env values" >> logs/cron_execution.log
-fi
-
-# STEP 2: Run the Twitter poster with Xvfb (virtual display)
-xvfb-run -a python3 -m twitter.twitter_post
-
-# Log execution
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Twitter posting completed" >> logs/cron_execution.log
-
-# STEP 3: Run image generation after posting (uses profile info from .env)
+# STEP 1: Run image generation (uses profile info from web interface settings)
 sleep 2
 ./run_image_generation.sh
 
-# STEP 4: Update posting log after everything
+# STEP 2: Update posting log after image generation
 python3 generate_posting_log.py > /dev/null 2>&1
 
