@@ -454,12 +454,12 @@ class DatabaseManager:
         """Start a new scraping session."""
         with self.get_connection() as conn:
             cursor = conn.execute(
-                'INSERT INTO scraping_sessions (profile_id) VALUES (?)',
+                'INSERT INTO scraping_sessions (profile_id, started_at) VALUES (?, CURRENT_TIMESTAMP)',
                 (profile_id,)
             )
             conn.commit()
             session_id = cursor.lastrowid
-            logger.info(f"Started scraping session {session_id} for profile {profile_id}")
+            logger.info(f"Bugfix: Started scraping session {session_id} for profile {profile_id} with explicit started_at")
             return session_id
     
     def complete_scraping_session(self, session_id: int, messages_found: int, 

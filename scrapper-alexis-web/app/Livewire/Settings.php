@@ -694,6 +694,115 @@ class Settings extends Component
         }
     }
 
+    public function testProxy()
+    {
+        \Log::info('Settings: testProxy called', [
+            'server' => $this->proxyServer,
+            'username' => $this->proxyUsername ? 'set' : 'empty'
+        ]);
+
+        // Validate proxy configuration exists
+        if (empty($this->proxyServer)) {
+            \Log::warning('Settings: testProxy - No proxy server configured');
+            $this->dispatch('proxy-test-result',
+                success: false,
+                message: 'Por favor, configure un servidor proxy primero',
+                details: null
+            );
+            return;
+        }
+
+        try {
+            $startTime = microtime(true);
+
+            // Build proxy URL with authentication
+            $proxyUrl = $this->proxyServer;
+            if ($this->proxyUsername && $this->proxyPassword) {
+                // Format: http://username:password@host:port
+                $parsedUrl = parse_url($this->proxyServer);
+                $scheme = $parsedUrl['scheme'] ?? 'http';
+                $host = $parsedUrl['host'] ?? $this->proxyServer;
+                $port = $parsedUrl['port'] ?? '';
+                $portSuffix = $port ? ":{$port}" : '';
+                
+                $proxyUrl = "{$scheme}://{$this->proxyUsername}:{$this->proxyPassword}@{$host}{$portSuffix}";
+            }
+
+            \Log::info('Settings: testProxy - Making test request through proxy');
+
+            // Test proxy with a simple IP check endpoint
+            $response = \Illuminate\Support\Facades\Http::withOptions([
+                'proxy' => $proxyUrl,
+                'timeout' => 10,
+                'connect_timeout' => 5,
+            ])->get('https://api.ipify.org?format=json');
+
+            $endTime = microtime(true);
+            $responseTime = round(($endTime - $startTime) * 1000, 2); // Convert to milliseconds
+
+            if ($response->successful()) {
+                $ipData = $response->json();
+                $proxyIp = $ipData['ip'] ?? 'Unknown';
+
+                \Log::info('Settings: testProxy - Success', [
+                    'proxy_ip' => $proxyIp,
+                    'response_time' => $responseTime . 'ms'
+                ]);
+
+                $this->dispatch('proxy-test-result',
+                    success: true,
+                    message: '✅ Proxy funcionando correctamente',
+                    details: [
+                        'ip' => $proxyIp,
+                        'response_time' => $responseTime . 'ms',
+                        'status' => $response->status()
+                    ]
+                );
+            } else {
+                \Log::error('Settings: testProxy - HTTP error', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+
+                $this->dispatch('proxy-test-result',
+                    success: false,
+                    message: '❌ Error de conexión con el proxy',
+                    details: [
+                        'status' => $response->status(),
+                        'error' => 'HTTP ' . $response->status()
+                    ]
+                );
+            }
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            \Log::error('Settings: testProxy - Connection exception', [
+                'error' => $e->getMessage()
+            ]);
+
+            $this->dispatch('proxy-test-result',
+                success: false,
+                message: '❌ No se pudo conectar al proxy',
+                details: [
+                    'error' => 'Timeout o proxy no responde'
+                ]
+            );
+
+        } catch (\Exception $e) {
+            \Log::error('Settings: testProxy - Exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            $this->dispatch('proxy-test-result',
+                success: false,
+                message: '❌ Error al probar el proxy',
+                details: [
+                    'error' => $e->getMessage()
+                ]
+            );
+        }
+    }
+
     public function render()
     {
         return view('livewire.settings-modular')->layout('components.layouts.app', ['title' => 'Settings']);

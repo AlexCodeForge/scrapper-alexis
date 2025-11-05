@@ -12,6 +12,15 @@ from dotenv import load_dotenv
 # Load environment variables (ONLY for static config - not credentials/intervals)
 load_dotenv()
 
+# Import Laravel decryption utility
+try:
+    from utils.laravel_decrypt import decrypt_laravel_value, is_encrypted
+    LARAVEL_DECRYPT_AVAILABLE = True
+except ImportError:
+    LARAVEL_DECRYPT_AVAILABLE = False
+    import logging
+    logging.warning("Laravel decrypt utility not available - encrypted passwords will not work")
+
 # Database path for dynamic settings (single source of truth)
 # Search for database in multiple possible locations
 def _get_database_path():
@@ -78,11 +87,20 @@ def get_settings_from_db():
 try:
     _db_settings = get_settings_from_db()
     
-    # Use database settings (passwords are already decrypted by Laravel before being stored)
+    # Decrypt passwords if they're Laravel encrypted
+    def _decrypt_if_needed(value: str) -> str:
+        """Decrypt value if it's Laravel encrypted, otherwise return as-is."""
+        if not value or not LARAVEL_DECRYPT_AVAILABLE:
+            return value or ''
+        if is_encrypted(value):
+            return decrypt_laravel_value(value)
+        return value
+    
+    # Use database settings (decrypt passwords if they're encrypted)
     FACEBOOK_EMAIL = _db_settings.get('facebook_email') or ''
-    FACEBOOK_PASSWORD = _db_settings.get('facebook_password') or ''
+    FACEBOOK_PASSWORD = _decrypt_if_needed(_db_settings.get('facebook_password'))
     X_EMAIL = _db_settings.get('twitter_email') or ''
-    X_PASSWORD = _db_settings.get('twitter_password') or ''
+    X_PASSWORD = _decrypt_if_needed(_db_settings.get('twitter_password'))
     X_DISPLAY_NAME = _db_settings.get('display_name') or _db_settings.get('twitter_display_name') or 'Twitter User'
     X_USERNAME = _db_settings.get('username') or _db_settings.get('twitter_username') or '@username'
     X_AVATAR_URL = _db_settings.get('avatar_url') or _db_settings.get('twitter_avatar_url') or ''
@@ -95,7 +113,7 @@ try:
     
     PROXY_SERVER = _db_settings.get('proxy_server') or ''
     PROXY_USERNAME = _db_settings.get('proxy_username') or ''
-    PROXY_PASSWORD = _db_settings.get('proxy_password') or ''
+    PROXY_PASSWORD = _decrypt_if_needed(_db_settings.get('proxy_password'))
     FACEBOOK_INTERVAL_MIN = int(_db_settings.get('facebook_interval_min', 45))
     FACEBOOK_INTERVAL_MAX = int(_db_settings.get('facebook_interval_max', 80))
     TWITTER_INTERVAL_MIN = int(_db_settings.get('twitter_interval_min', 8))
@@ -105,6 +123,13 @@ try:
     FACEBOOK_DEBUG_ENABLED = bool(_db_settings.get('facebook_debug_enabled', False))
     TWITTER_DEBUG_ENABLED = bool(_db_settings.get('twitter_debug_enabled', False))
     PAGE_POSTING_DEBUG_ENABLED = bool(_db_settings.get('page_posting_debug_enabled', False))
+    
+    # Log decryption status (for debugging)
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Bugfix: Laravel decryption {'enabled' if LARAVEL_DECRYPT_AVAILABLE else 'disabled'}")
+    if LARAVEL_DECRYPT_AVAILABLE and PROXY_PASSWORD:
+        logger.info(f"Bugfix: Proxy password decrypted successfully (length: {len(PROXY_PASSWORD)})")
     
 except Exception as e:
     import logging

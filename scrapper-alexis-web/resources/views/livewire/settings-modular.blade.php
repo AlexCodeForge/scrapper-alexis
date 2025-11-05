@@ -594,6 +594,77 @@
                             <input type="password" wire:model="proxyPassword" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
                         </div>
 
+                        <!-- Test Proxy Section -->
+                        <div class="pt-4 border-t border-border" 
+                             x-data="{ 
+                                 testResult: null, 
+                                 showResult: false 
+                             }"
+                             @proxy-test-result.window="
+                                 testResult = $event.detail; 
+                                 showResult = true;
+                                 setTimeout(() => { showResult = false; testResult = null; }, 8000);
+                             ">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h3 class="text-sm font-medium text-foreground">Probar Conexión</h3>
+                                    <p class="text-xs text-muted-foreground mt-1">Verificar que el proxy funciona correctamente</p>
+                                </div>
+                                <button type="button" 
+                                        wire:click="testProxy" 
+                                        wire:loading.attr="disabled"
+                                        wire:target="testProxy"
+                                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                    <x-lucide-globe class="h-4 w-4" wire:loading.remove wire:target="testProxy" />
+                                    <svg wire:loading wire:target="testProxy" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span wire:loading.remove wire:target="testProxy">Probar</span>
+                                    <span wire:loading wire:target="testProxy">Probando...</span>
+                                </button>
+                            </div>
+
+                            <!-- Test Results -->
+                            <div x-show="showResult" 
+                                 x-transition:enter="transition ease-out duration-300"
+                                 x-transition:enter-start="opacity-0 transform scale-95"
+                                 x-transition:enter-end="opacity-100 transform scale-100"
+                                 x-transition:leave="transition ease-in duration-200"
+                                 x-transition:leave-start="opacity-100 transform scale-100"
+                                 x-transition:leave-end="opacity-0 transform scale-95"
+                                 class="mt-3 p-4 rounded-lg"
+                                 :class="testResult?.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'"
+                                 style="display: none;">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex-shrink-0 mt-0.5">
+                                        <x-lucide-check-circle x-show="testResult?.success" class="h-5 w-5 text-green-600" />
+                                        <x-lucide-x-circle x-show="!testResult?.success" class="h-5 w-5 text-red-600" />
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium" :class="testResult?.success ? 'text-green-900' : 'text-red-900'" x-text="testResult?.message"></p>
+                                        <div x-show="testResult?.details" class="mt-2 text-xs" :class="testResult?.success ? 'text-green-700' : 'text-red-700'">
+                                            <div x-show="testResult?.details?.ip" class="flex items-center gap-2">
+                                                <span class="font-semibold">IP del Proxy:</span>
+                                                <span x-text="testResult?.details?.ip"></span>
+                                            </div>
+                                            <div x-show="testResult?.details?.response_time" class="flex items-center gap-2">
+                                                <span class="font-semibold">Tiempo de respuesta:</span>
+                                                <span x-text="testResult?.details?.response_time"></span>
+                                            </div>
+                                            <div x-show="testResult?.details?.error" class="flex items-center gap-2">
+                                                <span class="font-semibold">Error:</span>
+                                                <span x-text="testResult?.details?.error"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" @click="showResult = false; testResult = null;" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+                                        <x-lucide-x class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Save Button -->
                         <div class="flex justify-end gap-3 pt-4 border-t border-border">
                             <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
