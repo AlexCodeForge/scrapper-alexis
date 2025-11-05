@@ -124,6 +124,42 @@ def get_next_approved_image():
         return None
 
 
+def get_specific_image(image_id: int):
+    """Get a specific image by ID for manual posting."""
+    try:
+        import sqlite3
+        
+        # Connect to scraper database
+        db = get_database()
+        
+        # Get specific image by ID
+        query = """
+            SELECT m.id, m.message_text, m.image_path, m.approved_for_posting, m.posted_to_page
+            FROM messages m
+            WHERE m.id = ?
+              AND m.image_generated = 1
+        """
+        
+        with db.get_connection() as conn:
+            cursor = conn.execute(query, (image_id,))
+            result = cursor.fetchone()
+            
+            if result:
+                return {
+                    'id': result['id'],
+                    'message_text': result['message_text'],
+                    'image_path': result['image_path'],
+                    'approved_for_posting': bool(result['approved_for_posting']),
+                    'posted_to_page': bool(result['posted_to_page'])
+                }
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Failed to get specific image {image_id}: {e}")
+        return None
+
+
 def mark_as_posted(message_id):
     """Mark message as posted to page."""
     try:
@@ -592,8 +628,13 @@ def main():
         
         # Bugfix: Check if this is a manual run
         is_manual_run = os.environ.get('MANUAL_RUN') == '1'
+        # Feature: Check if specific image ID is provided for manual posting
+        specific_image_id = os.environ.get('IMAGE_ID')
+        
         if is_manual_run:
             logger.info("Manual run detected (MANUAL_RUN=1) - bypassing enabled check")
+            if specific_image_id:
+                logger.info(f"Specific image ID provided: {specific_image_id}")
         else:
             logger.info("Scheduled run detected")
         
@@ -624,13 +665,33 @@ def main():
         logger.info(f"Target page: {page_name}")
         logger.info(f"Page URL: {page_url}")
         
-        # Get next approved image
-        logger.info("Looking for approved images...")
-        image_data = get_next_approved_image()
-        
-        if not image_data:
-            logger.info("No approved images to post")
-            return 0
+        # Feature: Get specific image if IMAGE_ID provided, otherwise get next from queue
+        if specific_image_id:
+            logger.info(f"Fetching specific image ID: {specific_image_id}")
+            image_data = get_specific_image(int(specific_image_id))
+            
+            if not image_data:
+                logger.error(f"Image ID {specific_image_id} not found or invalid")
+                return 1
+            
+            # Validate image is approved and not already posted
+            if not image_data['approved_for_posting']:
+                logger.error(f"Image ID {specific_image_id} is not approved for posting")
+                return 1
+            
+            if image_data['posted_to_page']:
+                logger.error(f"Image ID {specific_image_id} has already been posted")
+                return 1
+            
+            logger.info(f"✅ Image ID {specific_image_id} is valid for manual posting")
+        else:
+            # Get next approved image from auto-post queue
+            logger.info("Looking for approved images in auto-post queue...")
+            image_data = get_next_approved_image()
+            
+            if not image_data:
+                logger.info("No approved images to post")
+                return 0
         
         logger.info(f"Found approved image: ID {image_data['id']}")
         logger.info(f"Image path: {image_data['image_path']}")

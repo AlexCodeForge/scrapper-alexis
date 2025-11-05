@@ -5,6 +5,28 @@
             localSelected: [],
             filter: @entangle('filter').live,
             perPage: @entangle('perPage').live,
+            confirmPostModal: false,
+            imageToPost: null,
+
+            openConfirmPostModal(imageId) {
+                this.imageToPost = imageId;
+                this.confirmPostModal = true;
+                console.log('Bugfix: Opening confirm modal for image', imageId);
+            },
+
+            closeConfirmPostModal() {
+                this.confirmPostModal = false;
+                this.imageToPost = null;
+                console.log('Bugfix: Closing confirm modal');
+            },
+
+            confirmPost() {
+                console.log('Bugfix: Confirmed post for image', this.imageToPost);
+                if (this.imageToPost) {
+                    $wire.postImageNow(this.imageToPost);
+                }
+                this.closeConfirmPostModal();
+            },
 
             getVisibleIds() {
                 const cards = this.$root.querySelectorAll('[data-image-id]');
@@ -372,12 +394,27 @@
                                     Rechazar
                                 </x-button>
                             @else
-                                {{-- Already approved, show status --}}
-                                <div class="text-center py-2 text-sm">
-                                    @if ($message->auto_post_enabled)
-                                        <p class="text-green-600 font-medium">✓ Lista para auto-publicación</p>
-                                    @else
-                                        <p class="text-blue-600 font-medium">✓ Lista para publicación manual</p>
+                                {{-- Already approved, show status and action buttons --}}
+                                <div class="space-y-2">
+                                    <div class="text-center py-2 text-sm">
+                                        @if ($message->auto_post_enabled)
+                                            <p class="text-green-600 font-medium">✓ Lista para auto-publicación</p>
+                                        @else
+                                            <p class="text-blue-600 font-medium">✓ Lista para publicación manual</p>
+                                        @endif
+                                    </div>
+
+                                    {{-- Feature: Manual "Post Now" button for manual-approved images --}}
+                                    @if (!$message->auto_post_enabled)
+                                        <x-button @click.stop="openConfirmPostModal({{ $message->id }})"
+                                            variant="outline"
+                                            size="sm"
+                                            wire:loading.attr="disabled"
+                                            wire:target="postImageNow({{ $message->id }})"
+                                            class="w-full bg-purple-600 text-white hover:bg-purple-700">
+                                            <x-lucide-send class="mr-1 h-3 w-3" />
+                                            Publicar Ahora
+                                        </x-button>
                                     @endif
                                 </div>
                             @endif
@@ -411,4 +448,43 @@
             {{ $messages->links() }}
         </div>
     @endif
+
+    <!-- Confirmation Modal for Manual Post -->
+    <template x-teleport="body">
+        <div x-show="confirmPostModal"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeConfirmPostModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Confirmar Publicación</h2>
+                    <button @click="closeConfirmPostModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-base text-gray-700 mb-4">
+                        ¿Estás seguro de que deseas publicar esta imagen ahora en Facebook?
+                    </p>
+                    <p class="text-sm text-gray-500">
+                        Esta acción iniciará el proceso de publicación inmediatamente.
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <x-button type="button" variant="outline" @click="closeConfirmPostModal()">
+                        Cancelar
+                    </x-button>
+                    <x-button type="button" @click="confirmPost()" class="bg-purple-600 text-white hover:bg-purple-700">
+                        <x-lucide-send class="mr-2 h-4 w-4" />
+                        Publicar Ahora
+                    </x-button>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>

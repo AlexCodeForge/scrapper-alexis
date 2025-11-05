@@ -289,7 +289,7 @@ def main():
     # Initialize database
     db = initialize_database('data/scraper.db')
     
-    # Get APPROVED messages that need images (ONE at a time for cronjob)
+    # Get ALL APPROVED messages that need images (batch processing)
     # Only generate images for messages that are approved_for_posting = true and image_generated = false/null
     messages_without_images = []
     with db.get_connection() as conn:
@@ -300,7 +300,6 @@ def main():
             WHERE approved_for_posting = 1
             AND (image_generated = 0 OR image_generated IS NULL)
             ORDER BY approved_at ASC
-            LIMIT 1
         """)
         
         for row in cursor.fetchall():

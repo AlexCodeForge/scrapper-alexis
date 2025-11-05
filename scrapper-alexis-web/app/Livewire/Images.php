@@ -111,6 +111,74 @@ class Images extends Component
         }
     }
 
+    public function postImageNow($messageId)
+    {
+        \Log::info('Images: Manual post now triggered', ['message_id' => $messageId, 'filter' => $this->filter]);
+
+        $message = Message::find($messageId);
+
+        if (!$message) {
+            \Log::error('Images: Message not found', ['message_id' => $messageId]);
+            session()->flash('error', 'Imagen no encontrada');
+            return;
+        }
+
+        // Validate image is approved for posting
+        if (!$message->approved_for_posting) {
+            \Log::warning('Images: Image not approved for posting', ['message_id' => $messageId]);
+            session()->flash('error', 'La imagen debe estar aprobada antes de publicar');
+            return;
+        }
+
+        // Prevent posting if already posted
+        if ($message->posted_to_page) {
+            \Log::warning('Images: Image already posted', ['message_id' => $messageId]);
+            session()->flash('error', 'Esta imagen ya ha sido publicada');
+            return;
+        }
+
+        \Log::info('Images: Executing manual post for image', ['message_id' => $messageId]);
+
+        // Execute posting script with specific image ID
+        $scriptPath = '/var/www/alexis-scrapper-docker/scrapper-alexis';
+        $timestamp = date('YmdHis');
+        $logFile = "/var/www/alexis-scrapper-docker/scrapper-alexis/logs/manual_post_image_{$messageId}_{$timestamp}.log";
+
+        // Feature: Run page poster with MANUAL_RUN=1 and IMAGE_ID={message_id}
+        $command = sprintf(
+            'cd %s && sudo -u root /bin/bash -c "export MANUAL_RUN=1 && export IMAGE_ID=%d && source venv/bin/activate && xvfb-run -a python3 facebook_page_poster.py" > %s 2>&1 &',
+            escapeshellarg($scriptPath),
+            $messageId,
+            escapeshellarg($logFile)
+        );
+
+        \Log::info('Images: Executing manual post command', [
+            'message_id' => $messageId,
+            'command' => $command,
+            'log_file' => $logFile
+        ]);
+
+        exec($command, $output, $returnVar);
+
+        // Give script moment to start
+        usleep(500000); // 0.5 seconds
+
+        if ($returnVar === 0 || file_exists($logFile)) {
+            \Log::info('Images: Manual post script started successfully', [
+                'message_id' => $messageId,
+                'log_file' => basename($logFile)
+            ]);
+            session()->flash('success', "Publicación iniciada. Revisa el log: " . basename($logFile));
+        } else {
+            \Log::error('Images: Failed to start manual post script', [
+                'message_id' => $messageId,
+                'return_var' => $returnVar,
+                'output' => $output
+            ]);
+            session()->flash('error', 'Error al iniciar la publicación. Revisa los logs.');
+        }
+    }
+
     public function rejectImage($messageId)
     {
         \Log::info('Images: Reject image', ['message_id' => $messageId, 'filter' => $this->filter]);
