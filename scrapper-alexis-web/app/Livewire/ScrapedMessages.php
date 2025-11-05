@@ -164,10 +164,11 @@ class ScrapedMessages extends Component
                 'headless_mode' => 'true' // Bugfix: Force headless mode for web UI execution
             ]);
 
-            // Execute Python script with specific MESSAGE_ID for immediate generation
-            $scriptPath = '/var/www/alexis-scrapper-docker/scrapper-alexis';
+            // Execute Python script with specific MESSAGE_ID for immediate generation - dynamic path from config
+            $pythonPath = config('scraper.python_path');
+            $scriptPath = $pythonPath . '/scrapper-alexis';
             $timestamp = date('YmdHis');
-            $logFile = "/var/www/alexis-scrapper-docker/scrapper-alexis/logs/manual_image_{$messageId}_{$timestamp}.log";
+            $logFile = $pythonPath . '/' . config('scraper.logs_dir') . "/manual_image_{$messageId}_{$timestamp}.log";
 
             // Run image generator with MESSAGE_ID environment variable
             // Bugfix: Set HEADLESS=true to avoid "no DISPLAY" error when running from web UI

@@ -82,14 +82,30 @@
             <!-- Posted Content Widget (Date Filtered) -->
             <x-card class="mb-8">
                 <x-card.header>
-                    <div class="flex flex-col gap-4">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <x-card.title class="text-xl">Contenido Publicado</x-card.title>
-                                <x-card.description>Mensajes publicados en la página</x-card.description>
-                            </div>
+                    <!-- Single Row Layout: Title, Count Widget & Date Filter -->
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <!-- Title and Description -->
+                        <div class="flex-shrink-0">
+                            <x-card.title class="text-xl">Contenido Publicado</x-card.title>
+                            <x-card.description>Mensajes publicados en la página</x-card.description>
                         </div>
                         
+                        <!-- Post Count & Date Filter -->
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-muted-foreground">Publicaciones en este período:</span>
+                                <span class="text-lg font-semibold text-foreground">{{ number_format($postedStats['count']) }}</span>
+                            </div>
+                            <x-select wire:model.live="dateFilter" class="w-48">
+                                <option value="today">Hoy</option>
+                                <option value="week">Últimos 7 días</option>
+                                <option value="month">Últimos 30 días</option>
+                                <option value="custom">Rango Personalizado</option>
+                            </x-select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col gap-4">
                         <!-- Custom Date Range -->
                         @if($dateFilter === 'custom')
                             <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-accent/50 p-4 rounded-lg border border-border">
@@ -113,29 +129,6 @@
                                 </div>
                             </div>
                         @endif
-
-                        <!-- Post Count Widget & Date Filter in Same Row -->
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                            <div class="flex-1 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
-                                <div class="flex items-center gap-3">
-                                    <div class="p-3 bg-blue-500 rounded-full">
-                                        <x-lucide-calendar-check class="h-6 w-6 text-white" />
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-muted-foreground">Publicaciones en este período</p>
-                                        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($postedStats['count']) }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <x-select wire:model.live="dateFilter" class="w-48">
-                                    <option value="today">Hoy</option>
-                                    <option value="week">Últimos 7 días</option>
-                                    <option value="month">Últimos 30 días</option>
-                                    <option value="custom">Rango Personalizado</option>
-                                </x-select>
-                            </div>
-                        </div>
                     </div>
                 </x-card.header>
                 <x-card.content class="p-6">

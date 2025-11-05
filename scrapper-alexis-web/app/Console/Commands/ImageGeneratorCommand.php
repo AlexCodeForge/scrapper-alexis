@@ -20,11 +20,12 @@ class ImageGeneratorCommand extends Command
             $this->info('Manual execution: generating images for approved messages');
         }
 
-        // Run Python script in virtualenv
-        $scriptPath = '/var/www/alexis-scrapper-docker/scrapper-alexis';
+        // Run Python script in virtualenv - use dynamic path from config
+        $pythonPath = config('scraper.python_path');
+        $scriptPath = $pythonPath . '/' . 'scrapper-alexis';
 
         $this->info('Starting image generator...');
-        \Log::info('ImageGeneratorCommand: Executing Python script');
+        \Log::info('ImageGeneratorCommand: Executing Python script', ['path' => $scriptPath]);
 
         $exitCode = $this->runInVirtualenv(
             $scriptPath,

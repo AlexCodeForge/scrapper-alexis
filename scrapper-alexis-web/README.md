@@ -1,209 +1,92 @@
 # Scraper Admin Panel
 
-Laravel 12 + Livewire 3 admin panel for managing the Facebook Scraper application.
+A Laravel-based web application for managing Facebook/Twitter scraping and automated posting.
 
 ## Features
 
-- **Dashboard**: View statistics and recent messages, manually trigger scraper scripts
-- **Image Gallery**: Browse, search, download, and delete generated images
-- **Settings**: Configure cron intervals, Facebook/Twitter accounts, and proxy settings
+- Facebook profile scraping
+- Automated image generation from scraped messages
+- Facebook page posting with scheduling
+- Web-based management interface
+- Real-time logs viewing
+- Portable installation (no hardcoded paths)
 
-## Installation
+## Directory Structure
 
-### Prerequisites
+This application requires two sibling directories:
+```
+parent-directory/
+├── scrapper-alexis-web/  (this Laravel app)
+└── scrapper-alexis/      (Python scraper scripts)
+```
 
-- PHP 8.2+
-- Composer
-- Node.js & NPM
-- SQLite (already set up with scraper)
+## Quick Start
 
-### Setup
-
-1. Install PHP dependencies:
+1. Install dependencies:
 ```bash
-cd /var/www/scrapper-alexis-web
 composer install
+npm install && npm run build
 ```
 
-2. Install Node dependencies and build assets:
+2. Setup environment:
 ```bash
-npm install
-npm run build
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
 ```
 
-3. Ensure proper permissions:
+3. Configure the scheduler (add to crontab):
 ```bash
-# Give www-data (or your web server user) permission to access the scraper database
-chmod 664 /var/www/scrapper-alexis/data/scraper.db
-chmod 775 /var/www/scrapper-alexis/data
-chmod 775 /var/www/scrapper-alexis/data/message_images
-
-# Laravel storage permissions
-chmod -R 775 storage bootstrap/cache
-chown -R www-data:www-data storage bootstrap/cache
+* * * * * cd /path/to/scrapper-alexis-web && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-4. Database is already configured to use the scraper's SQLite database at:
-   `/var/www/scrapper-alexis/data/scraper.db`
+4. Access the application and configure:
+- Default URL: http://localhost:8000
+- Login with configured credentials
+- Go to Settings to configure scrapers
 
-5. Admin user is already created:
-   - Email: `admin@scraper.local`
-   - Password: `password`
+## Configuration
 
-## Web Server Configuration
+### Custom Paths
 
-### Nginx
+If your directory structure differs, set these in `.env`:
 
-```nginx
-server {
-    listen 80;
-    server_name scraper-admin.local;
-    root /var/www/scrapper-alexis-web/public;
+```env
+# Parent directory containing both web and Python directories
+SCRAPER_PYTHON_PATH=/custom/path
 
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
+# Python logs directory (relative to SCRAPER_PYTHON_PATH)
+SCRAPER_LOGS_DIR=scrapper-alexis/logs
 
-    index index.php;
-
-    charset utf-8;
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location = /favicon.ico { access_log off; log_not_found off; }
-    location = /robots.txt  { access_log off; log_not_found off; }
-
-    error_page 404 /index.php;
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-        fastcgi_hide_header X-Powered-By;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-}
+# Python data directory (relative to SCRAPER_PYTHON_PATH)
+SCRAPER_DATA_DIR=scrapper-alexis/data
 ```
 
-### Apache
+### Scheduled Jobs
 
-```apache
-<VirtualHost *:80>
-    ServerName scraper-admin.local
-    DocumentRoot /var/www/scrapper-alexis-web/public
+The application runs these scheduled jobs:
+- **Facebook Scraper**: Hourly (when enabled)
+- **Image Generator**: Every 5 minutes (when enabled)
+- **Page Poster**: Every 30 minutes (when enabled)
+- **Cleanup**: Daily at 2 AM (when enabled)
 
-    <Directory /var/www/scrapper-alexis-web/public>
-        AllowOverride All
-        Require all granted
-    </Directory>
+## Portability
 
-    ErrorLog ${APACHE_LOG_DIR}/scraper-admin-error.log
-    CustomLog ${APACHE_LOG_DIR}/scraper-admin-access.log combined
-</VirtualHost>
-```
+✅ **Fully Portable**: No hardcoded paths!  
+✅ **Auto-Detection**: Automatically finds sibling directories  
+✅ **Customizable**: Override paths via environment variables
 
-## Development Server
+See [INSTALLATION.md](../INSTALLATION.md) for detailed setup instructions.
 
-For testing, you can use Laravel's built-in server:
+## Tech Stack
 
-```bash
-cd /var/www/scrapper-alexis-web
-php artisan serve --host=0.0.0.0 --port=8000
-```
-
-Access at: `http://localhost:8000`
-
-## Usage
-
-### Dashboard
-- View real-time statistics (total messages, posted tweets, generated images, active profiles)
-- See the 10 most recent scraped messages
-- Manually trigger any of the three main scripts (Facebook scraper, Twitter poster, Image generator)
-
-### Image Gallery
-- Browse all generated images in a responsive grid
-- Search images by message text
-- Select individual or multiple images
-- Download selected images as a ZIP file
-- Delete images (removes file and updates database)
-- Click any image to view full size with message details and Twitter link
-
-### Settings
-- **Cron Schedule**: Set intervals for Facebook scraper (hours) and Twitter poster (minutes)
-- **Facebook Account**: Configure email, password, and profile URLs to scrape
-- **Twitter Account**: Configure email and password for posting
-- **Proxy Settings**: Configure proxy server for Twitter access
-
-All settings are saved to `/var/www/scrapper-alexis/copy.env` and the crontab is automatically updated.
-
-## Security Notes
-
-- Change the default admin password after first login
-- Ensure the scraper's `copy.env` file has proper permissions (not world-readable)
-- Consider setting up HTTPS for production use
-- The admin panel should only be accessible from trusted networks
-
-## Troubleshooting
-
-### "Permission denied" errors
-Ensure web server user has read/write access to:
-- `/var/www/scrapper-alexis/data/scraper.db`
-- `/var/www/scrapper-alexis/data/message_images/`
-- `/var/www/scrapper-alexis/copy.env`
-- `/var/www/scrapper-alexis-web/storage/`
-
-### Cron updates not working
-The web server user needs permission to run `crontab`. You may need to:
-```bash
-# Add www-data to crontab users (if restricted)
-echo "www-data" >> /etc/cron.allow
-```
-
-### Images not displaying
-Check that image paths in the database match actual file locations:
-```bash
-ls -la /var/www/scrapper-alexis/data/message_images/
-```
-
-### Scripts not running
-Ensure bash scripts are executable:
-```bash
-chmod +x /var/www/scrapper-alexis/run_*.sh
-```
-
-## File Structure
-
-```
-/var/www/scrapper-alexis-web/
-├── app/
-│   ├── Http/Controllers/
-│   │   └── AuthController.php
-│   ├── Livewire/
-│   │   ├── Dashboard.php
-│   │   ├── ImageGallery.php
-│   │   └── Settings.php
-│   ├── Models/
-│   │   ├── Message.php
-│   │   ├── Profile.php
-│   │   └── ScrapingSession.php
-│   └── helpers.php
-├── resources/views/
-│   ├── auth/
-│   │   └── login.blade.php
-│   ├── layouts/
-│   │   └── app.blade.php
-│   └── livewire/
-│       ├── dashboard.blade.php
-│       ├── image-gallery.blade.php
-│       └── settings.blade.php
-└── routes/
-    └── web.php
-```
+- Laravel 12
+- Livewire 3.6
+- Tailwind CSS 4.0
+- Alpine.js 3.15
+- SQLite database
+- Python 3 (for scraper scripts)
 
 ## License
 
-Private project - All rights reserved
+MIT

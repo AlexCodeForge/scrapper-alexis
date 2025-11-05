@@ -52,6 +52,9 @@ class Settings extends Component
     public $imageGeneratorIntervalMax = 60;
     public $imageGeneratorDebugEnabled = false;
 
+    // Application Settings
+    public $timezone = 'America/Mexico_City';
+
     // File uploads for auth
     public $facebookAuthFile;
     
@@ -114,6 +117,9 @@ class Settings extends Component
         $this->imageGeneratorIntervalMax = $settings->image_generator_interval_max ?? 60;
         $this->imageGeneratorDebugEnabled = $settings->image_generator_debug_enabled ?? false;
 
+        // Load application settings
+        $this->timezone = $settings->timezone ?? 'America/Mexico_City';
+
         \Log::info('Settings: Loaded from database', [
             'facebook_enabled' => $this->facebookEnabled,
             'twitter_enabled' => $this->twitterEnabled,
@@ -140,7 +146,9 @@ class Settings extends Component
 
     public function checkAuthFiles()
     {
-        $this->facebookAuthExists = file_exists('/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook.json');
+        $pythonPath = config('scraper.python_path');
+        $authPath = $pythonPath . '/scrapper-alexis/auth/auth_facebook.json';
+        $this->facebookAuthExists = file_exists($authPath);
     }
 
     // Bugfix: Explicit toggle methods (Livewire $toggle magic doesn't trigger updated* hooks)
@@ -410,7 +418,8 @@ class Settings extends Component
         ]);
 
         try {
-            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook.json';
+            $pythonPath = config('scraper.python_path');
+            $authPath = $pythonPath . '/scrapper-alexis/auth/auth_facebook.json';
             $authDir = dirname($authPath);
 
             // Bugfix: Ensure the auth directory exists before saving files
@@ -433,7 +442,7 @@ class Settings extends Component
             }
 
             // Create empty session file (will be populated on first run)
-            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook_session.json';
+            $sessionPath = $pythonPath . '/scrapper-alexis/auth/auth_facebook_session.json';
             file_put_contents($sessionPath, json_encode([
                 'session_storage' => []
             ], JSON_PRETTY_PRINT));
@@ -466,8 +475,9 @@ class Settings extends Component
         \Log::info("deleteFacebookAuth: Method called");
 
         try {
-            $authPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook.json';
-            $sessionPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/auth/auth_facebook_session.json';
+            $pythonPath = config('scraper.python_path');
+            $authPath = $pythonPath . '/scrapper-alexis/auth/auth_facebook.json';
+            $sessionPath = $pythonPath . '/scrapper-alexis/auth/auth_facebook_session.json';
 
             // Delete files
             if (file_exists($authPath)) {
@@ -639,7 +649,8 @@ class Settings extends Component
                 
                 // Copy avatar to Python project for image generation
                 $publicAvatarPath = storage_path('app/public/' . $avatarPath);
-                $pythonAvatarPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/avatar_cache/user_avatar.jpg';
+                $pythonPath = config('scraper.python_path');
+                $pythonAvatarPath = $pythonPath . '/scrapper-alexis/avatar_cache/user_avatar.jpg';
                 
                 // Ensure avatar_cache directory exists
                 $pythonAvatarDir = dirname($pythonAvatarPath);
@@ -746,6 +757,33 @@ class Settings extends Component
         } else {
             \Log::error('Settings: saveProxySettings failed');
             $this->dispatch('settings-error', message: 'Error al guardar configuración de proxy');
+        }
+    }
+
+    public function saveApplicationSettings()
+    {
+        \Log::info('Settings: saveApplicationSettings called', ['timezone' => $this->timezone]);
+
+        // Small delay to ensure loading modal is visible to users
+        usleep(300000); // 300ms
+
+        $this->validate([
+            'timezone' => 'required|string|max:100',
+        ]);
+
+        // Update database
+        $result = ScraperSettings::updateSettings([
+            'timezone' => $this->timezone,
+        ]);
+
+        if ($result) {
+            \Log::info('Settings: saveApplicationSettings success');
+            // Clear config cache to apply timezone immediately
+            \Artisan::call('config:cache');
+            $this->dispatch('settings-saved', message: 'Configuración de aplicación guardada correctamente. Zona horaria actualizada.');
+        } else {
+            \Log::error('Settings: saveApplicationSettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar configuración de aplicación');
         }
     }
 

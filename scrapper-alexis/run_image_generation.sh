@@ -10,9 +10,16 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
-# Run the image generator with Xvfb (virtual display)
-xvfb-run -a python3 generate_message_images.py
+# Set up log file with date
+LOG_FILE="logs/image_generator_$(date '+%Y%m%d').log"
 
-# Log execution
+# Log start
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting image generator" >> "$LOG_FILE"
+
+# Run the image generator with Xvfb (virtual display) and redirect output
+xvfb-run -a python3 generate_message_images.py 2>&1 | tee -a "$LOG_FILE"
+
+# Log completion
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Image generation completed" >> "$LOG_FILE"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Image generation completed" >> logs/cron_execution.log
 

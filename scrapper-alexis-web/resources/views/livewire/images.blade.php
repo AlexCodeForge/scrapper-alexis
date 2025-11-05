@@ -151,32 +151,32 @@
     @endif
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stats-grid mb-8">
-        <!-- Pending -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3 stats-grid mb-8">
+        <!-- Pending for Publishing -->
         <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
-            <x-card.content class="p-4">
-                <div class="flex items-center justify-between space-x-3">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between space-x-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground truncate">Pendientes</p>
-                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['pending']) }}</p>
+                        <p class="text-sm font-medium text-muted-foreground truncate">Pendientes por publicar</p>
+                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['pending']) }}</p>
                     </div>
                     <div class="flex-shrink-0">
-                        <x-lucide-clock class="h-8 w-8 text-gray-500" />
+                        <x-lucide-clock class="h-10 w-10 text-gray-500" />
                     </div>
                 </div>
             </x-card.content>
         </x-card>
 
-        <!-- Approved Manual -->
+        <!-- Manual Pending -->
         <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
-            <x-card.content class="p-4">
-                <div class="flex items-center justify-between space-x-3">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between space-x-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground truncate">Aprobadas</p>
-                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['approved_manual']) }}</p>
+                        <p class="text-sm font-medium text-muted-foreground truncate">Pendientes Manuales</p>
+                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['approved_manual']) }}</p>
                     </div>
                     <div class="flex-shrink-0">
-                        <x-lucide-check-circle class="h-8 w-8 text-blue-500" />
+                        <x-lucide-hand class="h-10 w-10 text-blue-500" />
                     </div>
                 </div>
             </x-card.content>
@@ -184,14 +184,14 @@
 
         <!-- Posted -->
         <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
-            <x-card.content class="p-4">
-                <div class="flex items-center justify-between space-x-3">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between space-x-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground truncate">Publicadas</p>
-                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['posted']) }}</p>
+                        <p class="text-sm font-medium text-muted-foreground truncate">Publicadas</p>
+                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['posted']) }}</p>
                     </div>
                     <div class="flex-shrink-0">
-                        <x-lucide-check-circle-2 class="h-8 w-8 text-purple-500" />
+                        <x-lucide-check-circle-2 class="h-10 w-10 text-purple-500" />
                     </div>
                 </div>
             </x-card.content>
@@ -205,7 +205,7 @@
                 <!-- Filters -->
                 <div class="flex flex-col filters-inner gap-3 items-center">
                     <x-select wire:model.live="filter" class="min-w-[200px]">
-                        <option value="pending">Pendientes</option>
+                        <option value="pending">Pendientes por publicar</option>
                         <option value="approved_auto">Aprobadas (Auto)</option>
                         <option value="approved_manual">Aprobadas (Manual)</option>
                         <option value="posted">Publicadas</option>

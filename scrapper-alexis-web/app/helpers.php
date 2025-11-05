@@ -12,7 +12,9 @@ function updateEnvFile(string $key, string $value): bool
 {
     error_log("updateEnvFile: CALLED with key={$key}, value={$value}");
     // NOTE: Running on Nginx, not Docker
-    $envPath = '/var/www/alexis-scrapper-docker/scrapper-alexis/.env';
+    // Dynamic path from config
+    $pythonPath = config('scraper.python_path');
+    $envPath = $pythonPath . '/scrapper-alexis/.env';
 
     if (!file_exists($envPath)) {
         error_log("updateEnvFile: FILE NOT FOUND at {$envPath}");
@@ -109,7 +111,7 @@ function updateCrontab(int $facebookIntervalMin, int $twitterIntervalMin, bool $
             'facebook_enabled' => $facebookEnabled,
             'twitter_enabled' => $twitterEnabled
         ]);
-        
+
         return true; // Return true to avoid breaking existing code
 
         if ($returnVar === 0) {
@@ -226,9 +228,10 @@ function runScraperScript(string $script): array
 
     $command = $commandsMap[$script];
 
-    // Create timestamped log file for this manual run
+    // Create timestamped log file for this manual run - dynamic from config
     $timestamp = date('YmdHis');
-    $logDir = '/var/www/alexis-scrapper-docker/scrapper-alexis/logs';
+    $pythonPath = config('scraper.python_path');
+    $logDir = $pythonPath . '/' . config('scraper.logs_dir');
     $logFile = "{$logDir}/manual_{$script}_{$timestamp}.log";
 
     // Ensure log directory exists
@@ -247,11 +250,12 @@ function runScraperScript(string $script): array
         // Run Artisan command in background with --manual and --skip-delay flags
         // This bypasses the enabled check and skips random delays for manual execution
         $baseCommand = sprintf(
-            'cd /var/www/alexis-scrapper-docker/scrapper-alexis-web && php artisan %s --manual --skip-delay >> %s 2>&1 &',
+            'cd %s && php artisan %s --manual --skip-delay >> %s 2>&1 &',
+            escapeshellarg(base_path()),
             escapeshellarg($command),
             escapeshellarg($logFile)
         );
-        
+
         exec($baseCommand, $output, $returnVar);
 
         \Log::info("Manual script execution started", [
@@ -279,7 +283,7 @@ function runScraperScript(string $script): array
             'script' => $script,
             'error' => $e->getMessage()
         ]);
-        
+
         return [
             'success' => false,
             'message' => '❌ Error: ' . $e->getMessage(),
@@ -298,6 +302,7 @@ function getJobStatus(string $job): bool
             'facebook' => ['model' => \App\Models\ScraperSettings::class, 'field' => 'facebook_enabled'],
             'twitter' => ['model' => \App\Models\ScraperSettings::class, 'field' => 'twitter_enabled'],
             'page-poster' => ['model' => \App\Models\PostingSetting::class, 'field' => 'enabled'],
+            'image-generator' => ['model' => \App\Models\ScraperSettings::class, 'field' => 'image_generator_enabled'],
         ];
 
         if (!isset($jobMap[$job])) {
@@ -307,7 +312,7 @@ function getJobStatus(string $job): bool
         $modelClass = $jobMap[$job]['model'];
         $field = $jobMap[$job]['field'];
         $settings = $modelClass::getSettings();
-        
+
         return (bool) $settings->$field;
     } catch (\Exception $e) {
         \Log::error('getJobStatus failed', ['job' => $job, 'error' => $e->getMessage()]);
@@ -320,19 +325,17 @@ function getJobStatus(string $job): bool
  */
 function getJobLogs(string $job, int $lines = 100): string
 {
-    // Logs directory
-    $logMap = [
-        'facebook' => '/scraper/logs/facebook_cron.log',
-        'twitter' => '/scraper/logs/twitter_cron.log',
-        'page-poster' => '/scraper/logs/page_poster_' . date('Ymd') . '.log',
-        'execution' => '/scraper/logs/cron_execution.log',
-    ];
+    // Get log file path from configuration
+    $logFiles = config('scraper.log_files', []);
 
-    if (!isset($logMap[$job])) {
+    if (!isset($logFiles[$job])) {
         return "Invalid job type: {$job}";
     }
 
-    $logFile = $logMap[$job];
+    // Build full path: python_path/logs_dir/log_file
+    $pythonPath = config('scraper.python_path');
+    $logsDir = config('scraper.logs_dir');
+    $logFile = $pythonPath . '/' . $logsDir . '/' . $logFiles[$job];
 
     if (!file_exists($logFile)) {
         return "Log file not found: {$logFile}\n\nThe job may not have run yet.";
@@ -360,7 +363,8 @@ function getJobLogs(string $job, int $lines = 100): string
 function getManualLogFiles(): array
 {
     // Manual logs are stored in scraper logs directory
-    $logsDir = '/var/www/alexis-scrapper-docker/scrapper-alexis/logs';
+    $pythonPath = config('scraper.python_path');
+    $logsDir = $pythonPath . '/' . config('scraper.logs_dir');
 
     if (!is_dir($logsDir)) {
         return [];
@@ -393,7 +397,9 @@ function getManualLogFiles(): array
 function getLogFileContent(string $filename, int $lines = 500): string
 {
     // Manual logs are stored in scraper logs directory
-    $logFile = '/var/www/alexis-scrapper-docker/scrapper-alexis/logs/' . basename($filename);
+    $pythonPath = config('scraper.python_path');
+    $logsDir = config('scraper.logs_dir');
+    $logFile = $pythonPath . '/' . $logsDir . '/' . basename($filename);
 
     if (!file_exists($logFile)) {
         return "Log file not found: {$filename}";

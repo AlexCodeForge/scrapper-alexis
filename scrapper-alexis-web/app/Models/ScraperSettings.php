@@ -33,6 +33,7 @@ class ScraperSettings extends Model
         'image_generator_interval_min',
         'image_generator_interval_max',
         'image_generator_debug_enabled',
+        'timezone',
     ];
 
     protected $casts = [
@@ -122,6 +123,7 @@ class ScraperSettings extends Model
             'image_generator_interval_min' => 30,
             'image_generator_interval_max' => 60,
             'image_generator_debug_enabled' => false,
+            'timezone' => 'America/Mexico_City',
         ]);
     }
 

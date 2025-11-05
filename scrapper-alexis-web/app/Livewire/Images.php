@@ -139,10 +139,11 @@ class Images extends Component
 
         \Log::info('Images: Executing manual post for image', ['message_id' => $messageId]);
 
-        // Execute posting script with specific image ID
-        $scriptPath = '/var/www/alexis-scrapper-docker/scrapper-alexis';
+        // Execute posting script with specific image ID - dynamic path from config
+        $pythonPath = config('scraper.python_path');
+        $scriptPath = $pythonPath . '/scrapper-alexis';
         $timestamp = date('YmdHis');
-        $logFile = "/var/www/alexis-scrapper-docker/scrapper-alexis/logs/manual_post_image_{$messageId}_{$timestamp}.log";
+        $logFile = $pythonPath . '/' . config('scraper.logs_dir') . "/manual_post_image_{$messageId}_{$timestamp}.log";
 
         // Feature: Run page poster with MANUAL_RUN=1 and IMAGE_ID={message_id}
         $command = sprintf(

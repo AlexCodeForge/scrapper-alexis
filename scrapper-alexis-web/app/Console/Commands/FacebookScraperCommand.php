@@ -40,11 +40,12 @@ class FacebookScraperCommand extends Command
             $this->info('Skipping random delay (testing mode)');
         }
 
-        // Run Python script in virtualenv
-        $scriptPath = '/var/www/alexis-scrapper-docker/scrapper-alexis';
+        // Run Python script in virtualenv - use dynamic path from config
+        $pythonPath = config('scraper.python_path');
+        $scriptPath = $pythonPath . '/' . 'scrapper-alexis';
 
         $this->info('Starting Facebook scraper...');
-        \Log::info('FacebookScraperCommand: Executing Python script');
+        \Log::info('FacebookScraperCommand: Executing Python script', ['path' => $scriptPath]);
 
         $exitCode = $this->runInVirtualenv(
             $scriptPath,

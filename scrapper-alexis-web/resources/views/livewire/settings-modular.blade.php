@@ -89,6 +89,25 @@
             </x-card.content>
         </x-card>
 
+        <!-- Application Settings (Timezone) -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('application')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-settings class="h-5 w-5 text-indigo-600" />
+                            Configuración de Aplicación
+                            @if($timezone)
+                                <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                            @endif
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">Zona horaria</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
         <!-- Cron Scheduling -->
         <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('cron-schedule')">
             <x-card.content class="p-6">
@@ -666,10 +685,69 @@
         </div>
     </template>
 
+    <!-- Application Settings Modal -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'application'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Configuración de Aplicación</h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="saveApplicationSettings">
+                    <div class="space-y-6">
+                        <!-- Timezone Setting -->
+                        <div class="space-y-4">
+                            <div class="space-y-2">
+                                <x-label for="timezone">Zona Horaria</x-label>
+                                <select id="timezone" wire:model.blur="timezone"
+                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                                    <option value="America/Mexico_City">Ciudad de México (UTC-6/-5)</option>
+                                    <option value="America/Cancun">Cancún (UTC-5)</option>
+                                    <option value="America/Chihuahua">Chihuahua (UTC-7/-6)</option>
+                                    <option value="America/Tijuana">Tijuana (UTC-8/-7)</option>
+                                    <option value="America/Mazatlan">Mazatlán (UTC-7/-6)</option>
+                                    <option value="America/Monterrey">Monterrey (UTC-6/-5)</option>
+                                    <option value="Europe/Madrid">Madrid (UTC+1/+2)</option>
+                                    <option value="Europe/London">Londres (UTC+0/+1)</option>
+                                    <option value="America/New_York">Nueva York (UTC-5/-4)</option>
+                                    <option value="America/Los_Angeles">Los Ángeles (UTC-8/-7)</option>
+                                    <option value="UTC">UTC (Coordinado Universal)</option>
+                                </select>
+                                <p class="text-xs text-muted-foreground mt-1">
+                                    Esta configuración afecta cómo se muestran las fechas y horas en toda la aplicación.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex justify-end gap-3">
+                                <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                                <x-button type="submit" wire:loading.attr="disabled" wire:target="saveApplicationSettings">
+                                    <x-lucide-save class="mr-2 h-4 w-4" />
+                                    Guardar Zona Horaria
+                                </x-button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
     <!-- Loading Modal -->
     <template x-teleport="body">
         <div wire:loading.flex
-             wire:target="savePagePostingSettings, saveCronSettings, saveFacebookSettings, saveImageGeneratorSettings, saveProxySettings, testProxyConnection"
+             wire:target="savePagePostingSettings, saveCronSettings, saveFacebookSettings, saveImageGeneratorSettings, saveProxySettings, saveApplicationSettings, testProxyConnection"
              class="fixed inset-0 z-50 items-center justify-center bg-black/40 backdrop-blur-sm">
             <div class="bg-white rounded-lg shadow-2xl p-8 flex flex-col items-center space-y-4 max-w-sm mx-4">
                 <div class="relative">

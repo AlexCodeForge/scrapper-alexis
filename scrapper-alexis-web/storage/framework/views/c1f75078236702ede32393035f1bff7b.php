@@ -466,10 +466,11 @@
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes([]); ?>
-                    <div class="flex flex-col gap-4">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <?php if (isset($component)) { $__componentOriginal6ea0bfee1a50e1de1096e35e7b344cad = $component; } ?>
+                    <!-- Single Row Layout: Title, Count Widget & Date Filter -->
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <!-- Title and Description -->
+                        <div class="flex-shrink-0">
+                            <?php if (isset($component)) { $__componentOriginal6ea0bfee1a50e1de1096e35e7b344cad = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal6ea0bfee1a50e1de1096e35e7b344cad = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card.title','data' => ['class' => 'text-xl']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('card.title'); ?>
@@ -488,7 +489,7 @@
 <?php $component = $__componentOriginal6ea0bfee1a50e1de1096e35e7b344cad; ?>
 <?php unset($__componentOriginal6ea0bfee1a50e1de1096e35e7b344cad); ?>
 <?php endif; ?>
-                                <?php if (isset($component)) { $__componentOriginal687b2b57c91035c27980e0099398a14b = $component; } ?>
+                            <?php if (isset($component)) { $__componentOriginal687b2b57c91035c27980e0099398a14b = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal687b2b57c91035c27980e0099398a14b = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card.description','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('card.description'); ?>
@@ -507,9 +508,42 @@
 <?php $component = $__componentOriginal687b2b57c91035c27980e0099398a14b; ?>
 <?php unset($__componentOriginal687b2b57c91035c27980e0099398a14b); ?>
 <?php endif; ?>
-                            </div>
                         </div>
                         
+                        <!-- Post Count & Date Filter -->
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-muted-foreground">Publicaciones en este período:</span>
+                                <span class="text-lg font-semibold text-foreground"><?php echo e(number_format($postedStats['count'])); ?></span>
+                            </div>
+                            <?php if (isset($component)) { $__componentOriginaled2cde6083938c436304f332ba96bb7c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginaled2cde6083938c436304f332ba96bb7c = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.select.index','data' => ['wire:model.live' => 'dateFilter','class' => 'w-48']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('select'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['wire:model.live' => 'dateFilter','class' => 'w-48']); ?>
+                                <option value="today">Hoy</option>
+                                <option value="week">Últimos 7 días</option>
+                                <option value="month">Últimos 30 días</option>
+                                <option value="custom">Rango Personalizado</option>
+                             <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginaled2cde6083938c436304f332ba96bb7c)): ?>
+<?php $attributes = $__attributesOriginaled2cde6083938c436304f332ba96bb7c; ?>
+<?php unset($__attributesOriginaled2cde6083938c436304f332ba96bb7c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginaled2cde6083938c436304f332ba96bb7c)): ?>
+<?php $component = $__componentOriginaled2cde6083938c436304f332ba96bb7c; ?>
+<?php unset($__componentOriginaled2cde6083938c436304f332ba96bb7c); ?>
+<?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col gap-4">
                         <!-- Custom Date Range -->
                         <!--[if BLOCK]><![endif]--><?php if($dateFilter === 'custom'): ?>
                             <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-accent/50 p-4 rounded-lg border border-border">
@@ -570,66 +604,6 @@
                                 </div>
                             </div>
                         <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-
-                        <!-- Post Count Widget & Date Filter in Same Row -->
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                            <div class="flex-1 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
-                                <div class="flex items-center gap-3">
-                                    <div class="p-3 bg-blue-500 rounded-full">
-                                        <?php if (isset($component)) { $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c = $attributes; } ?>
-<?php $component = BladeUI\Icons\Components\Svg::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('lucide-calendar-check'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\BladeUI\Icons\Components\Svg::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['class' => 'h-6 w-6 text-white']); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
-<?php $attributes = $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
-<?php unset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
-<?php $component = $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
-<?php unset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
-<?php endif; ?>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-muted-foreground">Publicaciones en este período</p>
-                                        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400"><?php echo e(number_format($postedStats['count'])); ?></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <?php if (isset($component)) { $__componentOriginaled2cde6083938c436304f332ba96bb7c = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginaled2cde6083938c436304f332ba96bb7c = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.select.index','data' => ['wire:model.live' => 'dateFilter','class' => 'w-48']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('select'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['wire:model.live' => 'dateFilter','class' => 'w-48']); ?>
-                                    <option value="today">Hoy</option>
-                                    <option value="week">Últimos 7 días</option>
-                                    <option value="month">Últimos 30 días</option>
-                                    <option value="custom">Rango Personalizado</option>
-                                 <?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginaled2cde6083938c436304f332ba96bb7c)): ?>
-<?php $attributes = $__attributesOriginaled2cde6083938c436304f332ba96bb7c; ?>
-<?php unset($__attributesOriginaled2cde6083938c436304f332ba96bb7c); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginaled2cde6083938c436304f332ba96bb7c)): ?>
-<?php $component = $__componentOriginaled2cde6083938c436304f332ba96bb7c; ?>
-<?php unset($__componentOriginaled2cde6083938c436304f332ba96bb7c); ?>
-<?php endif; ?>
-                            </div>
-                        </div>
                     </div>
                  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>

@@ -75,7 +75,7 @@ class Dashboard extends Component
             'posted_to_page' => $pageStats['posted'],
         ];
 
-        // Get date range for filter
+        // Get date range for filter (use database-level date comparisons for timezone safety)
         $startDate = null;
         $endDate = now();
 
@@ -96,27 +96,34 @@ class Dashboard extends Component
         }
 
         // Get latest 5 posted messages for the selected date range
-        $postedMessagesFiltered = Message::where('posted_to_page', true)
-            ->when($startDate, function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('posted_to_page_at', [$startDate, $endDate]);
-            })
+        // BUGFIX: Use database-level date comparison for timezone-safe filtering
+        $messagesQuery = Message::where('posted_to_page', true);
+        
+        if ($this->dateFilter === 'today') {
+            $messagesQuery->whereTodayOrBefore('posted_to_page_at');
+        } elseif ($startDate) {
+            $messagesQuery->whereDate('posted_to_page_at', '>=', $startDate->toDateString())
+                         ->whereDate('posted_to_page_at', '<=', $endDate->toDateString());
+        }
+        
+        $postedMessagesFiltered = $messagesQuery
             ->latest('posted_to_page_at')
             ->limit(5)
             ->get();
 
         // Calculate stats for filtered period
+        $statsQuery = Message::where('posted_to_page', true);
+        
+        if ($this->dateFilter === 'today') {
+            $statsQuery->whereTodayOrBefore('posted_to_page_at');
+        } elseif ($startDate) {
+            $statsQuery->whereDate('posted_to_page_at', '>=', $startDate->toDateString())
+                      ->whereDate('posted_to_page_at', '<=', $endDate->toDateString());
+        }
+        
         $postedStats = [
-            'count' => Message::where('posted_to_page', true)
-                ->when($startDate, function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('posted_to_page_at', [$startDate, $endDate]);
-                })
-                ->count(),
-            'with_images' => Message::where('posted_to_page', true)
-                ->where('image_generated', true)
-                ->when($startDate, function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('posted_to_page_at', [$startDate, $endDate]);
-                })
-                ->count(),
+            'count' => $statsQuery->count(),
+            'with_images' => (clone $statsQuery)->where('image_generated', true)->count(),
         ];
 
         \Log::info('Dashboard: Rendering with posted messages', [

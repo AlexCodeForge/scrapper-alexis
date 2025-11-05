@@ -776,10 +776,12 @@ def main():
                     else:
                         logger.info(f"Not logged in as {page_name}, need to switch profiles...")
                         
-                        # Import and try to switch
-                        from facebook.facebook_page_manager import switch_to_page_mode
+                        # Bugfix: Use ensure_page_mode instead of switch_to_page_mode
+                        # ensure_page_mode tries direct navigation first (faster & more reliable)
+                        from facebook.facebook_page_manager import ensure_page_mode
                         
-                        if not switch_to_page_mode(page, page_name, None):
+                        # Bugfix: Use ensure_page_mode with page_url for direct navigation (Method 1)
+                        if not ensure_page_mode(page, page_name, page_url):
                             logger.error("❌ Failed to switch to page profile")
                             logger.error(f"Current URL: {page.url}")
                             take_debug_screenshot(page, "ERROR_cannot_switch_profile", "page_posting", "Failed to switch profile")

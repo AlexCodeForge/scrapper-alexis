@@ -52,6 +52,11 @@ def is_in_page_mode(page: Page, page_name: str = None) -> bool:
             except:
                 pass
         
+        # Bugfix: Composer text varies by URL!
+        # - On feed (facebook.com/): "¿Qué estás pensando, PageName?"
+        # - On page profile (facebook.com/PageURL/): "¿Qué estás pensando?" (no page name)
+        on_page_profile = "/" in current_url.split("facebook.com/")[-1]
+        
         # Fallback: Look for ANY composer (without checking page name)
         post_composer_indicators = [
             "¿Qué estás pensando",
@@ -68,8 +73,13 @@ def is_in_page_mode(page: Page, page_name: str = None) -> bool:
                     actual_text = composer.inner_text(timeout=1000)
                     logger.info(f"Found composer: '{actual_text[:80]}'")
                     
-                    # If we have a page name, verify it's in the composer
-                    if page_name and page_name in actual_text:
+                    # Bugfix: Accept composer based on URL context
+                    if on_page_profile:
+                        # On page profile URL - composer won't show page name, but that's OK!
+                        logger.info(f"✅ In page mode - on page profile URL, found composer")
+                        return True
+                    elif page_name and page_name in actual_text:
+                        # On feed - composer should show page name
                         logger.info(f"✅ In page mode - composer shows {page_name}")
                         return True
                     elif not page_name:

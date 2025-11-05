@@ -293,6 +293,48 @@
                 </div>
             </form>
 
+            <!-- Application Settings (Timezone) - Separate Form -->
+            <form wire:submit="saveApplicationSettings" class="mb-6">
+                <x-card class="mb-6">
+                    <x-card.header>
+                        <x-card.title class="flex items-center gap-2">
+                            <x-lucide-clock class="h-5 w-5 text-indigo-500" />
+                            Configuración de Aplicación
+                        </x-card.title>
+                        <x-card.description>Configurar zona horaria para la aplicación</x-card.description>
+                    </x-card.header>
+                    <x-card.content class="space-y-4">
+                        <div class="space-y-2">
+                            <x-label for="timezone">Zona Horaria</x-label>
+                            <select id="timezone" wire:model.blur="timezone"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                                <option value="America/Mexico_City">Ciudad de México (UTC-6/-5)</option>
+                                <option value="America/Cancun">Cancún (UTC-5)</option>
+                                <option value="America/Chihuahua">Chihuahua (UTC-7/-6)</option>
+                                <option value="America/Tijuana">Tijuana (UTC-8/-7)</option>
+                                <option value="America/Mazatlan">Mazatlán (UTC-7/-6)</option>
+                                <option value="America/Monterrey">Monterrey (UTC-6/-5)</option>
+                                <option value="Europe/Madrid">Madrid (UTC+1/+2)</option>
+                                <option value="Europe/London">Londres (UTC+0/+1)</option>
+                                <option value="America/New_York">Nueva York (UTC-5/-4)</option>
+                                <option value="America/Los_Angeles">Los Ángeles (UTC-8/-7)</option>
+                                <option value="UTC">UTC (Coordinado Universal)</option>
+                            </select>
+                            @error('timezone') <p class="text-destructive text-xs mt-1">{{ $message }}</p> @enderror
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Esta configuración afecta cómo se muestran las fechas y horas en toda la aplicación.
+                            </p>
+                        </div>
+                    </x-card.content>
+                    <x-card.footer class="flex justify-end">
+                        <x-button type="submit">
+                            <x-lucide-save class="mr-2 h-4 w-4" />
+                            Guardar Zona Horaria
+                        </x-button>
+                    </x-card.footer>
+                </x-card>
+            </form>
+
             <!-- Facebook Authentication Upload (Separate Form) -->
             <x-card class="mb-6">
                     <x-card.header>

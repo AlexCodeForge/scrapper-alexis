@@ -77,6 +77,7 @@ class Logs extends Component
 
         // Get cron job status
         $facebookEnabled = getJobStatus('facebook');
+        $imageGeneratorEnabled = getJobStatus('image-generator');
         $pagePosterEnabled = getJobStatus('page-poster');
 
         // Get cleanup settings
@@ -87,6 +88,7 @@ class Logs extends Component
             'logContent' => $logContent,
             'manualLogs' => $manualLogs,
             'facebookEnabled' => $facebookEnabled,
+            'imageGeneratorEnabled' => $imageGeneratorEnabled,
             'pagePosterEnabled' => $pagePosterEnabled,
             'cleanupEnabled' => $cleanupEnabled,
             'cleanupDays' => $cleanupSettings->cleanup_days,
