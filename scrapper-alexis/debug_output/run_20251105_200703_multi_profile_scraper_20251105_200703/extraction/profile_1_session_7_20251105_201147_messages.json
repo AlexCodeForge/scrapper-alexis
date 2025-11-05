@@ -1,0 +1,170 @@
+{
+  "extraction_info": {
+    "profile_id": 1,
+    "session_id": 7,
+    "timestamp": "20251105_201147",
+    "extraction_date": "2025-11-05T20:11:47.587325",
+    "total_messages": 25,
+    "stats": {
+      "session_id": 7,
+      "total_scraped": 35,
+      "new_messages": 25,
+      "duplicates_found": 0,
+      "first_duplicate_index": null,
+      "stopped_due_to_duplicate": false,
+      "quality_filtered": 0
+    }
+  },
+  "messages": [
+    {
+      "index": 1,
+      "text": "Ya me vi: en una mano el aguinaldo y en la otra mi renuncia",
+      "length": 59,
+      "extracted_at": "2025-11-05T20:11:47.587363"
+    },
+    {
+      "index": 2,
+      "text": "Un día más estorbando en el trabajo, pero con trabajo",
+      "length": 53,
+      "extracted_at": "2025-11-05T20:11:47.587372"
+    },
+    {
+      "index": 3,
+      "text": "Buenos días, ya despertó la única persona fiel y chambeadora que queda",
+      "length": 70,
+      "extracted_at": "2025-11-05T20:11:47.587376"
+    },
+    {
+      "index": 4,
+      "text": "Nomas pq ando endeudado, si no ni iba al jale mañana",
+      "length": 52,
+      "extracted_at": "2025-11-05T20:11:47.587380"
+    },
+    {
+      "index": 5,
+      "text": "menos mal existe tiktok pq no hablo con nadie",
+      "length": 45,
+      "extracted_at": "2025-11-05T20:11:47.587384"
+    },
+    {
+      "index": 6,
+      "text": "amor tengo q salvar el semestre hablamos en diciembre",
+      "length": 53,
+      "extracted_at": "2025-11-05T20:11:47.587388"
+    },
+    {
+      "index": 7,
+      "text": "Ya pasaron 11 meses y ni un ligue tuve, definitivamente uds son el problema",
+      "length": 75,
+      "extracted_at": "2025-11-05T20:11:47.587393"
+    },
+    {
+      "index": 8,
+      "text": "Cualquier deuda, la resuelvo en enero, ya estoy en horarios navideños",
+      "length": 69,
+      "extracted_at": "2025-11-05T20:11:47.587397"
+    },
+    {
+      "index": 9,
+      "text": "la mera caña del ponche ya está redi pal meri crisma",
+      "length": 52,
+      "extracted_at": "2025-11-05T20:11:47.587401"
+    },
+    {
+      "index": 10,
+      "text": "yame estoi cansando de arriesgar y no janar biegones",
+      "length": 52,
+      "extracted_at": "2025-11-05T20:11:47.587406"
+    },
+    {
+      "index": 11,
+      "text": "ontan los keme kieren dar enla mdre pa pasar por ahi",
+      "length": 52,
+      "extracted_at": "2025-11-05T20:11:47.587411"
+    },
+    {
+      "index": 12,
+      "text": "Apenas es martes y ya nomás me quedan 50 pal resto de la semana",
+      "length": 63,
+      "extracted_at": "2025-11-05T20:11:47.587415"
+    },
+    {
+      "index": 13,
+      "text": "como q no me topas, si hasta me decías q tuviéramos un morrillo",
+      "length": 63,
+      "extracted_at": "2025-11-05T20:11:47.587420"
+    },
+    {
+      "index": 14,
+      "text": "Ya nomas cobro el aguinaldo y renuncio",
+      "length": 38,
+      "extracted_at": "2025-11-05T20:11:47.587424"
+    },
+    {
+      "index": 15,
+      "text": "No me hablen en el jale porfa q no tengo autocontrol y me quedo chismeando",
+      "length": 74,
+      "extracted_at": "2025-11-05T20:11:47.587429"
+    },
+    {
+      "index": 16,
+      "text": "Buenos días, la máquina de chambeo ya está encendiendo motores",
+      "length": 62,
+      "extracted_at": "2025-11-05T20:11:47.587432"
+    },
+    {
+      "index": 17,
+      "text": "Ya fue mucho lunes, ya que sea sábado",
+      "length": 37,
+      "extracted_at": "2025-11-05T20:11:47.587434"
+    },
+    {
+      "index": 18,
+      "text": "Amo noviembre y diciembre, todo huele a hogar y a gente q quiero mucho",
+      "length": 70,
+      "extracted_at": "2025-11-05T20:11:47.587437"
+    },
+    {
+      "index": 19,
+      "text": "Hagan las cosas en silencio, no todo el mundo los quiere ver bien.",
+      "length": 66,
+      "extracted_at": "2025-11-05T20:11:47.587439"
+    },
+    {
+      "index": 20,
+      "text": "Creen q si me meto a trabajar ahorita, todavía alcancé aguinaldo",
+      "length": 64,
+      "extracted_at": "2025-11-05T20:11:47.587442"
+    },
+    {
+      "index": 21,
+      "text": "Yo iba a terminar el año en pareja pero me revisaron el celular",
+      "length": 63,
+      "extracted_at": "2025-11-05T20:11:47.587444"
+    },
+    {
+      "index": 22,
+      "text": "Una ya no busca ligues, una busca con quién tomar ponche en diciembre",
+      "length": 69,
+      "extracted_at": "2025-11-05T20:11:47.587447"
+    },
+    {
+      "index": 23,
+      "text": "Lo único bueno q tiene mi pueblo soy yo, de ahí no hay nada",
+      "length": 59,
+      "extracted_at": "2025-11-05T20:11:47.587450"
+    },
+    {
+      "index": 24,
+      "text": "feliz navidad por si me junto y ya no me dejan tener feis",
+      "length": 57,
+      "extracted_at": "2025-11-05T20:11:47.587452"
+    },
+    {
+      "index": 25,
+      "text": "le quieren venir a esconder mensajes a la paloma mensajera",
+      "length": 58,
+      "extracted_at": "2025-11-05T20:11:47.587455"
+    }
+  ]
+}
