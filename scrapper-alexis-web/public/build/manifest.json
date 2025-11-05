@@ -1,22 +1,24 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-4dG4p-Wi.css",
+    "file": "assets/app-BOPkb17z.css",
     "src": "resources/css/app.css",
     "isEntry": true,
+    "name": "app",
     "names": [
       "app.css"
     ]
   },
   "resources/css/luvi-ui.css": {
-    "file": "assets/luvi-ui-Cn1cizgM.css",
+    "file": "assets/luvi-ui-CMqwASx9.css",
     "src": "resources/css/luvi-ui.css",
     "isEntry": true,
+    "name": "luvi-ui",
     "names": [
       "luvi-ui.css"
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-C4mQnSi9.js",
+    "file": "assets/app-4I-xUwGG.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

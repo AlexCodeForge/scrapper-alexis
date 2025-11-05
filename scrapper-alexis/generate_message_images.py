@@ -193,6 +193,28 @@ def update_template(message_text: str, local_avatar_path: str) -> Optional[str]:
         
         logger.info(f"Twitter verified badge: {PROFILE_VERIFIED}")
         
+        # Apply or remove padding based on settings
+        import config
+        if hasattr(config, 'TWEET_TEMPLATE_PADDING_ENABLED'):
+            padding_enabled = config.TWEET_TEMPLATE_PADDING_ENABLED
+        else:
+            # Default to True if setting not found (maintain current behavior)
+            padding_enabled = True
+        
+        if not padding_enabled:
+            # Remove padding from .screenshot-wrapper
+            import re
+            padding_pattern = r'(\.screenshot-wrapper\s*\{[^}]*?)padding:\s*500px\s+0;'
+            updated_content = re.sub(
+                padding_pattern,
+                r'\1padding: 0;',
+                updated_content,
+                flags=re.DOTALL
+            )
+            logger.info("Padding disabled: Removed 500px padding from template")
+        else:
+            logger.info("Padding enabled: Using template with 500px padding")
+        
         # Create temporary template file
         temp_template = Path('temp_message_template.html')
         with open(temp_template, 'w', encoding='utf-8') as f:
@@ -289,18 +311,34 @@ def main():
     # Initialize database
     db = initialize_database('data/scraper.db')
     
+    # Check if specific MESSAGE_ID is provided via environment variable
+    specific_message_id = os.getenv('MESSAGE_ID')
+    
     # Get ALL APPROVED messages that need images (batch processing)
     # Only generate images for messages that are approved_for_posting = true and image_generated = false/null
     messages_without_images = []
     with db.get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, message_text, avatar_url, posted_at, approved_at
-            FROM messages
-            WHERE approved_for_posting = 1
-            AND (image_generated = 0 OR image_generated IS NULL)
-            ORDER BY approved_at ASC
-        """)
+        
+        if specific_message_id:
+            # Generate image for specific message only
+            logger.info(f"Generating image for specific message ID: {specific_message_id}")
+            cursor.execute("""
+                SELECT id, message_text, avatar_url, posted_at, approved_at
+                FROM messages
+                WHERE id = ?
+                AND approved_for_posting = 1
+                AND (image_generated = 0 OR image_generated IS NULL)
+            """, (int(specific_message_id),))
+        else:
+            # Batch process all approved messages without images
+            cursor.execute("""
+                SELECT id, message_text, avatar_url, posted_at, approved_at
+                FROM messages
+                WHERE approved_for_posting = 1
+                AND (image_generated = 0 OR image_generated IS NULL)
+                ORDER BY approved_at ASC
+            """)
         
         for row in cursor.fetchall():
             messages_without_images.append({
@@ -312,10 +350,16 @@ def main():
             })
     
     if not messages_without_images:
-        print("No approved messages need image generation!")
+        if specific_message_id:
+            print(f"Message ID {specific_message_id} not found or already has an image generated!")
+        else:
+            print("No approved messages need image generation!")
         return 0
     
-    print(f"Found {len(messages_without_images)} messages that need images")
+    if specific_message_id:
+        print(f"Generating image for specific message ID: {specific_message_id}")
+    else:
+        print(f"Found {len(messages_without_images)} messages that need images")
     
     successful_images = 0
     failed_images = 0

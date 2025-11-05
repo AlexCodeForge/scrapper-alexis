@@ -256,6 +256,28 @@ def update_template(tweet_text: str, local_avatar_path: str, display_name: str =
             f'src="{avatar_file_url}"'
         )
         
+        # Apply or remove padding based on settings
+        import config
+        if hasattr(config, 'TWEET_TEMPLATE_PADDING_ENABLED'):
+            padding_enabled = config.TWEET_TEMPLATE_PADDING_ENABLED
+        else:
+            # Default to True if setting not found (maintain current behavior)
+            padding_enabled = True
+        
+        if not padding_enabled:
+            # Remove padding from .screenshot-wrapper
+            import re
+            padding_pattern = r'(\.screenshot-wrapper\s*\{[^}]*?)padding:\s*500px\s+0;'
+            updated_content = re.sub(
+                padding_pattern,
+                r'\1padding: 0;',
+                updated_content,
+                flags=re.DOTALL
+            )
+            logger.info("Padding disabled: Removed 500px padding from template")
+        else:
+            logger.info("Padding enabled: Using template with 500px padding")
+        
         # Update display name if provided
         if display_name:
             import re

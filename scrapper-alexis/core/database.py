@@ -73,6 +73,42 @@ class DatabaseManager:
                 conn.execute("ALTER TABLE messages ADD COLUMN approval_type TEXT")
                 conn.commit()
                 logger.info("✅ Approval type column added successfully")
+            
+            if 'approved_for_posting' not in columns:
+                logger.info("Adding approved_for_posting column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN approved_for_posting BOOLEAN")
+                conn.commit()
+                logger.info("✅ Approved for posting column added successfully")
+            
+            if 'approved_at' not in columns:
+                logger.info("Adding approved_at column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN approved_at TIMESTAMP")
+                conn.commit()
+                logger.info("✅ Approved at column added successfully")
+            
+            if 'posted_to_page' not in columns:
+                logger.info("Adding posted_to_page column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN posted_to_page BOOLEAN DEFAULT 0")
+                conn.commit()
+                logger.info("✅ Posted to page column added successfully")
+            
+            if 'posted_to_page_at' not in columns:
+                logger.info("Adding posted_to_page_at column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN posted_to_page_at TIMESTAMP")
+                conn.commit()
+                logger.info("✅ Posted to page at column added successfully")
+            
+            if 'downloaded' not in columns:
+                logger.info("Adding downloaded column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN downloaded BOOLEAN DEFAULT 0")
+                conn.commit()
+                logger.info("✅ Downloaded column added successfully")
+            
+            if 'downloaded_at' not in columns:
+                logger.info("Adding downloaded_at column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN downloaded_at TIMESTAMP")
+                conn.commit()
+                logger.info("✅ Downloaded at column added successfully")
 
         except Exception as e:
             logger.warning(f"Migration warning (non-critical): {e}")
@@ -217,16 +253,83 @@ class DatabaseManager:
         return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
     
     def message_exists(self, message_text: str) -> bool:
-        """Check if a message already exists in the database."""
+        """
+        Check if a message should be blocked from scraping.
+        
+        Business Logic:
+        - Rejected messages (approved_for_posting=false): Block FOREVER
+        - Approved messages (approved_for_posting=true): Block for 15 days, then allow reuse
+        - Pending/unreviewed messages (approved_for_posting=NULL): Block (duplicate)
+        
+        Returns:
+            True if message should be blocked (duplicate)
+            False if message can be scraped (new or approved 15+ days ago)
+        """
         message_hash = self.generate_message_hash(message_text)
         with self.get_connection() as conn:
             cursor = conn.execute(
-                'SELECT 1 FROM messages WHERE message_hash = ?',
+                '''SELECT approved_for_posting, approved_at 
+                   FROM messages 
+                   WHERE message_hash = ?''',
                 (message_hash,)
             )
-            exists = cursor.fetchone() is not None
-            logger.debug(f"Message exists check: {exists}")
-            return exists
+            result = cursor.fetchone()
+            
+            if result is None:
+                # Message doesn't exist - allow scraping
+                logger.debug(f"Message is NEW - allow scraping")
+                return False
+            
+            approved_for_posting = result[0]
+            approved_at = result[1]
+            
+            # Message exists - check approval status
+            if approved_for_posting is None:
+                # Pending/unreviewed - block as duplicate
+                logger.debug(f"Message exists as PENDING - block duplicate")
+                return True
+            elif approved_for_posting == 0 or approved_for_posting == False:
+                # Rejected - always block
+                logger.debug(f"Message exists as REJECTED - block forever")
+                return True
+            elif approved_for_posting == 1 or approved_for_posting == True:
+                # Approved - check if 15+ days old
+                if approved_at is None:
+                    # Approved but no timestamp - block as safety measure
+                    logger.debug(f"Message APPROVED but no timestamp - block")
+                    return True
+                
+                # Calculate days since approval
+                from datetime import datetime, timezone
+                try:
+                    # Parse the timestamp (handle both ISO format and datetime objects)
+                    if isinstance(approved_at, str):
+                        approved_dt = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                    else:
+                        approved_dt = approved_at
+                    
+                    # Ensure timezone awareness
+                    if approved_dt.tzinfo is None:
+                        approved_dt = approved_dt.replace(tzinfo=timezone.utc)
+                    
+                    now = datetime.now(timezone.utc)
+                    days_since_approval = (now - approved_dt).days
+                    
+                    if days_since_approval >= 15:
+                        # Approved 15+ days ago - allow reuse
+                        logger.info(f"Message APPROVED {days_since_approval} days ago - ALLOW REUSE for re-scraping")
+                        return False
+                    else:
+                        # Approved but too recent - block
+                        logger.debug(f"Message APPROVED {days_since_approval} days ago - block (need 15+ days)")
+                        return True
+                except Exception as e:
+                    logger.warning(f"Error parsing approval date: {e} - blocking as safety measure")
+                    return True
+            
+            # Default: block unknown states
+            logger.debug(f"Message in unknown state - block as safety measure")
+            return True
     
     def add_message(self, profile_id: int, message_text: str) -> Optional[int]:
         """

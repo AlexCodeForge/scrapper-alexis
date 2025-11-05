@@ -87,6 +87,7 @@ try:
     X_USERNAME = _db_settings.get('username') or _db_settings.get('twitter_username') or '@username'
     X_AVATAR_URL = _db_settings.get('avatar_url') or _db_settings.get('twitter_avatar_url') or ''
     X_VERIFIED = bool(_db_settings.get('verified', _db_settings.get('twitter_verified', False)))
+    TWEET_TEMPLATE_PADDING_ENABLED = bool(_db_settings.get('tweet_template_padding_enabled', True))
     
     # Handle facebook_profiles (can be None or empty string)
     profiles_str = _db_settings.get('facebook_profiles') or ''
