@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Carbon;
 
 class Profile extends Model
 {
@@ -32,6 +34,20 @@ class Profile extends Model
     public function scrapingSessions()
     {
         return $this->hasMany(ScrapingSession::class);
+    }
+
+    /**
+     * Convert last_scraped_at from UTC to application timezone
+     * Dates are stored in UTC in database but should be displayed in app timezone
+     */
+    protected function lastScrapedAt(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
+            },
+        );
     }
 }
 

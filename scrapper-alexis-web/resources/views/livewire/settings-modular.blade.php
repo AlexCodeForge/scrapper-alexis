@@ -1,14 +1,18 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
      x-data="{
         activeModal: null,
+        proxyTestResult: null,
         openModal(name) {
             this.activeModal = name;
+            this.proxyTestResult = null;
             console.log('Opening modal:', name);
         },
         closeModal() {
             this.activeModal = null;
+            this.proxyTestResult = null;
         }
-    }">
+    }"
+     @proxy-test-result.window="proxyTestResult = $event.detail">
 
     <!-- Settings Overview Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -677,6 +681,40 @@
                                     <x-lucide-save class="mr-2 h-4 w-4" />
                                     Guardar Configuración
                                 </x-button>
+                            </div>
+                        </div>
+
+                        <!-- Proxy Test Result Message -->
+                        <div x-show="proxyTestResult" 
+                             x-transition
+                             class="mt-4 p-4 rounded-lg"
+                             :class="proxyTestResult?.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+                            <div class="flex items-start gap-3">
+                                <div x-show="proxyTestResult?.success" class="flex-shrink-0">
+                                    <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                                </div>
+                                <div x-show="!proxyTestResult?.success" class="flex-shrink-0">
+                                    <x-lucide-alert-circle class="h-5 w-5 text-red-600" />
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-semibold"
+                                       :class="proxyTestResult?.success ? 'text-green-800' : 'text-red-800'"
+                                       x-text="proxyTestResult?.message"></p>
+                                    <template x-if="proxyTestResult?.details">
+                                        <div class="mt-2 text-sm"
+                                             :class="proxyTestResult?.success ? 'text-green-700' : 'text-red-700'">
+                                            <p x-show="proxyTestResult?.details?.ip">
+                                                <strong>IP del Proxy:</strong> <span x-text="proxyTestResult?.details?.ip"></span>
+                                            </p>
+                                            <p x-show="proxyTestResult?.details?.response_time">
+                                                <strong>Tiempo de respuesta:</strong> <span x-text="proxyTestResult?.details?.response_time"></span>
+                                            </p>
+                                            <p x-show="proxyTestResult?.details?.error">
+                                                <strong>Error:</strong> <span x-text="proxyTestResult?.details?.error"></span>
+                                            </p>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>

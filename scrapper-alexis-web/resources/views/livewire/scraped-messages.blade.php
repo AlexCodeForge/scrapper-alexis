@@ -195,7 +195,7 @@
                                         </div>
                                         <div class="flex items-center text-xs mt-1">
                                             <x-lucide-clock class="h-3 w-3 mr-1" />
-                                            {{ $message->scraped_at ? $message->scraped_at->format('H:i') : 'N/A' }}
+                                            {{ $message->scraped_at ? $message->scraped_at->format('h:i A') : 'N/A' }}
                                         </div>
                                     </div>
                                 </td>
@@ -221,7 +221,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2 flex-wrap">
-                                        <button
+                                        <button 
                                             wire:click="approveAndGenerateImage({{ $message->id }})"
                                             type="button"
                                             wire:loading.attr="disabled"
@@ -234,19 +234,19 @@
                                         <button 
                                             wire:click="approveMessage({{ $message->id }})"
                                             type="button"
-                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
                                             Aprobar
                                         </button>
                                         <button 
                                             wire:click="approveForManual({{ $message->id }})"
                                             type="button"
-                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
                                             Manual
                                         </button>
                                         <button 
                                             wire:click="rejectMessage({{ $message->id }})"
                                             type="button"
-                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
                                             Rechazar
                                         </button>
                                     </div>

@@ -153,7 +153,7 @@
                                             <td class="p-3 text-sm text-foreground whitespace-nowrap">
                                                 <div class="flex flex-col">
                                                     <span class="font-medium">{{ $message->posted_to_page_at->format('d/m/Y') }}</span>
-                                                    <span class="text-xs text-muted-foreground">{{ $message->posted_to_page_at->format('H:i') }}</span>
+                                                    <span class="text-xs text-muted-foreground">{{ $message->posted_to_page_at->format('h:i A') }}</span>
                                                 </div>
                                             </td>
                                         </tr>

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Carbon;
 
 class Message extends Model
 {
@@ -155,6 +157,76 @@ class Message extends Model
     public function scopeManualPostOnly($query)
     {
         return $query->where('auto_post_enabled', false);
+    }
+
+    /**
+     * Convert scraped_at from UTC to application timezone
+     * Dates are stored in UTC in database but should be displayed in app timezone
+     */
+    protected function scrapedAt(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
+            },
+        );
+    }
+
+    /**
+     * Convert posted_to_page_at from UTC to application timezone
+     * Dates are stored in UTC in database but should be displayed in app timezone
+     */
+    protected function postedToPageAt(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
+            },
+        );
+    }
+
+    /**
+     * Convert posted_at from UTC to application timezone
+     * Dates are stored in UTC in database but should be displayed in app timezone
+     */
+    protected function postedAt(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
+            },
+        );
+    }
+
+    /**
+     * Convert downloaded_at from UTC to application timezone
+     * Dates are stored in UTC in database but should be displayed in app timezone
+     */
+    protected function downloadedAt(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
+            },
+        );
+    }
+
+    /**
+     * Convert approved_at from UTC to application timezone
+     * Dates are stored in UTC in database but should be displayed in app timezone
+     */
+    protected function approvedAt(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if (!$value) return null;
+                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
+            },
+        );
     }
 }
 

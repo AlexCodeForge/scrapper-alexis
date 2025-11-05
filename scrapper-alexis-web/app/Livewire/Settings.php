@@ -787,16 +787,16 @@ class Settings extends Component
         }
     }
 
-    public function testProxy()
+    public function testProxyConnection()
     {
-        \Log::info('Settings: testProxy called', [
+        \Log::info('Settings: testProxyConnection called', [
             'server' => $this->proxyServer,
             'username' => $this->proxyUsername ? 'set' : 'empty'
         ]);
 
         // Validate proxy configuration exists
         if (empty($this->proxyServer)) {
-            \Log::warning('Settings: testProxy - No proxy server configured');
+            \Log::warning('Settings: testProxyConnection - No proxy server configured');
             $this->dispatch('proxy-test-result',
                 success: false,
                 message: 'Por favor, configure un servidor proxy primero',
@@ -821,7 +821,7 @@ class Settings extends Component
                 $proxyUrl = "{$scheme}://{$this->proxyUsername}:{$this->proxyPassword}@{$host}{$portSuffix}";
             }
 
-            \Log::info('Settings: testProxy - Making test request through proxy');
+            \Log::info('Settings: testProxyConnection - Making test request through proxy');
 
             // Test proxy with a simple IP check endpoint
             $response = \Illuminate\Support\Facades\Http::withOptions([
@@ -837,7 +837,7 @@ class Settings extends Component
                 $ipData = $response->json();
                 $proxyIp = $ipData['ip'] ?? 'Unknown';
 
-                \Log::info('Settings: testProxy - Success', [
+                \Log::info('Settings: testProxyConnection - Success', [
                     'proxy_ip' => $proxyIp,
                     'response_time' => $responseTime . 'ms'
                 ]);
@@ -852,7 +852,7 @@ class Settings extends Component
                     ]
                 );
             } else {
-                \Log::error('Settings: testProxy - HTTP error', [
+                \Log::error('Settings: testProxyConnection - HTTP error', [
                     'status' => $response->status(),
                     'body' => $response->body()
                 ]);
@@ -868,7 +868,7 @@ class Settings extends Component
             }
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            \Log::error('Settings: testProxy - Connection exception', [
+            \Log::error('Settings: testProxyConnection - Connection exception', [
                 'error' => $e->getMessage()
             ]);
 
@@ -881,7 +881,7 @@ class Settings extends Component
             );
 
         } catch (\Exception $e) {
-            \Log::error('Settings: testProxy - Exception', [
+            \Log::error('Settings: testProxyConnection - Exception', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
