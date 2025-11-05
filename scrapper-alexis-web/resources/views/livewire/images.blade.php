@@ -404,18 +404,16 @@
                                         @endif
                                     </div>
 
-                                    {{-- Feature: Manual "Post Now" button for manual-approved images --}}
-                                    @if (!$message->auto_post_enabled)
-                                        <x-button @click.stop="openConfirmPostModal({{ $message->id }})"
-                                            variant="outline"
-                                            size="sm"
-                                            wire:loading.attr="disabled"
-                                            wire:target="postImageNow({{ $message->id }})"
-                                            class="w-full bg-purple-600 text-white hover:bg-purple-700">
-                                            <x-lucide-send class="mr-1 h-3 w-3" />
-                                            Publicar Ahora
-                                        </x-button>
-                                    @endif
+                                    {{-- Feature: Manual "Post Now" button for all approved images --}}
+                                    <x-button @click.stop="openConfirmPostModal({{ $message->id }})"
+                                        variant="outline"
+                                        size="sm"
+                                        wire:loading.attr="disabled"
+                                        wire:target="postImageNow({{ $message->id }})"
+                                        class="w-full bg-purple-600 text-white hover:bg-purple-700">
+                                        <x-lucide-send class="mr-1 h-3 w-3" />
+                                        Publicar Ahora
+                                    </x-button>
                                 </div>
                             @endif
                         @else
@@ -445,7 +443,7 @@
     <!-- Pagination -->
     @if ($messages->hasPages())
         <div class="mt-6">
-            {{ $messages->links() }}
+            {{ $messages->links('livewire::tailwind') }}
         </div>
     @endif
 

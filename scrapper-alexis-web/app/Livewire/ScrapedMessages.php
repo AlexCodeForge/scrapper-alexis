@@ -17,7 +17,7 @@ class ScrapedMessages extends Component
     public $selectAll = false;
     
     #[Url(keep: true)]
-    public $filter = 'all';
+    public $filter = 'pending'; // Default to pending filter to show new scraped messages
 
     protected $queryString = ['perPage', 'filter'];
 
@@ -129,6 +129,79 @@ class ScrapedMessages extends Component
             \Log::error('ScrapedMessages: Error rejecting message', [
                 'message_id' => $messageId,
                 'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Approve a message and generate image immediately (on-demand)
+     * This combines approval + immediate image generation without waiting for cron
+     */
+    public function approveAndGenerateImage(int $messageId)
+    {
+        try {
+            $message = Message::find($messageId);
+            
+            if (!$message) {
+                session()->flash('error', 'Mensaje no encontrado');
+                \Log::error('ScrapedMessages: Message not found for immediate image generation', [
+                    'message_id' => $messageId
+                ]);
+                return;
+            }
+
+            // Approve the message for auto-posting
+            $message->update([
+                'approved_for_posting' => true,
+                'approved_at' => now(),
+                'auto_post_enabled' => true,
+                'approval_type' => 'auto',
+            ]);
+
+            \Log::info('ScrapedMessages: Message approved, triggering immediate image generation', [
+                'message_id' => $messageId,
+                'message_text' => substr($message->message_text, 0, 50),
+                'headless_mode' => 'true' // Bugfix: Force headless mode for web UI execution
+            ]);
+
+            // Execute Python script with specific MESSAGE_ID for immediate generation
+            $scriptPath = '/var/www/alexis-scrapper-docker/scrapper-alexis';
+            $timestamp = date('YmdHis');
+            $logFile = "/var/www/alexis-scrapper-docker/scrapper-alexis/logs/manual_image_{$messageId}_{$timestamp}.log";
+
+            // Run image generator with MESSAGE_ID environment variable
+            // Bugfix: Set HEADLESS=true to avoid "no DISPLAY" error when running from web UI
+            $command = sprintf(
+                'cd %s && sudo -u root /bin/bash -c "export HEADLESS=true && export MESSAGE_ID=%d && source venv/bin/activate && python3 generate_message_images.py" > %s 2>&1 &',
+                escapeshellarg($scriptPath),
+                $messageId,
+                escapeshellarg($logFile)
+            );
+
+            \Log::info('ScrapedMessages: Executing immediate image generation command', [
+                'message_id' => $messageId,
+                'command' => $command,
+                'log_file' => $logFile
+            ]);
+
+            exec($command, $output, $returnVar);
+
+            // Give script a moment to start
+            usleep(500000); // 0.5 seconds
+
+            session()->flash('success', 'Mensaje aprobado. La imagen se está generando ahora. Revisa la página de Imágenes en unos momentos.');
+            
+            \Log::info('ScrapedMessages: Immediate image generation initiated', [
+                'message_id' => $messageId,
+                'log_file' => $logFile
+            ]);
+
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error al generar imagen: ' . $e->getMessage());
+            \Log::error('ScrapedMessages: Error in immediate image generation', [
+                'message_id' => $messageId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
         }
     }

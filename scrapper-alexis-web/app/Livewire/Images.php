@@ -406,7 +406,8 @@ class Images extends Component
                 break;
         }
 
-        $messages = $query->latest('scraped_at')->paginate($this->perPage);
+        // Sort by ID descending to show latest generated images first
+        $messages = $query->latest('id')->paginate($this->perPage);
 
         \Log::info('Images: Query results', ['total' => $messages->total(), 'current_page' => $messages->currentPage()]);
 
