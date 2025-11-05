@@ -29,6 +29,10 @@ class ScraperSettings extends Model
         'username',
         'avatar_url',
         'verified',
+        'image_generator_enabled',
+        'image_generator_interval_min',
+        'image_generator_interval_max',
+        'image_generator_debug_enabled',
     ];
 
     protected $casts = [
@@ -42,6 +46,10 @@ class ScraperSettings extends Model
         'twitter_debug_enabled' => 'boolean',
         'page_posting_debug_enabled' => 'boolean',
         'verified' => 'boolean',
+        'image_generator_enabled' => 'boolean',
+        'image_generator_interval_min' => 'integer',
+        'image_generator_interval_max' => 'integer',
+        'image_generator_debug_enabled' => 'boolean',
     ];
 
     /**
@@ -110,6 +118,10 @@ class ScraperSettings extends Model
             'twitter_interval_min' => 8,
             'twitter_interval_max' => 60,
             'verified' => false,
+            'image_generator_enabled' => false,
+            'image_generator_interval_min' => 30,
+            'image_generator_interval_max' => 60,
+            'image_generator_debug_enabled' => false,
         ]);
     }
 

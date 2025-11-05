@@ -288,6 +288,43 @@
                             </div>
                         </div>
 
+                        <!-- Image Generator Cronjob Toggle -->
+                        <x-card>
+                            <x-card.content class="p-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <x-lucide-image class="h-5 w-5 text-purple-600" />
+                                            <h4 class="font-semibold text-foreground">Generador de Imágenes</h4>
+                                        </div>
+                                        <p class="text-sm text-muted-foreground">Estado: @if($imageGeneratorEnabled) 🟢 Activo @else 🔴 Detenido @endif</p>
+                                        <p class="text-xs text-muted-foreground mt-1">{{ $imageGeneratorEnabled ? 'Generación automática de imágenes activa' : 'Generación automática deshabilitada' }}</p>
+                                    </div>
+                                    <button type="button" wire:click="toggleImageGenerator"
+                                            style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $imageGeneratorEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
+                                            class="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                                        <span style="position: absolute; top: 3px; {{ $imageGeneratorEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                                    </button>
+                                </div>
+                            </x-card.content>
+                        </x-card>
+
+                        <!-- Image Generator Interval -->
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Intervalo Generador de Imágenes (minutos)</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-xs text-muted-foreground">Mínimo</label>
+                                    <input type="number" wire:model="imageGeneratorIntervalMin" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-muted-foreground">Máximo</label>
+                                    <input type="number" wire:model="imageGeneratorIntervalMax" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
+                                </div>
+                            </div>
+                            <p class="text-xs text-muted-foreground mt-2">💡 El sistema genera imágenes para todos los mensajes aprobados sin imágenes cada hora</p>
+                        </div>
+
                         <!-- Save Button -->
                         <div class="flex justify-end gap-3 pt-4">
                             <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
@@ -545,6 +582,20 @@
                             </div>
                         </div>
 
+                        <!-- Template Padding Toggle -->
+                        <div class="border border-border rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <x-lucide-maximize-2 class="h-6 w-6 text-purple-500" />
+                                    <div>
+                                        <label class="block text-sm font-medium text-foreground">Padding en Imágenes</label>
+                                        <p class="text-xs text-muted-foreground mt-1">Agregar espacio (padding) alrededor del mensaje en las imágenes generadas</p>
+                                    </div>
+                                </div>
+                                <input type="checkbox" wire:model.live="tweetTemplatePaddingEnabled" class="h-5 w-5 rounded text-primary focus:ring-primary cursor-pointer" />
+                            </div>
+                        </div>
+
                         <!-- Save Button -->
                         <div class="flex justify-end gap-3 pt-4 border-t border-border">
                             <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
@@ -594,84 +645,20 @@
                             <input type="password" wire:model="proxyPassword" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
                         </div>
 
-                        <!-- Test Proxy Section -->
-                        <div class="pt-4 border-t border-border" 
-                             x-data="{ 
-                                 testResult: null, 
-                                 showResult: false 
-                             }"
-                             @proxy-test-result.window="
-                                 testResult = $event.detail; 
-                                 showResult = true;
-                                 setTimeout(() => { showResult = false; testResult = null; }, 8000);
-                             ">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <h3 class="text-sm font-medium text-foreground">Probar Conexión</h3>
-                                    <p class="text-xs text-muted-foreground mt-1">Verificar que el proxy funciona correctamente</p>
-                                </div>
-                                <button type="button" 
-                                        wire:click="testProxy" 
-                                        wire:loading.attr="disabled"
-                                        wire:target="testProxy"
-                                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                                    <x-lucide-globe class="h-4 w-4" wire:loading.remove wire:target="testProxy" />
-                                    <svg wire:loading wire:target="testProxy" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span wire:loading.remove wire:target="testProxy">Probar</span>
-                                    <span wire:loading wire:target="testProxy">Probando...</span>
-                                </button>
-                            </div>
-
-                            <!-- Test Results -->
-                            <div x-show="showResult" 
-                                 x-transition:enter="transition ease-out duration-300"
-                                 x-transition:enter-start="opacity-0 transform scale-95"
-                                 x-transition:enter-end="opacity-100 transform scale-100"
-                                 x-transition:leave="transition ease-in duration-200"
-                                 x-transition:leave-start="opacity-100 transform scale-100"
-                                 x-transition:leave-end="opacity-0 transform scale-95"
-                                 class="mt-3 p-4 rounded-lg"
-                                 :class="testResult?.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'"
-                                 style="display: none;">
-                                <div class="flex items-start gap-3">
-                                    <div class="flex-shrink-0 mt-0.5">
-                                        <x-lucide-check-circle x-show="testResult?.success" class="h-5 w-5 text-green-600" />
-                                        <x-lucide-x-circle x-show="!testResult?.success" class="h-5 w-5 text-red-600" />
-                                    </div>
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium" :class="testResult?.success ? 'text-green-900' : 'text-red-900'" x-text="testResult?.message"></p>
-                                        <div x-show="testResult?.details" class="mt-2 text-xs" :class="testResult?.success ? 'text-green-700' : 'text-red-700'">
-                                            <div x-show="testResult?.details?.ip" class="flex items-center gap-2">
-                                                <span class="font-semibold">IP del Proxy:</span>
-                                                <span x-text="testResult?.details?.ip"></span>
-                                            </div>
-                                            <div x-show="testResult?.details?.response_time" class="flex items-center gap-2">
-                                                <span class="font-semibold">Tiempo de respuesta:</span>
-                                                <span x-text="testResult?.details?.response_time"></span>
-                                            </div>
-                                            <div x-show="testResult?.details?.error" class="flex items-center gap-2">
-                                                <span class="font-semibold">Error:</span>
-                                                <span x-text="testResult?.details?.error"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="button" @click="showResult = false; testResult = null;" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
-                                        <x-lucide-x class="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Save Button -->
-                        <div class="flex justify-end gap-3 pt-4 border-t border-border">
-                            <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
-                            <x-button type="submit" wire:loading.attr="disabled" wire:target="saveProxySettings">
-                                <x-lucide-save class="mr-2 h-4 w-4" />
-                                Guardar Configuración
+                        <!-- Action Buttons -->
+                        <div class="flex justify-between items-center gap-3 pt-4 border-t border-border">
+                            <x-button type="button" variant="outline" wire:click="testProxyConnection" wire:loading.attr="disabled" wire:target="testProxyConnection">
+                                <x-lucide-check-circle class="mr-2 h-4 w-4" />
+                                <span wire:loading.remove wire:target="testProxyConnection">Probar Conexión</span>
+                                <span wire:loading wire:target="testProxyConnection">Probando...</span>
                             </x-button>
+                            <div class="flex gap-3">
+                                <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                                <x-button type="submit" wire:loading.attr="disabled" wire:target="saveProxySettings">
+                                    <x-lucide-save class="mr-2 h-4 w-4" />
+                                    Guardar Configuración
+                                </x-button>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -682,7 +669,7 @@
     <!-- Loading Modal -->
     <template x-teleport="body">
         <div wire:loading.flex
-             wire:target="savePagePostingSettings, saveCronSettings, saveFacebookSettings, saveImageGeneratorSettings, saveProxySettings"
+             wire:target="savePagePostingSettings, saveCronSettings, saveFacebookSettings, saveImageGeneratorSettings, saveProxySettings, testProxyConnection"
              class="fixed inset-0 z-50 items-center justify-center bg-black/40 backdrop-blur-sm">
             <div class="bg-white rounded-lg shadow-2xl p-8 flex flex-col items-center space-y-4 max-w-sm mx-4">
                 <div class="relative">

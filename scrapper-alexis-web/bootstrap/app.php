@@ -56,5 +56,15 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->runInBackground()
             ->onOneServer();
+        
+        // Image Generator - Hourly with database control
+        $schedule->command('scraper:generate-images')
+            ->hourly()
+            ->when(function () {
+                return ScraperSettings::getSettings()->image_generator_enabled;
+            })
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->onOneServer();
     })
     ->create();

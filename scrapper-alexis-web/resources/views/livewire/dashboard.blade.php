@@ -86,15 +86,7 @@
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
                                 <x-card.title class="text-xl">Contenido Publicado</x-card.title>
-                                <x-card.description>Galería de imágenes publicadas en la página</x-card.description>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <x-select wire:model.live="dateFilter" class="w-48">
-                                    <option value="today">Hoy</option>
-                                    <option value="week">Últimos 7 días</option>
-                                    <option value="month">Últimos 30 días</option>
-                                    <option value="custom">Rango Personalizado</option>
-                                </x-select>
+                                <x-card.description>Mensajes publicados en la página</x-card.description>
                             </div>
                         </div>
                         
@@ -121,38 +113,62 @@
                                 </div>
                             </div>
                         @endif
+
+                        <!-- Post Count Widget & Date Filter in Same Row -->
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                            <div class="flex-1 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-3 bg-blue-500 rounded-full">
+                                        <x-lucide-calendar-check class="h-6 w-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-muted-foreground">Publicaciones en este período</p>
+                                        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($postedStats['count']) }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <x-select wire:model.live="dateFilter" class="w-48">
+                                    <option value="today">Hoy</option>
+                                    <option value="week">Últimos 7 días</option>
+                                    <option value="month">Últimos 30 días</option>
+                                    <option value="custom">Rango Personalizado</option>
+                                </x-select>
+                            </div>
+                        </div>
                     </div>
                 </x-card.header>
                 <x-card.content class="p-6">
-                    @if($postedImagesFiltered->count() > 0)
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            @foreach($postedImagesFiltered as $image)
-                                <div class="group relative aspect-square rounded-lg overflow-hidden bg-accent hover:ring-2 hover:ring-primary transition-all cursor-pointer">
-                                    @if($image->image_url)
-                                        <img src="{{ $image->image_url }}" 
-                                             alt="Posted image" 
-                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
-                                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <div class="text-white text-center p-2">
-                                                <p class="text-xs font-medium">{{ $image->posted_to_page_at->format('d M Y') }}</p>
-                                                <p class="text-xs">{{ $image->posted_to_page_at->format('H:i') }}</p>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <div class="w-full h-full flex items-center justify-center">
-                                            <x-lucide-image class="h-8 w-8 text-muted-foreground" />
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
+                    @if($postedMessagesFiltered->count() > 0)
+                        <!-- Messages Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse">
+                                <thead>
+                                    <tr class="border-b border-border bg-accent/50">
+                                        <th class="text-left p-3 text-sm font-semibold text-foreground">Mensaje</th>
+                                        <th class="text-left p-3 text-sm font-semibold text-foreground">Fecha de Publicación</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($postedMessagesFiltered as $message)
+                                        <tr class="border-b border-border hover:bg-accent/30 transition-colors">
+                                            <td class="p-3 text-sm text-foreground">
+                                                <div class="max-w-2xl">
+                                                    {{ Str::limit($message->message_text, 150) }}
+                                                </div>
+                                            </td>
+                                            <td class="p-3 text-sm text-foreground whitespace-nowrap">
+                                                <div class="flex flex-col">
+                                                    <span class="font-medium">{{ $message->posted_to_page_at->format('d/m/Y') }}</span>
+                                                    <span class="text-xs text-muted-foreground">{{ $message->posted_to_page_at->format('H:i') }}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
-                        <!-- View All Link -->
-                        <div class="mt-6 text-center">
-                            <a href="{{ route('images') }}?filter=posted" class="inline-flex items-center gap-2 text-sm text-primary hover:underline">
-                                Ver todas las imágenes publicadas
-                                <x-lucide-arrow-right class="h-4 w-4" />
-                            </a>
-                        </div>
+
                     @else
                         <div class="text-center py-12">
                             <x-lucide-calendar-x class="mx-auto h-12 w-12 text-muted-foreground mb-4" />

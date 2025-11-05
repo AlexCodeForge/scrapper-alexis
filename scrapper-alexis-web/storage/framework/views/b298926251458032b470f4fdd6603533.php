@@ -1,0 +1,3 @@
+<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+</svg><?php /**PATH /var/www/alexis-scrapper-docker/scrapper-alexis-web/storage/framework/views/dd77c2b83fb1b82c8fe447c6c0b3bb3b.blade.php ENDPATH**/ ?>

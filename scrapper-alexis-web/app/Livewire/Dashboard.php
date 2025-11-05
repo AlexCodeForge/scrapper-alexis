@@ -95,16 +95,13 @@ class Dashboard extends Component
                 break;
         }
 
-        // Get posted images for the selected date range
-        $postedImagesFiltered = Message::with('profile')
-            ->where('posted_to_page', true)
-            ->where('image_generated', true)
-            ->whereNotNull('image_path')
+        // Get latest 5 posted messages for the selected date range
+        $postedMessagesFiltered = Message::where('posted_to_page', true)
             ->when($startDate, function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('posted_to_page_at', [$startDate, $endDate]);
             })
             ->latest('posted_to_page_at')
-            ->take(12)
+            ->limit(5)
             ->get();
 
         // Calculate stats for filtered period
@@ -122,9 +119,17 @@ class Dashboard extends Component
                 ->count(),
         ];
 
+        \Log::info('Dashboard: Rendering with posted messages', [
+            'dateFilter' => $this->dateFilter,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'postedCount' => $postedStats['count'],
+            'messagesInView' => $postedMessagesFiltered->count()
+        ]);
+
         return view('livewire.dashboard', [
             'stats' => $stats,
-            'postedImagesFiltered' => $postedImagesFiltered,
+            'postedMessagesFiltered' => $postedMessagesFiltered,
             'postedStats' => $postedStats,
         ])->layout('components.layouts.app', ['title' => 'Dashboard']);
     }

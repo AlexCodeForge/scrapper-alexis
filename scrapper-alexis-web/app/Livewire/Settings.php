@@ -46,6 +46,12 @@ class Settings extends Component
     public $autoCleanupEnabled = false;
     public $cleanupDays = 7;
 
+    // Image Generator Settings
+    public $imageGeneratorEnabled = false;
+    public $imageGeneratorIntervalMin = 30;
+    public $imageGeneratorIntervalMax = 60;
+    public $imageGeneratorDebugEnabled = false;
+
     // File uploads for auth
     public $facebookAuthFile;
     
@@ -102,12 +108,19 @@ class Settings extends Component
         $this->twitterDebugEnabled = $settings->twitter_debug_enabled ?? false;
         $this->pagePostingDebugEnabled = $settings->page_posting_debug_enabled ?? false;
 
+        // Load image generator settings
+        $this->imageGeneratorEnabled = $settings->image_generator_enabled ?? false;
+        $this->imageGeneratorIntervalMin = $settings->image_generator_interval_min ?? 30;
+        $this->imageGeneratorIntervalMax = $settings->image_generator_interval_max ?? 60;
+        $this->imageGeneratorDebugEnabled = $settings->image_generator_debug_enabled ?? false;
+
         \Log::info('Settings: Loaded from database', [
             'facebook_enabled' => $this->facebookEnabled,
             'twitter_enabled' => $this->twitterEnabled,
             'facebook_debug' => $this->facebookDebugEnabled,
             'twitter_debug' => $this->twitterDebugEnabled,
-            'page_posting_debug' => $this->pagePostingDebugEnabled
+            'page_posting_debug' => $this->pagePostingDebugEnabled,
+            'image_generator_enabled' => $this->imageGeneratorEnabled
         ]);
     }
 
@@ -224,6 +237,44 @@ class Settings extends Component
 
         \Log::info('Settings: Page posting debug toggled', ['enabled' => $this->pagePostingDebugEnabled]);
         session()->flash('success', '✓ Debug de Page Posting ' . ($this->pagePostingDebugEnabled ? 'activado' : 'desactivado'));
+    }
+
+    public function toggleImageGenerator()
+    {
+        $this->imageGeneratorEnabled = !$this->imageGeneratorEnabled;
+
+        // Update database
+        $result = ScraperSettings::updateSettings([
+            'image_generator_enabled' => $this->imageGeneratorEnabled
+        ]);
+
+        if (!$result) {
+            session()->flash('error', 'Error: No se pudo actualizar el estado del generador de imágenes.');
+            $this->imageGeneratorEnabled = !$this->imageGeneratorEnabled; // Revert
+            return;
+        }
+
+        \Log::info('Settings: Image generator toggled', ['enabled' => $this->imageGeneratorEnabled]);
+        session()->flash('success', '✓ Generador de imágenes ' . ($this->imageGeneratorEnabled ? 'activado' : 'desactivado'));
+    }
+
+    public function toggleImageGeneratorDebug()
+    {
+        $this->imageGeneratorDebugEnabled = !$this->imageGeneratorDebugEnabled;
+
+        // Update database
+        $result = ScraperSettings::updateSettings([
+            'image_generator_debug_enabled' => $this->imageGeneratorDebugEnabled
+        ]);
+
+        if (!$result) {
+            session()->flash('error', 'Error: No se pudo actualizar el debug del generador de imágenes.');
+            $this->imageGeneratorDebugEnabled = !$this->imageGeneratorDebugEnabled; // Revert
+            return;
+        }
+
+        \Log::info('Settings: Image generator debug toggled', ['enabled' => $this->imageGeneratorDebugEnabled]);
+        session()->flash('success', '✓ Debug de generador de imágenes ' . ($this->imageGeneratorDebugEnabled ? 'activado' : 'desactivado'));
     }
 
     public function saveSettings()
@@ -652,6 +703,8 @@ class Settings extends Component
             'facebookIntervalMax' => 'required|integer|min:1|max:1440|gte:facebookIntervalMin',
             'twitterIntervalMin' => 'required|integer|min:1|max:1440',
             'twitterIntervalMax' => 'required|integer|min:1|max:1440|gte:twitterIntervalMin',
+            'imageGeneratorIntervalMin' => 'required|integer|min:1|max:1440',
+            'imageGeneratorIntervalMax' => 'required|integer|min:1|max:1440|gte:imageGeneratorIntervalMin',
         ]);
 
         // Update database instead of .env file
@@ -660,6 +713,8 @@ class Settings extends Component
             'facebook_interval_max' => $this->facebookIntervalMax,
             'twitter_interval_min' => $this->twitterIntervalMin,
             'twitter_interval_max' => $this->twitterIntervalMax,
+            'image_generator_interval_min' => $this->imageGeneratorIntervalMin,
+            'image_generator_interval_max' => $this->imageGeneratorIntervalMax,
         ]);
 
         if ($result) {
