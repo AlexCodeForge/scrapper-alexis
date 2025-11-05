@@ -17,7 +17,7 @@
             @endif
 
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stats-grid mb-8">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 stats-grid mb-8">
                 <!-- Total Messages -->
                 <x-card class="hover:shadow-md transition-shadow">
                     <x-card.content class="p-4">
@@ -43,21 +43,6 @@
                             </div>
                             <div class="flex-shrink-0">
                                 <x-lucide-image class="h-8 w-8 text-green-500" />
-                            </div>
-                        </div>
-                    </x-card.content>
-                </x-card>
-
-                <!-- Active Profiles -->
-                <x-card class="hover:shadow-md transition-shadow">
-                    <x-card.content class="p-4">
-                        <div class="flex items-center justify-between space-x-3">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-medium text-muted-foreground truncate">Perfiles Activos</p>
-                                <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['active_profiles']) }}</p>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <x-lucide-users class="h-8 w-8 text-purple-500" />
                             </div>
                         </div>
                     </x-card.content>
@@ -94,6 +79,89 @@
                 </x-card>
             </div>
 
+            <!-- Posted Content Widget (Date Filtered) -->
+            <x-card class="mb-8">
+                <x-card.header>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <x-card.title class="text-xl">Contenido Publicado</x-card.title>
+                                <x-card.description>Galería de imágenes publicadas en la página</x-card.description>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <x-select wire:model.live="dateFilter" class="w-48">
+                                    <option value="today">Hoy</option>
+                                    <option value="week">Últimos 7 días</option>
+                                    <option value="month">Últimos 30 días</option>
+                                    <option value="custom">Rango Personalizado</option>
+                                </x-select>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Date Range -->
+                        @if($dateFilter === 'custom')
+                            <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-accent/50 p-4 rounded-lg border border-border">
+                                <div class="flex-1 w-full sm:w-auto">
+                                    <label class="block text-xs font-medium text-muted-foreground mb-1">Fecha Inicio</label>
+                                    <input type="date" 
+                                           wire:model.live="customStartDate"
+                                           class="w-full px-3 py-2 text-sm border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                </div>
+                                <div class="flex-1 w-full sm:w-auto">
+                                    <label class="block text-xs font-medium text-muted-foreground mb-1">Fecha Fin</label>
+                                    <input type="date" 
+                                           wire:model.live="customEndDate"
+                                           class="w-full px-3 py-2 text-sm border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                </div>
+                                <div class="self-end">
+                                    <x-button wire:click="$refresh" size="sm" class="whitespace-nowrap">
+                                        <x-lucide-search class="h-4 w-4 mr-2" />
+                                        Aplicar
+                                    </x-button>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </x-card.header>
+                <x-card.content class="p-6">
+                    @if($postedImagesFiltered->count() > 0)
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            @foreach($postedImagesFiltered as $image)
+                                <div class="group relative aspect-square rounded-lg overflow-hidden bg-accent hover:ring-2 hover:ring-primary transition-all cursor-pointer">
+                                    @if($image->image_url)
+                                        <img src="{{ $image->image_url }}" 
+                                             alt="Posted image" 
+                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
+                                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <div class="text-white text-center p-2">
+                                                <p class="text-xs font-medium">{{ $image->posted_to_page_at->format('d M Y') }}</p>
+                                                <p class="text-xs">{{ $image->posted_to_page_at->format('H:i') }}</p>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center">
+                                            <x-lucide-image class="h-8 w-8 text-muted-foreground" />
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                        <!-- View All Link -->
+                        <div class="mt-6 text-center">
+                            <a href="{{ route('images') }}?filter=posted" class="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+                                Ver todas las imágenes publicadas
+                                <x-lucide-arrow-right class="h-4 w-4" />
+                            </a>
+                        </div>
+                    @else
+                        <div class="text-center py-12">
+                            <x-lucide-calendar-x class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                            <p class="text-base text-muted-foreground">No hay contenido publicado en este período</p>
+                        </div>
+                    @endif
+                </x-card.content>
+            </x-card>
+
             <!-- Manual Run Buttons -->
             <x-card class="mb-8">
                 <x-card.header>
@@ -107,210 +175,15 @@
                             Ejecutar Scraper Facebook
                         </x-button>
 
+                        <x-button wire:click="generateImages" class="flex-1 h-14 text-base bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl">
+                            <x-lucide-image class="mr-3 h-6 w-6" />
+                            Generar Imágenes
+                        </x-button>
+
                         <x-button wire:click="postToPage" class="flex-1 h-14 text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl">
                             <x-lucide-share-2 class="mr-3 h-6 w-6" />
                             Publicar en Página de Facebook
                         </x-button>
-                    </div>
-                </x-card.content>
-            </x-card>
-
-            <!-- Recent Messages -->
-            <x-card x-data="{ activeTab: 'all' }">
-                <x-card.header>
-                    <x-card.title class="text-xl">Mensajes Recientes</x-card.title>
-                    <x-card.description>
-                        <span x-show="activeTab === 'all'">Últimos 5 mensajes extraídos</span>
-                        <span x-show="activeTab === 'posted'" x-cloak>Últimos 5 mensajes publicados</span>
-                        <span x-show="activeTab === 'pending'" x-cloak>Mensajes pendientes y programados</span>
-                        <span x-show="activeTab === 'images'" x-cloak>Últimas 10 imágenes publicadas en página</span>
-                    </x-card.description>
-                </x-card.header>
-                <x-card.content class="p-0">
-                    <!-- Tabs -->
-                    <div class="border-b border-border px-6 overflow-x-auto">
-                        <div class="flex gap-4 flex-nowrap">
-                            <button
-                                @click="activeTab = 'all'"
-                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
-                                :class="activeTab === 'all' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
-                                Todos
-                            </button>
-                            <button
-                                @click="activeTab = 'posted'"
-                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
-                                :class="activeTab === 'posted' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
-                                Publicados
-                            </button>
-                            <button
-                                @click="activeTab = 'pending'"
-                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
-                                :class="activeTab === 'pending' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
-                                Pendientes
-                            </button>
-                            <button
-                                @click="activeTab = 'images'"
-                                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap"
-                                :class="activeTab === 'images' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'">
-                                Imágenes Publicadas
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- All Messages -->
-                    <div x-show="activeTab === 'all'" class="divide-y divide-border">
-                        @forelse ($allMessages as $message)
-                            <div class="px-6 py-5 hover:bg-accent/50 transition-colors">
-                                <div class="flex items-center justify-between gap-4">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-base text-foreground line-clamp-2">{{ Str::limit($message->message_text, 150) }}</p>
-                                        <p class="text-sm text-muted-foreground mt-2 flex items-center gap-1">
-                                            <x-lucide-clock class="h-4 w-4" />
-                                            {{ $message->scraped_at->diffForHumans() }}
-                                            @if ($message->profile)
-                                                · {{ $message->profile->username }}
-                                            @endif
-                                        </p>
-                                    </div>
-                                    <div class="flex-shrink-0 flex items-center gap-2">
-                                        @if ($message->posted_to_twitter)
-                                            <x-badge variant="default">Publicado</x-badge>
-                                        @else
-                                            <x-badge variant="secondary">Pendiente</x-badge>
-                                        @endif
-
-                                        @if ($message->image_generated)
-                                            <x-badge variant="outline">
-                                                <x-lucide-image class="h-3 w-3 mr-1" />
-                                                Imagen
-                                            </x-badge>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="px-6 py-16 text-center">
-                                <x-lucide-inbox class="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                                <p class="text-base text-muted-foreground">No se encontraron mensajes</p>
-                            </div>
-                        @endforelse
-                    </div>
-
-                    <!-- Posted Messages -->
-                    <div x-show="activeTab === 'posted'" x-cloak class="divide-y divide-border">
-                        @forelse ($postedMessages as $message)
-                            <div class="px-6 py-5 hover:bg-accent/50 transition-colors">
-                                <div class="flex items-center justify-between gap-4">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-base text-foreground line-clamp-2">{{ Str::limit($message->message_text, 150) }}</p>
-                                        <p class="text-sm text-muted-foreground mt-2 flex items-center gap-1">
-                                            <x-lucide-clock class="h-4 w-4" />
-                                            {{ $message->posted_at ? $message->posted_at->diffForHumans() : $message->scraped_at->diffForHumans() }}
-                                            @if ($message->profile)
-                                                · {{ $message->profile->username }}
-                                            @endif
-                                        </p>
-                                    </div>
-                                    <div class="flex-shrink-0 flex items-center gap-2">
-                                        <x-badge variant="default">Publicado</x-badge>
-
-                                        @if ($message->image_generated)
-                                            <x-badge variant="outline">
-                                                <x-lucide-image class="h-3 w-3 mr-1" />
-                                                Imagen
-                                            </x-badge>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="px-6 py-16 text-center">
-                                <x-lucide-inbox class="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                                <p class="text-base text-muted-foreground">No hay mensajes publicados</p>
-                            </div>
-                        @endforelse
-                    </div>
-
-                    <!-- Pending Messages -->
-                    <div x-show="activeTab === 'pending'" x-cloak class="divide-y divide-border">
-                        @forelse ($pendingMessages as $message)
-                            <div class="px-6 py-5 hover:bg-accent/50 transition-colors">
-                                <div class="flex items-center justify-between gap-4">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-base text-foreground line-clamp-2">{{ Str::limit($message->message_text, 150) }}</p>
-                                        <p class="text-sm text-muted-foreground mt-2 flex items-center gap-1">
-                                            <x-lucide-clock class="h-4 w-4" />
-                                            @if ($message->posted_to_twitter && $message->posted_at && $message->posted_at->isFuture())
-                                                Se publicará {{ $message->posted_at->diffForHumans() }}
-                                            @else
-                                                {{ $message->scraped_at->diffForHumans() }}
-                                            @endif
-                                            @if ($message->profile)
-                                                · {{ $message->profile->username }}
-                                            @endif
-                                        </p>
-                                    </div>
-                                    <div class="flex-shrink-0 flex items-center gap-2">
-                                        @if ($message->posted_to_twitter && $message->posted_at && $message->posted_at->isFuture())
-                                            <x-badge variant="default">
-                                                <x-lucide-calendar-clock class="h-3 w-3 mr-1" />
-                                                Programado
-                                            </x-badge>
-                                        @else
-                                            <x-badge variant="secondary">Pendiente</x-badge>
-                                        @endif
-
-                                        @if ($message->image_generated)
-                                            <x-badge variant="outline">
-                                                <x-lucide-image class="h-3 w-3 mr-1" />
-                                                Imagen
-                                            </x-badge>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="px-6 py-16 text-center">
-                                <x-lucide-inbox class="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                                <p class="text-base text-muted-foreground">No hay mensajes pendientes</p>
-                            </div>
-                        @endforelse
-                    </div>
-
-                    <!-- Posted Images Tab -->
-                    <div x-show="activeTab === 'images'" x-cloak class="p-6">
-                        @if($postedImages->count() > 0)
-                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                @foreach($postedImages as $image)
-                                    <div class="group relative aspect-square rounded-lg overflow-hidden border border-border hover:shadow-lg transition-all cursor-pointer">
-                                        @php
-                                            $imagePath = str_replace('/scraper/data/', '/storage/', $image->image_path);
-                                        @endphp
-                                        <img src="{{ $imagePath }}"
-                                             alt="Posted image"
-                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                             loading="lazy">
-
-                                        <!-- Overlay with info -->
-                                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-3">
-                                            <p class="text-white text-xs text-center line-clamp-3 mb-2">{{ $image->message_text }}</p>
-                                            <p class="text-white/80 text-xs">
-                                                <x-lucide-clock class="inline h-3 w-3" />
-                                                {{ $image->posted_to_page_at->diffForHumans() }}
-                                            </p>
-                                            @if($image->profile)
-                                                <p class="text-white/80 text-xs mt-1">{{ $image->profile->username }}</p>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="py-16 text-center">
-                                <x-lucide-image class="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                                <p class="text-base text-muted-foreground">No hay imágenes publicadas en la página</p>
-                            </div>
-                        @endif
                     </div>
                 </x-card.content>
             </x-card>

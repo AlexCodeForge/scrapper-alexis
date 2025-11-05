@@ -88,10 +88,10 @@ class Settings extends Component
         $this->twitterEnabled = $settings->twitter_enabled;
         $this->twitterEmail = $settings->twitter_email ?? '';
         $this->twitterPassword = $settings->twitter_password ?? '';
-        $this->twitterDisplayName = $settings->twitter_display_name ?? '';
-        $this->twitterUsername = $settings->twitter_username ?? '';
-        $this->twitterAvatarUrl = $settings->twitter_avatar_url ?? '';
-        $this->twitterVerified = $settings->twitter_verified ?? false;
+        $this->twitterDisplayName = $settings->display_name ?? '';
+        $this->twitterUsername = $settings->username ?? '';
+        $this->twitterAvatarUrl = $settings->avatar_url ?? '';
+        $this->twitterVerified = $settings->verified ?? false;
 
         $this->proxyServer = $settings->proxy_server ?? '';
         $this->proxyUsername = $settings->proxy_username ?? '';
@@ -254,10 +254,10 @@ class Settings extends Component
             'twitter_enabled' => $this->twitterEnabled,
             'twitter_email' => $this->twitterEmail,
             'twitter_password' => $this->twitterPassword, // Encrypted by model
-            'twitter_display_name' => $this->twitterDisplayName,
-            'twitter_username' => $this->twitterUsername,
-            'twitter_avatar_url' => $this->twitterAvatarUrl,
-            'twitter_verified' => $this->twitterVerified,
+            'display_name' => $this->twitterDisplayName,
+            'username' => $this->twitterUsername,
+            'avatar_url' => $this->twitterAvatarUrl,
+            'verified' => $this->twitterVerified,
             'proxy_server' => $this->proxyServer,
             'proxy_username' => $this->proxyUsername,
             'proxy_password' => $this->proxyPassword, // Encrypted by model
@@ -574,9 +574,9 @@ class Settings extends Component
 
         // Prepare data for update
         $updateData = [
-            'twitter_display_name' => $this->twitterDisplayName,
-            'twitter_username' => $this->twitterUsername,
-            'twitter_verified' => $this->twitterVerified,
+            'display_name' => $this->twitterDisplayName,
+            'username' => $this->twitterUsername,
+            'verified' => $this->twitterVerified,
         ];
 
         // Handle avatar upload
@@ -584,7 +584,7 @@ class Settings extends Component
             try {
                 // Store avatar in public/storage/avatars/
                 $avatarPath = $this->avatarUpload->store('avatars', 'public');
-                $updateData['twitter_avatar_url'] = $avatarPath;
+                $updateData['avatar_url'] = $avatarPath;
                 
                 // Copy avatar to Python project for image generation
                 $publicAvatarPath = storage_path('app/public/' . $avatarPath);

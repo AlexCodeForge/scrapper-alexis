@@ -1,4 +1,5 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Cache buster: v2.0 -->
     <!-- Flash Messages -->
     @if (session()->has('success'))
         <x-alert class="mb-6">
@@ -16,25 +17,109 @@
         </x-alert>
     @endif
 
-    <!-- Header -->
-    <div class="mb-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900">Mensajes Scrapeados</h2>
-                <p class="text-sm text-gray-600 mt-1">Todos los mensajes recopilados de perfiles de Facebook</p>
-            </div>
-            <div>
-                <!-- Per Page -->
-                <select wire:model.live="perPage"
-                        class="block w-full px-3 py-2.5 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-input sm:text-sm transition duration-150 ease-in-out">
-                    <option value="10">10 por página</option>
-                    <option value="25">25 por página</option>
-                    <option value="50">50 por página</option>
-                    <option value="100">100 por página</option>
-                </select>
-            </div>
-        </div>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stats-grid mb-8">
+        <!-- Pending -->
+        <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
+            <x-card.content class="p-4">
+                <div class="flex items-center justify-between space-x-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-medium text-muted-foreground truncate">Pendientes</p>
+                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['pending']) }}</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <x-lucide-clock class="h-8 w-8 text-gray-500" />
+                    </div>
+                </div>
+            </x-card.content>
+        </x-card>
+
+        <!-- Approved -->
+        <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
+            <x-card.content class="p-4">
+                <div class="flex items-center justify-between space-x-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-medium text-muted-foreground truncate">Aprobados</p>
+                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['approved_auto'] + $stats['approved_manual']) }}</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <x-lucide-check-circle class="h-8 w-8 text-blue-500" />
+                    </div>
+                </div>
+            </x-card.content>
+        </x-card>
+
+        <!-- Rejected -->
+        <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
+            <x-card.content class="p-4">
+                <div class="flex items-center justify-between space-x-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-medium text-muted-foreground truncate">Rechazados</p>
+                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['rejected']) }}</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <x-lucide-x-circle class="h-8 w-8 text-red-500" />
+                    </div>
+                </div>
+            </x-card.content>
+        </x-card>
     </div>
+
+    <!-- Filters and Actions -->
+    <x-card class="mb-6">
+        <x-card.content class="p-4">
+            <div class="flex flex-col filters-container items-center justify-between gap-4">
+                <!-- Filters -->
+                <div class="flex flex-col filters-inner gap-3 items-center">
+                    <x-select wire:model.live="filter" class="min-w-[200px]">
+                        <option value="all">Todos</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="approved_auto">Auto-Post</option>
+                        <option value="approved_manual">Manual</option>
+                        <option value="rejected">Rechazados</option>
+                    </x-select>
+
+                    <x-select wire:model.live="perPage" class="w-48">
+                        <option value="10">10 por página</option>
+                        <option value="25">25 por página</option>
+                        <option value="50">50 por página</option>
+                        <option value="100">100 por página</option>
+                    </x-select>
+                </div>
+
+                <!-- Bulk Actions -->
+                @if(count($selected) > 0)
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-sm text-gray-600 self-center">{{ count($selected) }} seleccionados</span>
+                        
+                        <button 
+                            wire:click="bulkApprove"
+                            type="button"
+                            class="px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
+                            <x-lucide-zap class="inline-block w-4 h-4 mr-1" />
+                            Aprobar
+                        </button>
+                        
+                        <button 
+                            wire:click="bulkApproveManual"
+                            type="button"
+                            class="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                            <x-lucide-hand class="inline-block w-4 h-4 mr-1" />
+                            Manual
+                        </button>
+                        
+                        <button 
+                            wire:click="bulkReject"
+                            type="button"
+                            class="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
+                            <x-lucide-x class="inline-block w-4 h-4 mr-1" />
+                            Rechazar
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </x-card.content>
+    </x-card>
 
     <!-- Messages Table -->
     <x-card>
@@ -58,25 +143,41 @@
                 <table class="min-w-full divide-y divide-border">
                     <thead class="bg-muted">
                         <tr>
+                            <th scope="col" class="px-4 py-3 text-left">
+                                <input 
+                                    type="checkbox" 
+                                    wire:model.live="selectAll"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Mensaje
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Perfil
+                                Fecha
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Fecha
+                                Estado
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                Acciones
                             </th>
                         </tr>
                     </thead>
                     <tbody class="bg-background divide-y divide-border">
                         @forelse ($messages as $message)
                             <tr class="hover:bg-accent/50 transition-colors">
+                                <td class="px-4 py-4">
+                                    <input 
+                                        type="checkbox" 
+                                        wire:model.live="selected"
+                                        value="{{ $message->id }}"
+                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-start space-x-3">
                                         @if ($message->image_generated)
                                             <div class="flex-shrink-0">
-                                                <x-lucide-image class="h-5 w-5 text-green-500" />
+                                                <span class="text-green-500 text-xl">🖼️</span>
                                             </div>
                                         @endif
                                         <div class="flex-1 min-w-0">
@@ -84,14 +185,6 @@
                                                 {{ $message->message_text }}
                                             </p>
                                         </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <x-lucide-user class="h-4 w-4 text-muted-foreground mr-2" />
-                                        <span class="text-sm font-medium text-foreground">
-                                            {{ $message->profile?->username ?? 'N/A' }}
-                                        </span>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -106,10 +199,52 @@
                                         </div>
                                     </div>
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm">
+                                        @if ($message->approved_for_posting === true)
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <x-lucide-check class="w-3 h-3 mr-1" />
+                                                Aprobado
+                                            </span>
+                                        @elseif ($message->approved_for_posting === false)
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <x-lucide-x class="w-3 h-3 mr-1" />
+                                                Rechazado
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                <x-lucide-clock class="w-3 h-3 mr-1" />
+                                                Pendiente
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <button 
+                                            wire:click="approveMessage({{ $message->id }})"
+                                            type="button"
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                                            Aprobar
+                                        </button>
+                                        <button 
+                                            wire:click="approveForManual({{ $message->id }})"
+                                            type="button"
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                            Manual
+                                        </button>
+                                        <button 
+                                            wire:click="rejectMessage({{ $message->id }})"
+                                            type="button"
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                                            Rechazar
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="px-6 py-12 text-center">
+                                <td colspan="5" class="px-6 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center space-y-3">
                                         <x-lucide-inbox class="h-12 w-12 text-muted-foreground" />
                                         <h3 class="text-sm font-medium text-foreground">No se encontraron mensajes</h3>

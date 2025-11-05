@@ -87,19 +87,20 @@ def get_posting_settings():
 
 
 def get_next_approved_image():
-    """Get the next approved image to post."""
+    """Get the next approved image to post (only auto-post enabled)."""
     try:
         import sqlite3
         
         # Connect to scraper database
         db = get_database()
         
-        # Get oldest approved but not posted image
+        # Get oldest approved but not posted image (only auto-post enabled)
         query = """
             SELECT m.id, m.message_text, m.image_path
             FROM messages m
             WHERE m.image_generated = 1
               AND m.approved_for_posting = 1
+              AND m.auto_post_enabled = 1
               AND (m.posted_to_page = 0 OR m.posted_to_page IS NULL)
             ORDER BY m.approved_at ASC
             LIMIT 1

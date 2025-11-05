@@ -34,4 +34,14 @@
             flex-direction: row !important;
         }
     }
+
+    /* Fix for filters container - row on desktop, column on mobile */
+    @media (min-width: 48rem) {
+        .filters-container {
+            flex-direction: row !important;
+        }
+        .filters-inner {
+            flex-direction: row !important;
+        }
+    }
 }

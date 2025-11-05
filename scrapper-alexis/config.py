@@ -83,10 +83,10 @@ try:
     FACEBOOK_PASSWORD = _db_settings.get('facebook_password') or ''
     X_EMAIL = _db_settings.get('twitter_email') or ''
     X_PASSWORD = _db_settings.get('twitter_password') or ''
-    X_DISPLAY_NAME = _db_settings.get('twitter_display_name') or 'Twitter User'
-    X_USERNAME = _db_settings.get('twitter_username') or '@username'
-    X_AVATAR_URL = _db_settings.get('twitter_avatar_url') or ''
-    X_VERIFIED = bool(_db_settings.get('twitter_verified', False))
+    X_DISPLAY_NAME = _db_settings.get('display_name') or _db_settings.get('twitter_display_name') or 'Twitter User'
+    X_USERNAME = _db_settings.get('username') or _db_settings.get('twitter_username') or '@username'
+    X_AVATAR_URL = _db_settings.get('avatar_url') or _db_settings.get('twitter_avatar_url') or ''
+    X_VERIFIED = bool(_db_settings.get('verified', _db_settings.get('twitter_verified', False)))
     
     # Handle facebook_profiles (can be None or empty string)
     profiles_str = _db_settings.get('facebook_profiles') or ''

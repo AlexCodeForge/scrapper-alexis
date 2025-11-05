@@ -217,6 +217,7 @@ function runScraperScript(string $script): array
         'facebook' => 'scraper:facebook',
         'twitter' => 'scraper:twitter',
         'page_poster' => 'scraper:page-poster',
+        'image_generator' => 'scraper:generate-images',
     ];
 
     if (!isset($commandsMap[$script])) {

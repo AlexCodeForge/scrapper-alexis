@@ -22,20 +22,43 @@ class PostingService
 
     /**
      * Get approved images ready for posting (approved but not posted yet)
+     * Only includes auto-post enabled images for cron job
      */
     public function getApprovedImages(): Collection
     {
         return Message::withImages()
             ->approvedForPosting()
+            ->autoPostEnabled()
             ->notPostedToPage()
             ->oldest('approved_at')
             ->get();
     }
 
     /**
-     * Approve an image for posting
+     * Get approved images for manual posting queue
+     */
+    public function getManualPostImages(): Collection
+    {
+        return Message::withImages()
+            ->approvedForPosting()
+            ->manualPostOnly()
+            ->notPostedToPage()
+            ->oldest('approved_at')
+            ->get();
+    }
+
+    /**
+     * Approve an image for posting (defaults to auto-post)
      */
     public function approveImage(int $messageId): bool
+    {
+        return $this->approveForAutoPost($messageId);
+    }
+
+    /**
+     * Approve an image for auto-posting (will be posted automatically by cron)
+     */
+    public function approveForAutoPost(int $messageId): bool
     {
         $message = Message::find($messageId);
 
@@ -46,6 +69,27 @@ class PostingService
         return $message->update([
             'approved_for_posting' => true,
             'approved_at' => now(),
+            'auto_post_enabled' => true,
+            'approval_type' => 'auto',
+        ]);
+    }
+
+    /**
+     * Approve an image for manual posting (won't be auto-posted by cron)
+     */
+    public function approveForManualPost(int $messageId): bool
+    {
+        $message = Message::find($messageId);
+
+        if (!$message) {
+            return false;
+        }
+
+        return $message->update([
+            'approved_for_posting' => true,
+            'approved_at' => now(),
+            'auto_post_enabled' => false,
+            'approval_type' => 'manual',
         ]);
     }
 
@@ -73,7 +117,9 @@ class PostingService
     {
         return [
             'pending' => Message::withImages()->pendingApproval()->count(),
-            'approved' => Message::withImages()->approvedForPosting()->notPostedToPage()->count(),
+            'approved_auto' => Message::withImages()->approvedForPosting()->autoPostEnabled()->notPostedToPage()->count(),
+            'approved_manual' => Message::withImages()->approvedForPosting()->manualPostOnly()->notPostedToPage()->count(),
+            'approved' => Message::withImages()->approvedForPosting()->notPostedToPage()->count(), // Total approved
             'rejected' => Message::withImages()
                 ->where('approved_for_posting', false)
                 ->whereNotNull('approved_at')
@@ -100,11 +146,13 @@ class PostingService
 
     /**
      * Get the next approved image to post (one at a time for cronjob)
+     * Only returns auto-post enabled images
      */
     public function getNextImageToPost(): ?Message
     {
         return Message::withImages()
             ->approvedForPosting()
+            ->autoPostEnabled()
             ->notPostedToPage()
             ->oldest('approved_at')
             ->first();

@@ -24,6 +24,8 @@ class Message extends Model
         'downloaded_at',
         'approved_for_posting',
         'approved_at',
+        'auto_post_enabled',
+        'approval_type',
         'posted_to_page',
         'posted_to_page_at',
     ];
@@ -33,6 +35,7 @@ class Message extends Model
         'image_generated' => 'boolean',
         'downloaded' => 'boolean',
         'approved_for_posting' => 'boolean',
+        'auto_post_enabled' => 'boolean',
         'posted_to_page' => 'boolean',
         'scraped_at' => 'datetime',
         'posted_at' => 'datetime',
@@ -136,6 +139,22 @@ class Message extends Model
     {
         return $query->where('posted_to_page', false)
             ->orWhereNull('posted_to_page');
+    }
+
+    /**
+     * Scope to filter messages with auto-post enabled
+     */
+    public function scopeAutoPostEnabled($query)
+    {
+        return $query->where('auto_post_enabled', true);
+    }
+
+    /**
+     * Scope to filter messages for manual posting only (auto-post disabled)
+     */
+    public function scopeManualPostOnly($query)
+    {
+        return $query->where('auto_post_enabled', false);
     }
 }
 

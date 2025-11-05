@@ -20,15 +20,15 @@ class ScraperSettings extends Model
         'twitter_interval_max',
         'twitter_email',
         'twitter_password',
-        'twitter_display_name',
-        'twitter_username',
-        'twitter_avatar_url',
-        'twitter_verified',
         'twitter_debug_enabled',
         'proxy_server',
         'proxy_username',
         'proxy_password',
         'page_posting_debug_enabled',
+        'display_name',
+        'username',
+        'avatar_url',
+        'verified',
     ];
 
     protected $casts = [
@@ -39,9 +39,9 @@ class ScraperSettings extends Model
         'twitter_enabled' => 'boolean',
         'twitter_interval_min' => 'integer',
         'twitter_interval_max' => 'integer',
-        'twitter_verified' => 'boolean',
         'twitter_debug_enabled' => 'boolean',
         'page_posting_debug_enabled' => 'boolean',
+        'verified' => 'boolean',
     ];
 
     /**
@@ -109,7 +109,7 @@ class ScraperSettings extends Model
             'twitter_enabled' => false,
             'twitter_interval_min' => 8,
             'twitter_interval_max' => 60,
-            'twitter_verified' => false,
+            'verified' => false,
         ]);
     }
 

@@ -2,9 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Livewire\Dashboard;
-use App\Livewire\ImageGallery;
+use App\Livewire\Images;
 use App\Livewire\Logs;
-use App\Livewire\PostingApproval;
 use App\Livewire\ScrapedMessages;
 use App\Livewire\Settings;
 use Illuminate\Support\Facades\Route;
@@ -21,7 +20,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/', Dashboard::class)->name('dashboard');
     Route::get('/dashboard', Dashboard::class);
-    Route::get('/images', ImageGallery::class)->name('images');
+    Route::get('/images', Images::class)->name('images');
     Route::get('/images/download/{zipFileName}', function ($zipFileName) {
         $zipPath = storage_path('app/public/' . basename($zipFileName));
 
@@ -31,7 +30,6 @@ Route::middleware('auth')->group(function () {
 
         abort(404);
     })->name('images.download');
-    Route::get('/posting/approve', PostingApproval::class)->name('posting.approve');
     Route::get('/messages', ScrapedMessages::class)->name('messages');
     Route::get('/settings', Settings::class)->name('settings');
     Route::get('/logs', Logs::class)->name('logs');

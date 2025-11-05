@@ -19,7 +19,7 @@
     </div>
 
     <!-- Status Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <!-- Facebook Scraper Status -->
         <x-card>
             <x-card.content class="p-4">
@@ -37,30 +37,6 @@
                     </div>
                     <x-button wire:click="selectLog('facebook')"
                               variant="{{ $selectedLog === 'facebook' ? 'default' : 'outline' }}"
-                              size="sm">
-                        Ver Logs
-                    </x-button>
-                </div>
-            </x-card.content>
-        </x-card>
-
-        <!-- Twitter Poster Status -->
-        <x-card>
-            <x-card.content class="p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-blue-100 rounded-lg">
-                            <x-lucide-twitter class="h-6 w-6 text-blue-400" />
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-gray-900">Twitter Poster</h3>
-                            <p class="text-sm {{ $twitterEnabled ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $twitterEnabled ? '🟢 Activo' : '🔴 Detenido' }}
-                            </p>
-                        </div>
-                    </div>
-                    <x-button wire:click="selectLog('twitter')"
-                              variant="{{ $selectedLog === 'twitter' ? 'default' : 'outline' }}"
                               size="sm">
                         Ver Logs
                     </x-button>
@@ -134,12 +110,6 @@
                               size="sm">
                         <x-lucide-facebook class="h-4 w-4 mr-1" />
                         Facebook
-                    </x-button>
-                    <x-button wire:click="selectLog('twitter')"
-                              variant="{{ $selectedLog === 'twitter' ? 'default' : 'ghost' }}"
-                              size="sm">
-                        <x-lucide-twitter class="h-4 w-4 mr-1" />
-                        Twitter
                     </x-button>
                     <x-button wire:click="selectLog('page-poster')"
                               variant="{{ $selectedLog === 'page-poster' ? 'default' : 'ghost' }}"
@@ -234,7 +204,6 @@
         <x-card.content>
             <div class="space-y-2 text-sm text-gray-600">
                 <p><strong>Facebook:</strong> Logs de scraping de perfiles de Facebook (cron_facebook.log)</p>
-                <p><strong>Twitter:</strong> Logs de publicaciones en Twitter (cron_twitter.log)</p>
                 <p><strong>Page Poster:</strong> Logs de publicaciones en página de Facebook (page_poster_*.log)</p>
                 <p><strong>Execution:</strong> Logs generales de ejecución de cron (cron_execution.log)</p>
                 <p><strong>Manual Runs:</strong> Logs de ejecuciones manuales desde el dashboard</p>

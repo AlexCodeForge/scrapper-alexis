@@ -9,6 +9,17 @@ use Livewire\Component;
 
 class Dashboard extends Component
 {
+    public $dateFilter = 'today';
+    public $customStartDate = null;
+    public $customEndDate = null;
+
+    protected $queryString = ['dateFilter'];
+
+    public function updatedDateFilter()
+    {
+        \Log::info('Dashboard: Date filter updated', ['filter' => $this->dateFilter]);
+    }
+
     public function runScript($script)
     {
         $result = runScraperScript($script);
@@ -33,6 +44,19 @@ class Dashboard extends Component
         }
     }
 
+    public function generateImages()
+    {
+        \Log::info('Dashboard: Manual image generation triggered');
+
+        $result = runScraperScript('image_generator');
+
+        if ($result['success']) {
+            session()->flash('success', 'Generación de imágenes iniciada correctamente');
+        } else {
+            session()->flash('error', $result['message']);
+        }
+    }
+
     public function render()
     {
         $postingService = app(PostingService::class);
@@ -51,61 +75,57 @@ class Dashboard extends Component
             'posted_to_page' => $pageStats['posted'],
         ];
 
-        // Load all messages for instant tab switching with Alpine
-        // Apply word count filter to match scraper's deduplicator logic (>4 words)
-        $allMessages = Message::with('profile')
-            ->validWordCount()
-            ->latest('scraped_at')
-            ->take(5)
-            ->get();
+        // Get date range for filter
+        $startDate = null;
+        $endDate = now();
 
-        $postedMessages = Message::with('profile')
-            ->validWordCount()
-            ->where('posted_to_twitter', true)
-            ->where(function($query) {
-                $query->whereNull('posted_at')
-                      ->orWhereRaw('datetime(posted_at) <= datetime(?)', [now()]);
-            })
-            ->latest('id')
-            ->take(5)
-            ->get();
+        switch ($this->dateFilter) {
+            case 'today':
+                $startDate = now()->startOfDay();
+                break;
+            case 'week':
+                $startDate = now()->subDays(7)->startOfDay();
+                break;
+            case 'month':
+                $startDate = now()->subDays(30)->startOfDay();
+                break;
+            case 'custom':
+                $startDate = $this->customStartDate ? now()->parse($this->customStartDate) : now()->subDays(30);
+                $endDate = $this->customEndDate ? now()->parse($this->customEndDate) : now();
+                break;
+        }
 
-        // Get scheduled posts (future posts) ordered by when they'll be published
-        // Use datetime() for proper comparison in SQLite to avoid string comparison issues
-        $scheduledMessages = Message::with('profile')
-            ->validWordCount()
-            ->where('posted_to_twitter', true)
-            ->whereNotNull('posted_at')
-            ->whereRaw('datetime(posted_at) > datetime(?)', [now()])
-            ->orderBy('posted_at', 'asc')
-            ->get();
-
-        // Get truly pending messages (not posted yet)
-        // Order by scraped_at ASC (oldest first) to match Twitter poster's logic
-        $unpostedMessages = Message::with('profile')
-            ->validWordCount()
-            ->where('posted_to_twitter', false)
-            ->orderBy('scraped_at', 'asc')
-            ->get();
-
-        // Combine: scheduled first, then pending, limit to 5 total
-        $pendingMessages = $scheduledMessages->concat($unpostedMessages)->take(5);
-
-        // Get recently posted images to Facebook page (last 10)
-        $postedImages = Message::with('profile')
+        // Get posted images for the selected date range
+        $postedImagesFiltered = Message::with('profile')
             ->where('posted_to_page', true)
             ->where('image_generated', true)
             ->whereNotNull('image_path')
+            ->when($startDate, function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('posted_to_page_at', [$startDate, $endDate]);
+            })
             ->latest('posted_to_page_at')
-            ->take(10)
+            ->take(12)
             ->get();
+
+        // Calculate stats for filtered period
+        $postedStats = [
+            'count' => Message::where('posted_to_page', true)
+                ->when($startDate, function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('posted_to_page_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'with_images' => Message::where('posted_to_page', true)
+                ->where('image_generated', true)
+                ->when($startDate, function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('posted_to_page_at', [$startDate, $endDate]);
+                })
+                ->count(),
+        ];
 
         return view('livewire.dashboard', [
             'stats' => $stats,
-            'allMessages' => $allMessages,
-            'postedMessages' => $postedMessages,
-            'pendingMessages' => $pendingMessages,
-            'postedImages' => $postedImages,
+            'postedImagesFiltered' => $postedImagesFiltered,
+            'postedStats' => $postedStats,
         ])->layout('components.layouts.app', ['title' => 'Dashboard']);
     }
 }

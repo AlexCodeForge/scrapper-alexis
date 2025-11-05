@@ -61,6 +61,18 @@ class DatabaseManager:
                 conn.execute("ALTER TABLE messages ADD COLUMN image_path TEXT")
                 conn.commit()
                 logger.info("✅ Image path column added successfully")
+            
+            if 'auto_post_enabled' not in columns:
+                logger.info("Adding auto_post_enabled column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN auto_post_enabled BOOLEAN DEFAULT 1")
+                conn.commit()
+                logger.info("✅ Auto post enabled column added successfully")
+            
+            if 'approval_type' not in columns:
+                logger.info("Adding approval_type column to messages table...")
+                conn.execute("ALTER TABLE messages ADD COLUMN approval_type TEXT")
+                conn.commit()
+                logger.info("✅ Approval type column added successfully")
 
         except Exception as e:
             logger.warning(f"Migration warning (non-critical): {e}")
@@ -106,6 +118,8 @@ class DatabaseManager:
                 posted_at TIMESTAMP,
                 post_url TEXT,
                 avatar_url TEXT,
+                auto_post_enabled BOOLEAN DEFAULT 1,
+                approval_type TEXT,
                 FOREIGN KEY (profile_id) REFERENCES profiles (id)
             )
         ''')
@@ -287,7 +301,7 @@ class DatabaseManager:
             return new_count, duplicate_count
     
     def get_unposted_messages(self, limit: Optional[int] = None) -> List[Dict]:
-        """Get messages that haven't been posted to Twitter."""
+        """Get messages that haven't been posted yet."""
         query = '''
             SELECT m.*, p.username as profile_username 
             FROM messages m
@@ -306,7 +320,7 @@ class DatabaseManager:
             return messages
     
     def mark_message_posted(self, message_id: int, post_url: str = None, avatar_url: str = None):
-        """Mark a message as posted to Twitter with post URL and avatar URL."""
+        """Mark a message as posted with post URL and avatar URL."""
         with self.get_connection() as conn:
             conn.execute(
                 '''UPDATE messages 
@@ -391,7 +405,7 @@ class DatabaseManager:
     def get_posted_messages_without_images(self, limit: int = 1) -> List[Dict]:
         """Get posted messages that don't have images generated yet.
         
-        Only includes messages that were successfully posted to Twitter,
+        Only includes messages that were successfully posted,
         excluding messages that were skipped due to quality filtering or duplicates.
         """
         with self.get_connection() as conn:

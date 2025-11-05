@@ -3,7 +3,7 @@
 # Generates images for posted messages
 # CRITICAL: Uses xvfb-run to prevent VPS crashes (see VPS_CRASH_SOLUTION.md)
 
-cd /app
+cd /var/www/alexis-scrapper-docker/scrapper-alexis
 
 # Activate virtual environment if it exists
 if [ -d "venv" ]; then

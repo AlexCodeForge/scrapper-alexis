@@ -289,11 +289,31 @@ def main():
     # Initialize database
     db = initialize_database('data/scraper.db')
     
-    # Get messages that need images (ONE at a time for cronjob)
-    messages_without_images = db.get_posted_messages_without_images(limit=1)
+    # Get APPROVED messages that need images (ONE at a time for cronjob)
+    # Only generate images for messages that are approved_for_posting = true and image_generated = false/null
+    messages_without_images = []
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, message_text, avatar_url, posted_at, approved_at
+            FROM messages
+            WHERE approved_for_posting = 1
+            AND (image_generated = 0 OR image_generated IS NULL)
+            ORDER BY approved_at ASC
+            LIMIT 1
+        """)
+        
+        for row in cursor.fetchall():
+            messages_without_images.append({
+                'id': row[0],
+                'message_text': row[1],
+                'avatar_url': row[2],
+                'posted_at': row[3],
+                'approved_at': row[4]
+            })
     
     if not messages_without_images:
-        print("No posted messages need image generation!")
+        print("No approved messages need image generation!")
         return 0
     
     print(f"Found {len(messages_without_images)} messages that need images")

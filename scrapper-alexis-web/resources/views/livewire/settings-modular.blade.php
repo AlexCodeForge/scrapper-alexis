@@ -32,25 +32,6 @@
             </x-card.content>
         </x-card>
 
-        <!-- Image Generator Configuration -->
-        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('image-generator')">
-            <x-card.content class="p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
-                            <x-lucide-image class="h-5 w-5 text-purple-600" />
-                            Generador de Imágenes
-                            @if($twitterDisplayName && $twitterUsername)
-                                <x-lucide-check-circle class="h-5 w-5 text-green-600" />
-                            @endif
-                        </h3>
-                        <p class="text-sm text-muted-foreground mt-1">Perfil y avatar para imágenes</p>
-                    </div>
-                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
-                </div>
-            </x-card.content>
-        </x-card>
-
         <!-- Página donde se publica -->
         <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('page-posting')">
             <x-card.content class="p-6">
@@ -64,6 +45,25 @@
                             @endif
                         </h3>
                         <p class="text-sm text-muted-foreground mt-1">Configuración y auto-limpieza</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
+        <!-- Image Generator Configuration -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('image-generator')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-image class="h-5 w-5 text-purple-600" />
+                            Generador de Imágenes
+                            @if($twitterDisplayName && $twitterUsername)
+                                <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                            @endif
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">Perfil y avatar para imágenes</p>
                     </div>
                     <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
                 </div>
@@ -284,42 +284,6 @@
                                 <div>
                                     <label class="text-xs text-muted-foreground">Máximo</label>
                                     <input type="number" wire:model="facebookIntervalMax" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Twitter Poster Cronjob Toggle -->
-                        <x-card>
-                            <x-card.content class="p-6">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <x-lucide-twitter class="h-5 w-5 text-sky-500" />
-                                            <h4 class="font-semibold text-foreground">Twitter Poster</h4>
-                                        </div>
-                                        <p class="text-sm text-muted-foreground">Estado: @if($twitterEnabled) 🟢 Activo @else 🔴 Detenido @endif</p>
-                                        <p class="text-xs text-muted-foreground mt-1">{{ $twitterEnabled ? 'El cronjob está ejecutándose' : 'El cronjob está deshabilitado' }}</p>
-                                    </div>
-                                    <button type="button" wire:click="toggleTwitter"
-                                            style="width: 60px; height: 34px; border-radius: 17px; position: relative; transition: all 0.3s; cursor: pointer; {{ $twitterEnabled ? 'background-color: #16a34a;' : 'background-color: #d1d5db;' }}"
-                                            class="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                                        <span style="position: absolute; top: 3px; {{ $twitterEnabled ? 'left: 28px;' : 'left: 3px;' }} width: 28px; height: 28px; background-color: white; border-radius: 50%; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
-                                    </button>
-                                </div>
-                            </x-card.content>
-                        </x-card>
-
-                        <!-- Twitter Interval -->
-                        <div>
-                            <label class="block text-sm font-medium text-foreground mb-2">Intervalo Twitter (minutos)</label>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-xs text-muted-foreground">Mínimo</label>
-                                    <input type="number" wire:model="twitterIntervalMin" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
-                                </div>
-                                <div>
-                                    <label class="text-xs text-muted-foreground">Máximo</label>
-                                    <input type="number" wire:model="twitterIntervalMax" min="1" max="1440" class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" />
                                 </div>
                             </div>
                         </div>

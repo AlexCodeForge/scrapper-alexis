@@ -33,13 +33,6 @@
                                 <x-lucide-image class="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
                                 Imágenes
                             </a>
-                            <a href="{{ route('posting.approve') }}"
-                               wire:navigate
-                               wire:navigate.hover
-                                class="@if(request()->routeIs('posting.approve')) border-primary text-foreground bg-accent @else border-transparent text-muted-foreground hover:border-border hover:text-foreground @endif inline-flex items-center px-4 py-2 border-b-2 text-sm lg:text-base font-medium transition-colors">
-                                <x-lucide-check-circle class="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
-                                Aprobación
-                            </a>
                             <a href="{{ route('messages') }}"
                                wire:navigate
                                wire:navigate.hover
@@ -104,12 +97,6 @@
                         class="@if(request()->routeIs('images')) bg-accent border-primary text-foreground @else border-transparent text-muted-foreground hover:bg-accent/50 hover:border-border hover:text-foreground @endif flex items-center gap-2 pl-3 pr-4 py-3 border-l-4 text-base font-medium transition-colors">
                         <x-lucide-image class="h-5 w-5" />
                         Imágenes
-                    </a>
-                    <a href="{{ route('posting.approve') }}"
-                       wire:navigate
-                        class="@if(request()->routeIs('posting.approve')) bg-accent border-primary text-foreground @else border-transparent text-muted-foreground hover:bg-accent/50 hover:border-border hover:text-foreground @endif flex items-center gap-2 pl-3 pr-4 py-3 border-l-4 text-base font-medium transition-colors">
-                        <x-lucide-check-circle class="h-5 w-5" />
-                        Aprobación
                     </a>
                     <a href="{{ route('messages') }}"
                        wire:navigate
