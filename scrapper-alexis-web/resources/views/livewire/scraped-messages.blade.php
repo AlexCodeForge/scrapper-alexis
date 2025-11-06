@@ -18,17 +18,17 @@
     @endif
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stats-grid mb-8">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3 stats-grid-3 mb-8">
         <!-- Pending -->
         <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
-            <x-card.content class="p-4">
-                <div class="flex items-center justify-between space-x-3">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between space-x-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground truncate">Pendientes</p>
-                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['pending']) }}</p>
+                        <p class="text-sm font-medium text-muted-foreground truncate">Pendientes</p>
+                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['pending']) }}</p>
                     </div>
                     <div class="flex-shrink-0">
-                        <x-lucide-clock class="h-8 w-8 text-gray-500" />
+                        <x-lucide-clock class="h-10 w-10 text-gray-500" />
                     </div>
                 </div>
             </x-card.content>
@@ -36,14 +36,14 @@
 
         <!-- Approved -->
         <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
-            <x-card.content class="p-4">
-                <div class="flex items-center justify-between space-x-3">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between space-x-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground truncate">Aprobados</p>
-                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['approved_auto'] + $stats['approved_manual']) }}</p>
+                        <p class="text-sm font-medium text-muted-foreground truncate">Aprobados</p>
+                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['approved_auto'] + $stats['approved_manual']) }}</p>
                     </div>
                     <div class="flex-shrink-0">
-                        <x-lucide-check-circle class="h-8 w-8 text-blue-500" />
+                        <x-lucide-check-circle class="h-10 w-10 text-blue-500" />
                     </div>
                 </div>
             </x-card.content>
@@ -51,14 +51,14 @@
 
         <!-- Rejected -->
         <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
-            <x-card.content class="p-4">
-                <div class="flex items-center justify-between space-x-3">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between space-x-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground truncate">Rechazados</p>
-                        <p class="text-2xl font-bold text-foreground mt-1">{{ number_format($stats['rejected']) }}</p>
+                        <p class="text-sm font-medium text-muted-foreground truncate">Rechazados</p>
+                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['rejected']) }}</p>
                     </div>
                     <div class="flex-shrink-0">
-                        <x-lucide-x-circle class="h-8 w-8 text-red-500" />
+                        <x-lucide-x-circle class="h-10 w-10 text-red-500" />
                     </div>
                 </div>
             </x-card.content>

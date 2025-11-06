@@ -297,7 +297,7 @@
     <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3 stats-grid mb-8">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3 stats-grid-3 mb-8">
         <!-- Pending for Publishing -->
         <?php if (isset($component)) { $__componentOriginal53747ceb358d30c0105769f8471417f6 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal53747ceb358d30c0105769f8471417f6 = $attributes; } ?>

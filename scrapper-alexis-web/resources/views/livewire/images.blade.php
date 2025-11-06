@@ -151,7 +151,7 @@
     @endif
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3 stats-grid mb-8">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3 stats-grid-3 mb-8">
         <!-- Pending for Publishing -->
         <x-card class="hover:shadow-md transition-shadow" wire:loading.class="animate-pulse" wire:target="filter, perPage">
             <x-card.content class="p-6">
