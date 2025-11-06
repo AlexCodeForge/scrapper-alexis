@@ -163,9 +163,13 @@ def mark_as_posted(message_id):
         db = get_database()
         
         with db.get_connection() as conn:
+            # BUGFIX: Store timestamp in UTC format for Laravel compatibility
+            # Laravel's accessor will convert from UTC to app timezone (Mexico) for display
+            from datetime import timezone as dt_timezone
+            timestamp = datetime.now(tz=dt_timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
             conn.execute(
                 "UPDATE messages SET posted_to_page = 1, posted_to_page_at = ? WHERE id = ?",
-                (datetime.now(), message_id)
+                (timestamp, message_id)
             )
             conn.commit()
         
