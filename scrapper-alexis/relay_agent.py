@@ -243,6 +243,10 @@ def main():
                     logger.info(f"URL: {profile['url']}")
                     logger.info(f"{'='*60}")
                     
+                    # BUGFIX: Count profile as processed regardless of outcome
+                    # This ensures accurate statistics even when profiles fail due to duplicates
+                    profiles_scraped += 1
+                    
                     try:
                         # Navigate to profile
                         navigate_to_message(page, profile['url'])
@@ -255,7 +259,6 @@ def main():
                         # Update totals
                         total_messages_found += extraction_stats['total_scraped']
                         total_new_messages += extraction_stats['new_messages']
-                        profiles_scraped += 1
                         
                         if extraction_stats['stopped_due_to_duplicate']:
                             profiles_stopped_due_to_duplicates += 1
@@ -283,6 +286,15 @@ def main():
                         logger.error(f"   ⚠️  This share URL may be invalid or inaccessible")
                         logger.error(f"   💡 Check the URL at {profile['url']} in your browser")
                         logger.error(f"   ⏭️  Skipping to next profile...")
+                        continue
+                    
+                    except ExtractionError as e:
+                        # BUGFIX: Enhanced logging for extraction failures
+                        logger.warning(f"⚠️ Profile {profile['username']}: {e}")
+                        # Check if it's a "no quality messages" error (all duplicates)
+                        if "No quality messages extracted" in str(e):
+                            logger.info(f"   ℹ️  All messages from this profile are already in the database")
+                            logger.info(f"   ✅ Profile counted as processed (no new content)")
                         continue
                     
                     except Exception as e:

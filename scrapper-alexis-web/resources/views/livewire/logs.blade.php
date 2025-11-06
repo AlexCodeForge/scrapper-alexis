@@ -1,4 +1,11 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <style>
+        @media (min-width: 1024px) {
+            .next-execution-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+        }
+    </style>
     <!-- Header with Controls -->
     <div class="mb-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -16,6 +23,109 @@
                 </x-button>
             </div>
         </div>
+    </div>
+
+    <!-- Next Execution Cards -->
+    <div class="next-execution-grid grid grid-cols-1 gap-4 mb-6">
+        @foreach ($this->nextExecutions as $jobKey => $execution)
+            @php
+                $nextRunIso = $execution['next_run_at'] ? $execution['next_run_at']->toIso8601String() : null;
+                $iconMap = [
+                    'facebook' => 'facebook',
+                    'page_poster' => 'image',
+                    'image_generator' => 'image-plus',
+                ];
+                $colorMap = [
+                    'facebook' => 'text-blue-600',
+                    'page_poster' => 'text-indigo-600',
+                    'image_generator' => 'text-green-600',
+                ];
+            @endphp
+            <x-card class="hover:shadow-md transition-shadow">
+                <x-card.content class="p-4">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            @if ($iconMap[$jobKey] === 'facebook')
+                                <x-lucide-facebook class="h-5 w-5 {{ $colorMap[$jobKey] }}" />
+                            @elseif ($iconMap[$jobKey] === 'image')
+                                <x-lucide-image class="h-5 w-5 {{ $colorMap[$jobKey] }}" />
+                            @else
+                                <x-lucide-image-plus class="h-5 w-5 {{ $colorMap[$jobKey] }}" />
+                            @endif
+                            <h3 class="font-semibold text-foreground text-sm">{{ $execution['name'] }}</h3>
+                        </div>
+                        @if ($execution['next_run_at'])
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Activo
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Pendiente
+                            </span>
+                        @endif
+                    </div>
+
+                    @if ($execution['next_run_at'])
+                        <div class="space-y-2"
+                             x-data="{
+                                 nextRunAt: @js($nextRunIso),
+                                 timeLeft: '',
+                                 updateCountdown() {
+                                     if (!this.nextRunAt) {
+                                         this.timeLeft = 'No programado';
+                                         return;
+                                     }
+                                     
+                                     const now = new Date();
+                                     const target = new Date(this.nextRunAt);
+                                     const diff = target - now;
+                                     
+                                     if (diff <= 0) {
+                                         this.timeLeft = 'Ejecutando...';
+                                         return;
+                                     }
+                                     
+                                     const minutes = Math.floor(diff / 60000);
+                                     const seconds = Math.floor((diff % 60000) / 1000);
+                                     
+                                     if (minutes > 60) {
+                                         const hours = Math.floor(minutes / 60);
+                                         const mins = minutes % 60;
+                                         this.timeLeft = hours + 'h ' + mins + 'm';
+                                     } else if (minutes > 0) {
+                                         this.timeLeft = minutes + 'm ' + seconds + 's';
+                                     } else {
+                                         this.timeLeft = seconds + 's';
+                                     }
+                                 }
+                             }"
+                             x-init="updateCountdown(); setInterval(() => updateCountdown(), 1000)">
+                            <div>
+                                <p class="text-xs font-medium text-muted-foreground">Próxima ejecución</p>
+                                <p class="text-lg font-bold text-foreground">
+                                    {{ $execution['next_run_at']->format('H:i:s') }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-muted-foreground">Tiempo restante</p>
+                                <p class="text-2xl font-bold {{ $colorMap[$jobKey] }}" x-text="timeLeft"></p>
+                            </div>
+                            @if ($execution['last_run_at'])
+                                <div class="pt-2 border-t border-border">
+                                    <p class="text-xs text-muted-foreground">
+                                        Última ejecución: {{ $execution['last_run_at']->diffForHumans() }}
+                                    </p>
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <div class="py-4">
+                            <p class="text-sm text-muted-foreground text-center">Esperando primera ejecución</p>
+                        </div>
+                    @endif
+                </x-card.content>
+            </x-card>
+        @endforeach
     </div>
 
     <!-- Status Cards -->

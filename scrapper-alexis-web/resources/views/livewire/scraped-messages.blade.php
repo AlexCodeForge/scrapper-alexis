@@ -170,13 +170,13 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Mensaje
                             </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <th scope="col" class="max-md:hidden px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Fecha
                             </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <th scope="col" class="max-md:hidden px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Estado
                             </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <th scope="col" class="max-md:hidden px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Acciones
                             </th>
                         </tr>
@@ -184,7 +184,7 @@
                     <tbody class="bg-background divide-y divide-border">
                         @forelse ($messages as $message)
                             <tr class="hover:bg-accent/50 transition-colors">
-                                <td class="px-4 py-4">
+                                <td class="px-4 py-4 align-top">
                                     <input
                                         type="checkbox"
                                         wire:model.live="selected"
@@ -199,13 +199,68 @@
                                             </div>
                                         @endif
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-sm text-foreground">
+                                            <p class="text-sm text-foreground mb-3">
                                                 {{ $message->message_text }}
                                             </p>
+                                            
+                                            <!-- Mobile: Status and Actions below message -->
+                                            <div class="md:hidden space-y-3">
+                                                <!-- Status Badge on Mobile -->
+                                                <div class="text-sm">
+                                                    @if ($message->approved_for_posting === true)
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                            <x-lucide-check class="w-3 h-3 mr-1" />
+                                                            Aprobado
+                                                        </span>
+                                                    @elseif ($message->approved_for_posting === false)
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                            <x-lucide-x class="w-3 h-3 mr-1" />
+                                                            Rechazado
+                                                        </span>
+                                                    @else
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                            <x-lucide-clock class="w-3 h-3 mr-1" />
+                                                            Pendiente
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                
+                                                <!-- Action Buttons on Mobile -->
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <button
+                                                        wire:click="approveAndGenerateImage({{ $message->id }})"
+                                                        type="button"
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="approveAndGenerateImage({{ $message->id }})"
+                                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                        <x-lucide-zap class="w-3 h-3 mr-1" />
+                                                        <span wire:loading.remove wire:target="approveAndGenerateImage({{ $message->id }})">Generar</span>
+                                                        <span wire:loading wire:target="approveAndGenerateImage({{ $message->id }})">...</span>
+                                                    </button>
+                                                    <button
+                                                        wire:click="approveMessage({{ $message->id }})"
+                                                        type="button"
+                                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
+                                                        Aprobar
+                                                    </button>
+                                                    <button
+                                                        wire:click="approveForManual({{ $message->id }})"
+                                                        type="button"
+                                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                                                        Manual
+                                                    </button>
+                                                    <button
+                                                        wire:click="rejectMessage({{ $message->id }})"
+                                                        type="button"
+                                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
+                                                        Rechazar
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="max-md:hidden px-6 py-4 whitespace-nowrap align-top">
                                     <div class="text-sm text-muted-foreground">
                                         <div class="flex items-center">
                                             <x-lucide-calendar class="h-4 w-4 mr-1" />
@@ -217,7 +272,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="max-md:hidden px-6 py-4 whitespace-nowrap align-top">
                                     <div class="text-sm">
                                         @if ($message->approved_for_posting === true)
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -237,7 +292,7 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="max-md:hidden px-6 py-4 align-top">
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <button
                                             wire:click="approveAndGenerateImage({{ $message->id }})"
@@ -272,7 +327,16 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center">
+                                <td colspan="2" class="md:hidden px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center justify-center space-y-3">
+                                        <x-lucide-inbox class="h-12 w-12 text-muted-foreground" />
+                                        <h3 class="text-sm font-medium text-foreground">No se encontraron mensajes</h3>
+                                        <p class="text-sm text-muted-foreground">
+                                            Los mensajes scrapeados aparecerán aquí
+                                        </p>
+                                    </div>
+                                </td>
+                                <td colspan="5" class="hidden md:table-cell px-6 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center space-y-3">
                                         <x-lucide-inbox class="h-12 w-12 text-muted-foreground" />
                                         <h3 class="text-sm font-medium text-foreground">No se encontraron mensajes</h3>

@@ -1,4 +1,11 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <style>
+        @media (min-width: 1024px) {
+            .next-execution-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+        }
+    </style>
     <!-- Header with Controls -->
     <div class="mb-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -53,6 +60,204 @@
 <?php endif; ?>
             </div>
         </div>
+    </div>
+
+    <!-- Next Execution Cards -->
+    <div class="next-execution-grid grid grid-cols-1 gap-4 mb-6">
+        <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $this->nextExecutions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $jobKey => $execution): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php
+                $nextRunIso = $execution['next_run_at'] ? $execution['next_run_at']->toIso8601String() : null;
+                $iconMap = [
+                    'facebook' => 'facebook',
+                    'page_poster' => 'image',
+                    'image_generator' => 'image-plus',
+                ];
+                $colorMap = [
+                    'facebook' => 'text-blue-600',
+                    'page_poster' => 'text-indigo-600',
+                    'image_generator' => 'text-green-600',
+                ];
+            ?>
+            <?php if (isset($component)) { $__componentOriginal53747ceb358d30c0105769f8471417f6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal53747ceb358d30c0105769f8471417f6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card.index','data' => ['class' => 'hover:shadow-md transition-shadow']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'hover:shadow-md transition-shadow']); ?>
+                <?php if (isset($component)) { $__componentOriginal78a1b2ecc5a8f303caad4125c19b2889 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card.content','data' => ['class' => 'p-4']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('card.content'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'p-4']); ?>
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <!--[if BLOCK]><![endif]--><?php if($iconMap[$jobKey] === 'facebook'): ?>
+                                <?php if (isset($component)) { $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c = $attributes; } ?>
+<?php $component = BladeUI\Icons\Components\Svg::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('lucide-facebook'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\BladeUI\Icons\Components\Svg::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'h-5 w-5 '.e($colorMap[$jobKey]).'']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
+<?php $attributes = $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
+<?php unset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
+<?php $component = $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
+<?php unset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
+<?php endif; ?>
+                            <?php elseif($iconMap[$jobKey] === 'image'): ?>
+                                <?php if (isset($component)) { $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c = $attributes; } ?>
+<?php $component = BladeUI\Icons\Components\Svg::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('lucide-image'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\BladeUI\Icons\Components\Svg::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'h-5 w-5 '.e($colorMap[$jobKey]).'']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
+<?php $attributes = $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
+<?php unset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
+<?php $component = $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
+<?php unset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
+<?php endif; ?>
+                            <?php else: ?>
+                                <?php if (isset($component)) { $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c = $attributes; } ?>
+<?php $component = BladeUI\Icons\Components\Svg::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('lucide-image-plus'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\BladeUI\Icons\Components\Svg::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'h-5 w-5 '.e($colorMap[$jobKey]).'']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
+<?php $attributes = $__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
+<?php unset($__attributesOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c)): ?>
+<?php $component = $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c; ?>
+<?php unset($__componentOriginal643fe1b47aec0b76658e1a0200b34b2c); ?>
+<?php endif; ?>
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                            <h3 class="font-semibold text-foreground text-sm"><?php echo e($execution['name']); ?></h3>
+                        </div>
+                        <!--[if BLOCK]><![endif]--><?php if($execution['next_run_at']): ?>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Activo
+                            </span>
+                        <?php else: ?>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Pendiente
+                            </span>
+                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                    </div>
+
+                    <!--[if BLOCK]><![endif]--><?php if($execution['next_run_at']): ?>
+                        <div class="space-y-2"
+                             x-data="{
+                                 nextRunAt: <?php echo \Illuminate\Support\Js::from($nextRunIso)->toHtml() ?>,
+                                 timeLeft: '',
+                                 updateCountdown() {
+                                     if (!this.nextRunAt) {
+                                         this.timeLeft = 'No programado';
+                                         return;
+                                     }
+                                     
+                                     const now = new Date();
+                                     const target = new Date(this.nextRunAt);
+                                     const diff = target - now;
+                                     
+                                     if (diff <= 0) {
+                                         this.timeLeft = 'Ejecutando...';
+                                         return;
+                                     }
+                                     
+                                     const minutes = Math.floor(diff / 60000);
+                                     const seconds = Math.floor((diff % 60000) / 1000);
+                                     
+                                     if (minutes > 60) {
+                                         const hours = Math.floor(minutes / 60);
+                                         const mins = minutes % 60;
+                                         this.timeLeft = hours + 'h ' + mins + 'm';
+                                     } else if (minutes > 0) {
+                                         this.timeLeft = minutes + 'm ' + seconds + 's';
+                                     } else {
+                                         this.timeLeft = seconds + 's';
+                                     }
+                                 }
+                             }"
+                             x-init="updateCountdown(); setInterval(() => updateCountdown(), 1000)">
+                            <div>
+                                <p class="text-xs font-medium text-muted-foreground">Próxima ejecución</p>
+                                <p class="text-lg font-bold text-foreground">
+                                    <?php echo e($execution['next_run_at']->format('H:i:s')); ?>
+
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-muted-foreground">Tiempo restante</p>
+                                <p class="text-2xl font-bold <?php echo e($colorMap[$jobKey]); ?>" x-text="timeLeft"></p>
+                            </div>
+                            <!--[if BLOCK]><![endif]--><?php if($execution['last_run_at']): ?>
+                                <div class="pt-2 border-t border-border">
+                                    <p class="text-xs text-muted-foreground">
+                                        Última ejecución: <?php echo e($execution['last_run_at']->diffForHumans()); ?>
+
+                                    </p>
+                                </div>
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                        </div>
+                    <?php else: ?>
+                        <div class="py-4">
+                            <p class="text-sm text-muted-foreground text-center">Esperando primera ejecución</p>
+                        </div>
+                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                 <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889)): ?>
+<?php $attributes = $__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889; ?>
+<?php unset($__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal78a1b2ecc5a8f303caad4125c19b2889)): ?>
+<?php $component = $__componentOriginal78a1b2ecc5a8f303caad4125c19b2889; ?>
+<?php unset($__componentOriginal78a1b2ecc5a8f303caad4125c19b2889); ?>
+<?php endif; ?>
+             <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $attributes = $__attributesOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__attributesOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $component = $__componentOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__componentOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
     </div>
 
     <!-- Status Cards -->

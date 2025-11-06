@@ -63,6 +63,53 @@ class Logs extends Component
         }
     }
 
+    #[\Livewire\Attributes\Computed]
+    public function nextExecutions()
+    {
+        \Log::info('Logs: Calculating next executions');
+
+        $jobs = [
+            'facebook' => 'Facebook Scraper',
+            'page_poster' => 'Page Poster',
+            'image_generator' => 'Image Generator',
+        ];
+
+        $executions = [];
+
+        foreach ($jobs as $jobKey => $jobName) {
+            $state = \App\Models\SchedulerState::where('job_name', $jobKey)->first();
+
+            if (!$state || !$state->last_run_at || !$state->next_interval_minutes) {
+                $executions[$jobKey] = [
+                    'name' => $jobName,
+                    'next_run_at' => null,
+                    'minutes_remaining' => null,
+                    'last_run_at' => $state?->last_run_at,
+                ];
+                continue;
+            }
+
+            // Calculate next execution time (Carbon handles timezone)
+            $nextRunAt = $state->last_run_at->copy()->addMinutes($state->next_interval_minutes);
+            $now = now();
+            $minutesRemaining = max(0, $now->diffInMinutes($nextRunAt, false));
+
+            \Log::info("Logs: Next execution for {$jobKey}", [
+                'next_run_at' => $nextRunAt->toDateTimeString(),
+                'minutes_remaining' => $minutesRemaining,
+            ]);
+
+            $executions[$jobKey] = [
+                'name' => $jobName,
+                'next_run_at' => $nextRunAt,
+                'minutes_remaining' => $minutesRemaining,
+                'last_run_at' => $state->last_run_at,
+            ];
+        }
+
+        return $executions;
+    }
+
     public function render()
     {
         $logContent = '';
