@@ -568,9 +568,10 @@
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes(['wire:model.live' => 'perPage','class' => 'w-48']); ?>
-                        <option value="12">12 por página</option>
-                        <option value="24">24 por página</option>
-                        <option value="48">48 por página</option>
+                        <option value="10">10 por página</option>
+                        <option value="25">25 por página</option>
+                        <option value="50">50 por página</option>
+                        <option value="100">100 por página</option>
                      <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginaled2cde6083938c436304f332ba96bb7c)): ?>
@@ -1267,12 +1268,93 @@
     </div>
 
     <!-- Pagination -->
-    <!--[if BLOCK]><![endif]--><?php if($messages->hasPages()): ?>
-        <div class="mt-6">
-            <?php echo e($messages->links('livewire::tailwind')); ?>
+    <?php if (isset($component)) { $__componentOriginal53747ceb358d30c0105769f8471417f6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal53747ceb358d30c0105769f8471417f6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card.index','data' => ['class' => 'mt-6']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'mt-6']); ?>
+        <?php if (isset($component)) { $__componentOriginal78a1b2ecc5a8f303caad4125c19b2889 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.card.content','data' => ['class' => 'p-0']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('card.content'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'p-0']); ?>
+            <!--[if BLOCK]><![endif]--><?php if($messages->hasPages()): ?>
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            <!--[if BLOCK]><![endif]--><?php if($messages->onFirstPage()): ?>
+                                <span class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-muted-foreground bg-muted border border-input cursor-not-allowed leading-5 rounded-md">
+                                    Anterior
+                                </span>
+                            <?php else: ?>
+                                <button type="button" wire:click="previousPage" wire:loading.attr="disabled"
+                                        class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-foreground bg-background border border-input leading-5 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition ease-in-out duration-150">
+                                    Anterior
+                                </button>
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
-        </div>
-    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                            <!--[if BLOCK]><![endif]--><?php if($messages->hasMorePages()): ?>
+                                <button type="button" wire:click="nextPage" wire:loading.attr="disabled"
+                                        class="ml-3 relative inline-flex items-center px-4 py-2 text-sm font-medium text-foreground bg-background border border-input leading-5 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition ease-in-out duration-150">
+                                    Siguiente
+                                </button>
+                            <?php else: ?>
+                                <span class="ml-3 relative inline-flex items-center px-4 py-2 text-sm font-medium text-muted-foreground bg-muted border border-input cursor-not-allowed leading-5 rounded-md">
+                                    Siguiente
+                                </span>
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                        </div>
+
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-muted-foreground">
+                                    Mostrando
+                                    <span class="font-medium text-foreground"><?php echo e($messages->firstItem() ?? 0); ?></span>
+                                    a
+                                    <span class="font-medium text-foreground"><?php echo e($messages->lastItem() ?? 0); ?></span>
+                                    de
+                                    <span class="font-medium text-foreground"><?php echo e($messages->total()); ?></span>
+                                    imágenes
+                                </p>
+                            </div>
+                            <div>
+                                <?php echo e($messages->links()); ?>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+         <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889)): ?>
+<?php $attributes = $__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889; ?>
+<?php unset($__attributesOriginal78a1b2ecc5a8f303caad4125c19b2889); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal78a1b2ecc5a8f303caad4125c19b2889)): ?>
+<?php $component = $__componentOriginal78a1b2ecc5a8f303caad4125c19b2889; ?>
+<?php unset($__componentOriginal78a1b2ecc5a8f303caad4125c19b2889); ?>
+<?php endif; ?>
+     <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $attributes = $__attributesOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__attributesOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal53747ceb358d30c0105769f8471417f6)): ?>
+<?php $component = $__componentOriginal53747ceb358d30c0105769f8471417f6; ?>
+<?php unset($__componentOriginal53747ceb358d30c0105769f8471417f6); ?>
+<?php endif; ?>
 
     <!-- Confirmation Modal for Manual Post -->
     <template x-teleport="body">

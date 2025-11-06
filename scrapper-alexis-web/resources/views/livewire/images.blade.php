@@ -212,9 +212,10 @@
                     </x-select>
 
                     <x-select wire:model.live="perPage" class="w-48">
-                        <option value="12">12 por página</option>
-                        <option value="24">24 por página</option>
-                        <option value="48">48 por página</option>
+                        <option value="10">10 por página</option>
+                        <option value="25">25 por página</option>
+                        <option value="50">50 por página</option>
+                        <option value="100">100 por página</option>
                     </x-select>
                 </div>
 
@@ -440,11 +441,56 @@
     </div>
 
     <!-- Pagination -->
-    @if ($messages->hasPages())
-        <div class="mt-6">
-            {{ $messages->links('livewire::tailwind') }}
-        </div>
-    @endif
+    <x-card class="mt-6">
+        <x-card.content class="p-0">
+            @if ($messages->hasPages())
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            @if ($messages->onFirstPage())
+                                <span class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-muted-foreground bg-muted border border-input cursor-not-allowed leading-5 rounded-md">
+                                    Anterior
+                                </span>
+                            @else
+                                <button type="button" wire:click="previousPage" wire:loading.attr="disabled"
+                                        class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-foreground bg-background border border-input leading-5 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition ease-in-out duration-150">
+                                    Anterior
+                                </button>
+                            @endif
+
+                            @if ($messages->hasMorePages())
+                                <button type="button" wire:click="nextPage" wire:loading.attr="disabled"
+                                        class="ml-3 relative inline-flex items-center px-4 py-2 text-sm font-medium text-foreground bg-background border border-input leading-5 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition ease-in-out duration-150">
+                                    Siguiente
+                                </button>
+                            @else
+                                <span class="ml-3 relative inline-flex items-center px-4 py-2 text-sm font-medium text-muted-foreground bg-muted border border-input cursor-not-allowed leading-5 rounded-md">
+                                    Siguiente
+                                </span>
+                            @endif
+                        </div>
+
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-muted-foreground">
+                                    Mostrando
+                                    <span class="font-medium text-foreground">{{ $messages->firstItem() ?? 0 }}</span>
+                                    a
+                                    <span class="font-medium text-foreground">{{ $messages->lastItem() ?? 0 }}</span>
+                                    de
+                                    <span class="font-medium text-foreground">{{ $messages->total() }}</span>
+                                    imágenes
+                                </p>
+                            </div>
+                            <div>
+                                {{ $messages->links() }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </x-card.content>
+    </x-card>
 
     <!-- Confirmation Modal for Manual Post -->
     <template x-teleport="body">

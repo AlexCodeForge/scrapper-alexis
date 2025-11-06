@@ -15,7 +15,7 @@ class Images extends Component
     public $selected = [];
     public $previousPage = null;
     public $filter = 'all';
-    public $perPage = 12;
+    public $perPage = 25;
 
     protected $queryString = ['filter', 'perPage'];
     protected $postingService;
