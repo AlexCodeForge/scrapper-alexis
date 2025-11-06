@@ -81,14 +81,16 @@ def get_posting_settings():
 
 
 def get_next_approved_image():
-    """Get the next approved image to post (only auto-post enabled)."""
+    """Get the next approved image to post (only auto-post enabled).
+    Orders by priority (highest first), then by approved_at (oldest first)."""
     try:
         import sqlite3
         
         # Connect to scraper database
         db = get_database()
         
-        # Get oldest approved but not posted image (only auto-post enabled)
+        # Get next approved image by priority (highest first), then oldest approved
+        # Feature: post_priority field - images with priority 1 (from "generar ahora") post first
         query = """
             SELECT m.id, m.message_text, m.image_path
             FROM messages m
@@ -96,7 +98,7 @@ def get_next_approved_image():
               AND m.approved_for_posting = 1
               AND m.auto_post_enabled = 1
               AND (m.posted_to_page = 0 OR m.posted_to_page IS NULL)
-            ORDER BY m.approved_at ASC
+            ORDER BY m.post_priority DESC, m.approved_at ASC
             LIMIT 1
         """
         

@@ -26,6 +26,7 @@ class Message extends Model
         'downloaded_at',
         'approved_for_posting',
         'approved_at',
+        'post_priority',
         'auto_post_enabled',
         'approval_type',
         'posted_to_page',

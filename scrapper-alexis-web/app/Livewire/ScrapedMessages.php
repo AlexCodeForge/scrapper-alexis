@@ -159,17 +159,19 @@ class ScrapedMessages extends Component
                 return;
             }
 
-            // Approve the message for auto-posting
+            // Approve the message for auto-posting with high priority (generar ahora = next to post)
             $message->update([
                 'approved_for_posting' => true,
                 'approved_at' => now(),
+                'post_priority' => 1, // High priority - will be posted next
                 'auto_post_enabled' => true,
                 'approval_type' => 'auto',
             ]);
 
-            \Log::info('ScrapedMessages: Message approved, triggering immediate image generation', [
+            \Log::info('ScrapedMessages: Message approved with priority, triggering immediate image generation', [
                 'message_id' => $messageId,
                 'message_text' => substr($message->message_text, 0, 50),
+                'post_priority' => 1,
                 'headless_mode' => 'true' // Bugfix: Force headless mode for web UI execution
             ]);
 

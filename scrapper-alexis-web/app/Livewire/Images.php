@@ -417,14 +417,14 @@ class Images extends Component
 
         // Bugfix: Sort logic based on filter type
         // - Posted: Reverse chronological (most recent first)
-        // - Approved (Auto/Manual): FIFO queue (oldest approved first, these will be posted next)
+        // - Approved (Auto/Manual): Priority queue (highest priority first, then oldest approved)
         // - All: Newest messages first
         if ($this->filter === 'posted') {
             \Log::info('Bugfix: Sorting posted by posted_to_page_at DESC (reverse chronological)');
             $messages = $query->orderByDesc('posted_to_page_at')->paginate($this->perPage);
         } elseif ($this->filter === 'approved_auto' || $this->filter === 'approved_manual') {
-            \Log::info('Bugfix: Sorting approved by approved_at ASC (oldest first, FIFO queue)');
-            $messages = $query->orderBy('approved_at', 'asc')->paginate($this->perPage);
+            \Log::info('Bugfix: Sorting approved by post_priority DESC, approved_at ASC (priority queue)');
+            $messages = $query->orderByDesc('post_priority')->orderBy('approved_at', 'asc')->paginate($this->perPage);
         } else {
             \Log::info('Bugfix: Sorting by id DESC (newest first)');
             $messages = $query->latest('id')->paginate($this->perPage);

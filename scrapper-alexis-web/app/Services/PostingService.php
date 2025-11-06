@@ -23,6 +23,7 @@ class PostingService
     /**
      * Get approved images ready for posting (approved but not posted yet)
      * Only includes auto-post enabled images for cron job
+     * Orders by priority (highest first), then by approved_at (oldest first)
      */
     public function getApprovedImages(): Collection
     {
@@ -30,12 +31,14 @@ class PostingService
             ->approvedForPosting()
             ->autoPostEnabled()
             ->notPostedToPage()
+            ->orderByDesc('post_priority')
             ->oldest('approved_at')
             ->get();
     }
 
     /**
      * Get approved images for manual posting queue
+     * Orders by priority (highest first), then by approved_at (oldest first)
      */
     public function getManualPostImages(): Collection
     {
@@ -43,6 +46,7 @@ class PostingService
             ->approvedForPosting()
             ->manualPostOnly()
             ->notPostedToPage()
+            ->orderByDesc('post_priority')
             ->oldest('approved_at')
             ->get();
     }
@@ -147,6 +151,7 @@ class PostingService
     /**
      * Get the next approved image to post (one at a time for cronjob)
      * Only returns auto-post enabled images
+     * Orders by priority (highest first), then by approved_at (oldest first)
      */
     public function getNextImageToPost(): ?Message
     {
@@ -154,6 +159,7 @@ class PostingService
             ->approvedForPosting()
             ->autoPostEnabled()
             ->notPostedToPage()
+            ->orderByDesc('post_priority')
             ->oldest('approved_at')
             ->first();
     }
