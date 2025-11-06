@@ -47,8 +47,28 @@ PROFILE_USERNAME = config.X_USERNAME if hasattr(config, 'X_USERNAME') else os.ge
 PROFILE_AVATAR_FALLBACK = config.X_AVATAR_URL if hasattr(config, 'X_AVATAR_URL') else os.getenv('X_AVATAR_URL', '')
 PROFILE_VERIFIED = config.X_VERIFIED if hasattr(config, 'X_VERIFIED') else os.getenv('X_VERIFIED', 'false').lower() == 'true'
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Setup logging with Mexico timezone
+from utils.logging_config import MexicoTimezoneFormatter
+from zoneinfo import ZoneInfo
+
+formatter = MexicoTimezoneFormatter(
+    fmt='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# Configure root logger with custom formatter
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler()
+    ],
+    force=True
+)
+
+# Apply formatter to all handlers
+for handler in logging.root.handlers:
+    handler.setFormatter(formatter)
+
 logger = logging.getLogger(__name__)
 
 

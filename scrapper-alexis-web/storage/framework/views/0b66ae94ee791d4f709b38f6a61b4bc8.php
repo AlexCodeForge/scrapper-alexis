@@ -400,6 +400,53 @@
             <div class="flex flex-col filters-container items-center justify-between gap-4">
                 <!-- Filters -->
                 <div class="flex flex-col filters-inner gap-3 items-center">
+                    <!-- Search Input -->
+                    <div class="flex gap-2 w-full max-w-md">
+                        <?php if (isset($component)) { $__componentOriginalc2fcfa88dc54fee60e0757a7e0572df1 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc2fcfa88dc54fee60e0757a7e0572df1 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.input.index','data' => ['type' => 'text','wire:model.live' => 'search','placeholder' => 'Buscar mensajes...','class' => 'flex-1']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('input'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['type' => 'text','wire:model.live' => 'search','placeholder' => 'Buscar mensajes...','class' => 'flex-1']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc2fcfa88dc54fee60e0757a7e0572df1)): ?>
+<?php $attributes = $__attributesOriginalc2fcfa88dc54fee60e0757a7e0572df1; ?>
+<?php unset($__attributesOriginalc2fcfa88dc54fee60e0757a7e0572df1); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc2fcfa88dc54fee60e0757a7e0572df1)): ?>
+<?php $component = $__componentOriginalc2fcfa88dc54fee60e0757a7e0572df1; ?>
+<?php unset($__componentOriginalc2fcfa88dc54fee60e0757a7e0572df1); ?>
+<?php endif; ?>
+                        <!--[if BLOCK]><![endif]--><?php if(!empty($search)): ?>
+                            <?php if (isset($component)) { $__componentOriginald0f1fd2689e4bb7060122a5b91fe8561 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginald0f1fd2689e4bb7060122a5b91fe8561 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.button.index','data' => ['wire:click' => '$set(\'search\', \'\')','type' => 'button','variant' => 'outline','size' => 'sm']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('button'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['wire:click' => '$set(\'search\', \'\')','type' => 'button','variant' => 'outline','size' => 'sm']); ?>
+                                Limpiar
+                             <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginald0f1fd2689e4bb7060122a5b91fe8561)): ?>
+<?php $attributes = $__attributesOriginald0f1fd2689e4bb7060122a5b91fe8561; ?>
+<?php unset($__attributesOriginald0f1fd2689e4bb7060122a5b91fe8561); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginald0f1fd2689e4bb7060122a5b91fe8561)): ?>
+<?php $component = $__componentOriginald0f1fd2689e4bb7060122a5b91fe8561; ?>
+<?php unset($__componentOriginald0f1fd2689e4bb7060122a5b91fe8561); ?>
+<?php endif; ?>
+                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                    </div>
+
                     <?php if (isset($component)) { $__componentOriginaled2cde6083938c436304f332ba96bb7c = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginaled2cde6083938c436304f332ba96bb7c = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.select.index','data' => ['wire:model.live' => 'filter','class' => 'min-w-[200px]']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -456,8 +503,8 @@
                 <!--[if BLOCK]><![endif]--><?php if(count($selected) > 0): ?>
                     <div class="flex flex-wrap gap-2">
                         <span class="text-sm text-gray-600 self-center"><?php echo e(count($selected)); ?> seleccionados</span>
-                        
-                        <button 
+
+                        <button
                             wire:click="bulkApprove"
                             type="button"
                             class="px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
@@ -483,8 +530,8 @@
 <?php endif; ?>
                             Aprobar
                         </button>
-                        
-                        <button 
+
+                        <button
                             wire:click="bulkApproveManual"
                             type="button"
                             class="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
@@ -510,8 +557,8 @@
 <?php endif; ?>
                             Manual
                         </button>
-                        
-                        <button 
+
+                        <button
                             wire:click="bulkReject"
                             type="button"
                             class="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
@@ -602,8 +649,8 @@
                     <thead class="bg-muted">
                         <tr>
                             <th scope="col" class="px-4 py-3 text-left">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     wire:model.live="selectAll"
                                     class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                             </th>
@@ -625,8 +672,8 @@
                         <!--[if BLOCK]><![endif]--><?php $__empty_1 = true; $__currentLoopData = $messages; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $message): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                             <tr class="hover:bg-accent/50 transition-colors">
                                 <td class="px-4 py-4">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         wire:model.live="selected"
                                         value="<?php echo e($message->id); ?>"
                                         class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
@@ -777,7 +824,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2 flex-wrap">
-                                        <button 
+                                        <button
                                             wire:click="approveAndGenerateImage(<?php echo e($message->id); ?>)"
                                             type="button"
                                             wire:loading.attr="disabled"
@@ -806,19 +853,19 @@
                                             <span wire:loading.remove wire:target="approveAndGenerateImage(<?php echo e($message->id); ?>)">Generar Ahora</span>
                                             <span wire:loading wire:target="approveAndGenerateImage(<?php echo e($message->id); ?>)">Generando...</span>
                                         </button>
-                                        <button 
+                                        <button
                                             wire:click="approveMessage(<?php echo e($message->id); ?>)"
                                             type="button"
                                             class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
                                             Aprobar
                                         </button>
-                                        <button 
+                                        <button
                                             wire:click="approveForManual(<?php echo e($message->id); ?>)"
                                             type="button"
                                             class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
                                             Manual
                                         </button>
-                                        <button 
+                                        <button
                                             wire:click="rejectMessage(<?php echo e($message->id); ?>)"
                                             type="button"
                                             class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">

@@ -71,6 +71,24 @@
             <div class="flex flex-col filters-container items-center justify-between gap-4">
                 <!-- Filters -->
                 <div class="flex flex-col filters-inner gap-3 items-center">
+                    <!-- Search Input -->
+                    <div class="flex gap-2 w-full max-w-md">
+                        <x-input
+                            type="text"
+                            wire:model.live="search"
+                            placeholder="Buscar mensajes..."
+                            class="flex-1" />
+                        @if(!empty($search))
+                            <x-button
+                                wire:click="$set('search', '')"
+                                type="button"
+                                variant="outline"
+                                size="sm">
+                                Limpiar
+                            </x-button>
+                        @endif
+                    </div>
+
                     <x-select wire:model.live="filter" class="min-w-[200px]">
                         <option value="all">Todos</option>
                         <option value="pending">Pendientes</option>
@@ -91,24 +109,24 @@
                 @if(count($selected) > 0)
                     <div class="flex flex-wrap gap-2">
                         <span class="text-sm text-gray-600 self-center">{{ count($selected) }} seleccionados</span>
-                        
-                        <button 
+
+                        <button
                             wire:click="bulkApprove"
                             type="button"
                             class="px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
                             <x-lucide-zap class="inline-block w-4 h-4 mr-1" />
                             Aprobar
                         </button>
-                        
-                        <button 
+
+                        <button
                             wire:click="bulkApproveManual"
                             type="button"
                             class="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
                             <x-lucide-hand class="inline-block w-4 h-4 mr-1" />
                             Manual
                         </button>
-                        
-                        <button 
+
+                        <button
                             wire:click="bulkReject"
                             type="button"
                             class="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
@@ -144,8 +162,8 @@
                     <thead class="bg-muted">
                         <tr>
                             <th scope="col" class="px-4 py-3 text-left">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     wire:model.live="selectAll"
                                     class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                             </th>
@@ -167,8 +185,8 @@
                         @forelse ($messages as $message)
                             <tr class="hover:bg-accent/50 transition-colors">
                                 <td class="px-4 py-4">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         wire:model.live="selected"
                                         value="{{ $message->id }}"
                                         class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
@@ -221,7 +239,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2 flex-wrap">
-                                        <button 
+                                        <button
                                             wire:click="approveAndGenerateImage({{ $message->id }})"
                                             type="button"
                                             wire:loading.attr="disabled"
@@ -231,19 +249,19 @@
                                             <span wire:loading.remove wire:target="approveAndGenerateImage({{ $message->id }})">Generar Ahora</span>
                                             <span wire:loading wire:target="approveAndGenerateImage({{ $message->id }})">Generando...</span>
                                         </button>
-                                        <button 
+                                        <button
                                             wire:click="approveMessage({{ $message->id }})"
                                             type="button"
                                             class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
                                             Aprobar
                                         </button>
-                                        <button 
+                                        <button
                                             wire:click="approveForManual({{ $message->id }})"
                                             type="button"
                                             class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
                                             Manual
                                         </button>
-                                        <button 
+                                        <button
                                             wire:click="rejectMessage({{ $message->id }})"
                                             type="button"
                                             class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">

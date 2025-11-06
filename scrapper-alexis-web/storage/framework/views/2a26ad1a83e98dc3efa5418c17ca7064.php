@@ -543,7 +543,6 @@
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes(['wire:model.live' => 'filter','class' => 'min-w-[200px]']); ?>
-                        <option value="pending">Pendientes por publicar</option>
                         <option value="approved_auto">Aprobadas (Auto)</option>
                         <option value="approved_manual">Aprobadas (Manual)</option>
                         <option value="posted">Publicadas</option>

@@ -205,7 +205,6 @@
                 <!-- Filters -->
                 <div class="flex flex-col filters-inner gap-3 items-center">
                     <x-select wire:model.live="filter" class="min-w-[200px]">
-                        <option value="pending">Pendientes por publicar</option>
                         <option value="approved_auto">Aprobadas (Auto)</option>
                         <option value="approved_manual">Aprobadas (Manual)</option>
                         <option value="posted">Publicadas</option>

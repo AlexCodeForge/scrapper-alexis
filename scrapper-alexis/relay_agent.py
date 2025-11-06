@@ -30,18 +30,12 @@ from core.message_deduplicator import get_message_deduplicator
 logs_dir = Path('logs')
 logs_dir.mkdir(exist_ok=True)
 
-# Configure logging with UTF-8 encoding
-logging.basicConfig(
-    level=getattr(logging, config.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(
-            logs_dir / f'relay_agent_{datetime.now().strftime("%Y%m%d")}.log',
-            encoding='utf-8'
-        ),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging with UTF-8 encoding and Mexico timezone
+from utils.logging_config import setup_basicConfig_with_mexico_timezone
+from zoneinfo import ZoneInfo
+
+log_file = logs_dir / f'relay_agent_{datetime.now(tz=ZoneInfo("America/Mexico_City")).strftime("%Y%m%d")}.log'
+setup_basicConfig_with_mexico_timezone(log_file, getattr(logging, config.LOG_LEVEL))
 
 logger = logging.getLogger(__name__)
 

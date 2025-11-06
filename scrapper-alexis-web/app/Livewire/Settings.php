@@ -28,6 +28,7 @@ class Settings extends Component
     public $twitterUsername = '';
     public $twitterAvatarUrl = '';
     public $twitterVerified = false;
+    public $tweetTemplatePaddingEnabled = false;
     public $proxyServer = '';
     public $proxyUsername = '';
     public $proxyPassword = '';
@@ -101,6 +102,7 @@ class Settings extends Component
         $this->twitterUsername = $settings->username ?? '';
         $this->twitterAvatarUrl = $settings->avatar_url ?? '';
         $this->twitterVerified = $settings->verified ?? false;
+        $this->tweetTemplatePaddingEnabled = $settings->tweet_template_padding_enabled ?? false;
 
         $this->proxyServer = $settings->proxy_server ?? '';
         $this->proxyUsername = $settings->proxy_username ?? '';
@@ -638,7 +640,14 @@ class Settings extends Component
             'display_name' => $this->twitterDisplayName,
             'username' => $this->twitterUsername,
             'verified' => $this->twitterVerified,
+            'tweet_template_padding_enabled' => $this->tweetTemplatePaddingEnabled,
         ];
+        
+        // Bugfix: Log padding setting to debug save issue
+        \Log::info('Bugfix: Saving image generator settings with padding', [
+            'padding_enabled' => $this->tweetTemplatePaddingEnabled,
+            'before_save' => $updateData
+        ]);
 
         // Handle avatar upload
         if ($this->avatarUpload) {

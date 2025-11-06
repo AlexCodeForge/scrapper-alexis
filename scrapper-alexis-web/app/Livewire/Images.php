@@ -390,9 +390,6 @@ class Images extends Component
         $query = Message::withImages()->validWordCount();
 
         switch ($this->filter) {
-            case 'pending':
-                $query->pendingApproval()->notPostedToPage();
-                break;
             case 'approved_auto':
                 $query->approvedForPosting()->autoPostEnabled()->notPostedToPage();
                 break;
@@ -407,8 +404,14 @@ class Images extends Component
                 break;
         }
 
-        // Sort by ID descending to show latest generated images first
-        $messages = $query->latest('id')->paginate($this->perPage);
+        // Sort by posted_to_page_at for posted items (DESC for reverse chronological), otherwise by ID
+        if ($this->filter === 'posted') {
+            \Log::info('Images: Sorting posted by posted_to_page_at DESC (reverse chronological)');
+            $messages = $query->orderByDesc('posted_to_page_at')->paginate($this->perPage);
+        } else {
+            \Log::info('Images: Sorting by id DESC');
+            $messages = $query->latest('id')->paginate($this->perPage);
+        }
 
         \Log::info('Images: Query results', ['total' => $messages->total(), 'current_page' => $messages->currentPage()]);
 

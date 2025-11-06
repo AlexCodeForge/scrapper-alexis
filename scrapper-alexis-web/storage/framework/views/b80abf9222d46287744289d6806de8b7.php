@@ -2,7 +2,7 @@
 
 $__newAttributes = [];
 $__propNames = \Illuminate\View\ComponentAttributeBag::extractPropNames(([
-    'variant' => null,
+    'type' => 'text',
 ]));
 
 foreach ($attributes->all() as $__key => $__value) {
@@ -19,7 +19,7 @@ unset($__propNames);
 unset($__newAttributes);
 
 foreach (array_filter(([
-    'variant' => null,
+    'type' => 'text',
 ]), 'is_string', ARRAY_FILTER_USE_KEY) as $__key => $__value) {
     $$__key = $$__key ?? $__value;
 }
@@ -32,10 +32,9 @@ foreach ($attributes->all() as $__key => $__value) {
 
 unset($__defined_vars, $__key, $__value); ?>
 
-<?php $alert = app('App\Services\AlertCvaService'); ?>
+<input
+    type="<?php echo e($type); ?>"
+    <?php echo e($attributes->twMerge('flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50')); ?>
 
-<div <?php echo e($attributes->twMerge($alert(['variant' => $variant]))); ?>>
-    <?php echo e($slot); ?>
-
-</div>
-<?php /**PATH /var/www/alexis-scrapper-docker/scrapper-alexis-web/resources/views/components/alert/index.blade.php ENDPATH**/ ?>
+/>
+<?php /**PATH /var/www/alexis-scrapper-docker/scrapper-alexis-web/resources/views/components/input/index.blade.php ENDPATH**/ ?>

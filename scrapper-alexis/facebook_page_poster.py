@@ -27,18 +27,12 @@ from core.debug_helper import take_debug_screenshot, DebugSession
 logs_dir = Path('logs')
 logs_dir.mkdir(exist_ok=True)
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, config.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(
-            logs_dir / f'page_poster_{datetime.now().strftime("%Y%m%d")}.log',
-            encoding='utf-8'
-        ),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging with Mexico timezone
+from utils.logging_config import setup_basicConfig_with_mexico_timezone
+from zoneinfo import ZoneInfo
+
+log_file = logs_dir / f'page_poster_{datetime.now(tz=ZoneInfo("America/Mexico_City")).strftime("%Y%m%d")}.log'
+setup_basicConfig_with_mexico_timezone(log_file, getattr(logging, config.LOG_LEVEL))
 
 logger = logging.getLogger(__name__)
 
@@ -756,10 +750,40 @@ def main():
                 # The auth state might already have us logged in as Miltoner!
                 logger.info("Checking current profile state...")
                 
-                # Navigate to home first
+                # Navigate to home first with retry logic for timeout issues
                 logger.info("Navigating to Facebook home...")
-                page.goto('https://www.facebook.com/', wait_until='domcontentloaded')
-                page.wait_for_timeout(4000)  # Give it time to load
+                
+                # Bugfix: Add retry logic for navigation timeouts
+                # Facebook can sometimes take >30s to respond, especially with proxies
+                max_nav_retries = 3
+                nav_success = False
+                
+                for nav_attempt in range(1, max_nav_retries + 1):
+                    try:
+                        logger.info(f"Navigation attempt {nav_attempt}/{max_nav_retries}...")
+                        # Bugfix: Increase timeout from 30s (default) to 60s
+                        page.goto('https://www.facebook.com/', wait_until='domcontentloaded', timeout=60000)
+                        page.wait_for_timeout(4000)  # Give it time to load
+                        nav_success = True
+                        logger.info(f"✅ Navigation successful on attempt {nav_attempt}")
+                        break
+                    except PlaywrightTimeoutError as timeout_error:
+                        logger.warning(f"❌ Navigation attempt {nav_attempt} timed out: {timeout_error}")
+                        if nav_attempt < max_nav_retries:
+                            wait_time = nav_attempt * 3  # 3s, 6s, 9s
+                            logger.info(f"Retrying in {wait_time} seconds...")
+                            page.wait_for_timeout(wait_time * 1000)
+                        else:
+                            logger.error(f"Navigation failed after {max_nav_retries} attempts")
+                            raise
+                    except Exception as nav_error:
+                        logger.error(f"Navigation attempt {nav_attempt} failed with unexpected error: {nav_error}")
+                        if nav_attempt < max_nav_retries:
+                            wait_time = nav_attempt * 3
+                            logger.info(f"Retrying in {wait_time} seconds...")
+                            page.wait_for_timeout(wait_time * 1000)
+                        else:
+                            raise
                 
                 logger.info(f"Current URL: {page.url}")
                 take_debug_screenshot(page, "01_home_loaded", "page_posting", "Home page loaded")

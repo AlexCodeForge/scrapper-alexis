@@ -736,7 +736,7 @@
                                                 class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 <?php echo e($selectedManualLog === $log['name'] ? 'bg-blue-50 text-blue-700' : 'text-gray-700'); ?>">
                                             <div class="font-medium"><?php echo e($log['name']); ?></div>
                                             <div class="text-xs text-gray-500">
-                                                <?php echo e(date('Y-m-d H:i:s', $log['modified'])); ?> • <?php echo e(number_format($log['size'] / 1024, 2)); ?> KB
+                                                <?php echo e(\Illuminate\Support\Carbon::createFromTimestamp($log['modified'])->format('Y-m-d H:i:s')); ?> • <?php echo e(number_format($log['size'] / 1024, 2)); ?> KB
                                             </div>
                                         </button>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->

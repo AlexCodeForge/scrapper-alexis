@@ -177,7 +177,7 @@
                                                 class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 {{ $selectedManualLog === $log['name'] ? 'bg-blue-50 text-blue-700' : 'text-gray-700' }}">
                                             <div class="font-medium">{{ $log['name'] }}</div>
                                             <div class="text-xs text-gray-500">
-                                                {{ date('Y-m-d H:i:s', $log['modified']) }} • {{ number_format($log['size'] / 1024, 2) }} KB
+                                                {{ \Illuminate\Support\Carbon::createFromTimestamp($log['modified'])->format('Y-m-d H:i:s') }} • {{ number_format($log['size'] / 1024, 2) }} KB
                                             </div>
                                         </button>
                                     @endforeach

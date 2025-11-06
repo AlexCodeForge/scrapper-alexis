@@ -19,7 +19,10 @@ class ScrapedMessages extends Component
     #[Url(keep: true)]
     public $filter = 'pending'; // Default to pending filter to show new scraped messages
 
-    protected $queryString = ['perPage', 'filter'];
+    #[Url(keep: true)]
+    public $search = '';
+
+    protected $queryString = ['perPage', 'filter', 'search'];
 
     public function updatedPerPage()
     {
@@ -30,6 +33,12 @@ class ScrapedMessages extends Component
     public function updatedFilter()
     {
         \Log::info('ScrapedMessages: Filter updated', ['filter' => $this->filter]);
+        $this->resetPage();
+    }
+
+    public function updatedSearch()
+    {
+        \Log::info('ScrapedMessages: Search updated', ['search' => $this->search]);
         $this->resetPage();
     }
 
@@ -293,7 +302,7 @@ class ScrapedMessages extends Component
 
     public function render()
     {
-        \Log::info('ScrapedMessages: Rendering', ['perPage' => $this->perPage, 'filter' => $this->filter]);
+        \Log::info('ScrapedMessages: Rendering', ['perPage' => $this->perPage, 'filter' => $this->filter, 'search' => $this->search]);
 
         // Build base query: Show ALL messages without images
         // Once image is generated, message disappears from this page
@@ -302,6 +311,12 @@ class ScrapedMessages extends Component
                 $q->where('image_generated', false)
                   ->orWhereNull('image_generated');
             });
+
+        // Apply search filter if search term is provided
+        if (!empty($this->search)) {
+            $query->whereLike('message_text', "%{$this->search}%");
+            \Log::info('ScrapedMessages: Applying search filter', ['search' => $this->search]);
+        }
 
         // Apply filter based on approval status
         switch ($this->filter) {
