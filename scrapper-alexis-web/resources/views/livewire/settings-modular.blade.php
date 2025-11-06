@@ -128,6 +128,22 @@
             </x-card.content>
         </x-card>
 
+        <!-- Clear All Data (Danger Zone) -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer border-2 border-red-500" @click="openModal('clear-data')">
+            <x-card.content class="p-6 bg-red-50/30">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2">
+                            <x-lucide-alert-triangle class="h-5 w-5" />
+                            Eliminar Todos los Datos
+                        </h3>
+                        <p class="text-sm text-red-700 mt-1">Zona de peligro</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-red-600" />
+                </div>
+            </x-card.content>
+        </x-card>
+
     </div>
 
 
@@ -778,6 +794,103 @@
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- Clear All Data Modal -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'clear-data'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-red-800 flex items-center gap-2">
+                        <x-lucide-alert-triangle class="h-6 w-6" />
+                        Eliminar Todos los Datos
+                    </h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <!-- Flash Messages in Modal -->
+                @if (session()->has('success'))
+                    <div x-data="{ show: true }"
+                         x-show="show"
+                         x-init="setTimeout(() => show = false, 5000)"
+                         x-transition
+                         class="mb-6 relative">
+                        <x-alert class="border-2 border-green-500 bg-green-50 shadow-lg pr-10">
+                            <x-lucide-circle-check class="h-5 w-5 text-green-600" />
+                            <x-alert.title class="text-green-800">Éxito</x-alert.title>
+                            <x-alert.description class="text-green-700">{{ session('success') }}</x-alert.description>
+                        </x-alert>
+                        <button @click="show = false" class="absolute top-3 right-3 text-green-600 hover:text-green-800">
+                            <x-lucide-x class="h-5 w-5" />
+                        </button>
+                    </div>
+                @endif
+
+                @if (session()->has('error'))
+                    <div x-data="{ show: true }"
+                         x-show="show"
+                         x-init="setTimeout(() => show = false, 5000)"
+                         x-transition
+                         class="mb-6 relative">
+                        <x-alert variant="destructive" class="border-2 border-red-500 bg-red-50 shadow-lg pr-10">
+                            <x-lucide-triangle-alert class="h-5 w-5 text-red-600" />
+                            <x-alert.title class="text-red-800">Error</x-alert.title>
+                            <x-alert.description class="text-red-700">{{ session('error') }}</x-alert.description>
+                        </x-alert>
+                        <button @click="show = false" class="absolute top-3 right-3 text-red-600 hover:text-red-800">
+                            <x-lucide-x class="h-5 w-5" />
+                        </button>
+                    </div>
+                @endif
+
+                <!-- Warning Content -->
+                <div class="space-y-4">
+                    <!-- Warning Message -->
+                    <div class="rounded-lg bg-red-100 border border-red-300 p-4">
+                        <div class="flex items-start gap-3">
+                            <x-lucide-alert-circle class="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <div class="text-sm text-red-800">
+                                <p class="font-semibold mb-2">⚠️ Advertencia: Esta acción eliminará permanentemente:</p>
+                                <ul class="list-disc list-inside space-y-1 text-xs ml-2">
+                                    <li>Todos los mensajes scrapeados de la base de datos</li>
+                                    <li>Todas las imágenes generadas del almacenamiento</li>
+                                    <li>Todas las sesiones de scraping</li>
+                                    <li>Todo el historial de publicaciones</li>
+                                </ul>
+                                <p class="mt-3 font-semibold">✅ El scraper continuará funcionando y comenzará a scrapear mensajes desde cero.</p>
+                                <p class="mt-2 text-xs text-red-700">Esta acción NO puede deshacerse. Se te pedirá confirmar antes de eliminar.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clear Data Button -->
+                    <div class="border-t border-gray-200 pt-6">
+                        <div class="flex justify-end gap-3">
+                            <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                            <button
+                                type="button"
+                                wire:click="clearAllData"
+                                wire:confirm="¿Estás ABSOLUTAMENTE SEGURO de que deseas eliminar TODOS los mensajes e imágenes? Esta acción NO puede deshacerse. El scraper continuará funcionando y comenzará desde cero."
+                                wire:loading.attr="disabled"
+                                wire:target="clearAllData"
+                                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                <x-lucide-trash-2 class="mr-2 h-4 w-4" />
+                                <span wire:loading.remove wire:target="clearAllData">Eliminar Todos los Datos</span>
+                                <span wire:loading wire:target="clearAllData">Eliminando...</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </template>

@@ -54,8 +54,8 @@ class Message extends Model
     public function getImageFullPathAttribute()
     {
         if ($this->image_path) {
-            // In Docker, message images are in shared volume at /app/data/message_images
-            return '/app/data/message_images/' . basename($this->image_path);
+            // Images are stored in public/message_images directory
+            return public_path('message_images/' . basename($this->image_path));
         }
         return null;
     }
@@ -160,72 +160,72 @@ class Message extends Model
     }
 
     /**
-     * Convert scraped_at from UTC to application timezone
-     * Dates are stored in UTC in database but should be displayed in app timezone
+     * BUGFIX: Timezone handling for datetime fields
+     * 
+     * Issue: SQLite doesn't have native timezone support, so Laravel stores datetime as text strings
+     * in whatever timezone they're provided. This caused dates to be stored in app timezone
+     * (America/Mexico_City) instead of UTC, leading to incorrect "future" timestamps.
+     * 
+     * Solution: Custom accessors/mutators to ensure:
+     * 1. WRITE: Convert from app timezone to UTC before storing
+     * 2. READ: Convert from UTC to app timezone for display
+     * 
+     * This ensures all dates are stored in UTC (single source of truth) and displayed in
+     * the configured app timezone (America/Mexico_City).
+     */
+
+    /**
+     * Accessor/Mutator for scraped_at - Store UTC, display app timezone
      */
     protected function scrapedAt(): Attribute
     {
         return Attribute::make(
-            get: function (?string $value) {
-                if (!$value) return null;
-                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
-            },
+            get: fn (?string $value) => $value ? Carbon::parse($value, 'UTC')->timezone(config('app.timezone')) : null,
+            set: fn ($value) => $value ? Carbon::parse($value)->timezone('UTC')->toDateTimeString() : null,
         );
     }
 
     /**
-     * Convert posted_to_page_at from UTC to application timezone
-     * Dates are stored in UTC in database but should be displayed in app timezone
+     * Accessor/Mutator for posted_to_page_at - Store UTC, display app timezone
      */
     protected function postedToPageAt(): Attribute
     {
         return Attribute::make(
-            get: function (?string $value) {
-                if (!$value) return null;
-                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
-            },
+            get: fn (?string $value) => $value ? Carbon::parse($value, 'UTC')->timezone(config('app.timezone')) : null,
+            set: fn ($value) => $value ? Carbon::parse($value)->timezone('UTC')->toDateTimeString() : null,
         );
     }
 
     /**
-     * Convert posted_at from UTC to application timezone
-     * Dates are stored in UTC in database but should be displayed in app timezone
+     * Accessor/Mutator for posted_at - Store UTC, display app timezone
      */
     protected function postedAt(): Attribute
     {
         return Attribute::make(
-            get: function (?string $value) {
-                if (!$value) return null;
-                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
-            },
+            get: fn (?string $value) => $value ? Carbon::parse($value, 'UTC')->timezone(config('app.timezone')) : null,
+            set: fn ($value) => $value ? Carbon::parse($value)->timezone('UTC')->toDateTimeString() : null,
         );
     }
 
     /**
-     * Convert downloaded_at from UTC to application timezone
-     * Dates are stored in UTC in database but should be displayed in app timezone
+     * Accessor/Mutator for downloaded_at - Store UTC, display app timezone
      */
     protected function downloadedAt(): Attribute
     {
         return Attribute::make(
-            get: function (?string $value) {
-                if (!$value) return null;
-                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
-            },
+            get: fn (?string $value) => $value ? Carbon::parse($value, 'UTC')->timezone(config('app.timezone')) : null,
+            set: fn ($value) => $value ? Carbon::parse($value)->timezone('UTC')->toDateTimeString() : null,
         );
     }
 
     /**
-     * Convert approved_at from UTC to application timezone
-     * Dates are stored in UTC in database but should be displayed in app timezone
+     * Accessor/Mutator for approved_at - Store UTC, display app timezone
      */
     protected function approvedAt(): Attribute
     {
         return Attribute::make(
-            get: function (?string $value) {
-                if (!$value) return null;
-                return Carbon::parse($value, 'UTC')->timezone(config('app.timezone'));
-            },
+            get: fn (?string $value) => $value ? Carbon::parse($value, 'UTC')->timezone(config('app.timezone')) : null,
+            set: fn ($value) => $value ? Carbon::parse($value)->timezone('UTC')->toDateTimeString() : null,
         );
     }
 }

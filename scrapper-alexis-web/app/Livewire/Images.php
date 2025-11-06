@@ -368,6 +368,13 @@ class Images extends Component
     {
         $message = Message::find($messageId);
 
+        \Log::info('Bugfix: Download image attempt', [
+            'message_id' => $messageId,
+            'image_path' => $message->image_path ?? 'null',
+            'image_full_path' => $message->image_full_path ?? 'null',
+            'file_exists' => $message->image_full_path ? file_exists($message->image_full_path) : false
+        ]);
+
         if ($message && $message->image_full_path && file_exists($message->image_full_path)) {
             // Mark image as downloaded with timestamp
             $message->update([
@@ -379,6 +386,10 @@ class Images extends Component
             return response()->download($message->image_full_path);
         }
 
+        \Log::error('Bugfix: Image file not found', [
+            'message_id' => $messageId,
+            'image_full_path' => $message->image_full_path ?? 'null'
+        ]);
         session()->flash('error', 'Archivo de imagen no encontrado');
     }
 

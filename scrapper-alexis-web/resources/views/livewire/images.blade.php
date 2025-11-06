@@ -158,7 +158,7 @@
                 <div class="flex items-center justify-between space-x-4">
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-muted-foreground truncate">Pendientes por publicar</p>
-                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['pending']) }}</p>
+                        <p class="text-3xl font-bold text-foreground mt-2">{{ number_format($stats['approved_auto']) }}</p>
                     </div>
                     <div class="flex-shrink-0">
                         <x-lucide-clock class="h-10 w-10 text-gray-500" />

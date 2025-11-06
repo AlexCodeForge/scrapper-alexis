@@ -905,6 +905,68 @@ class Settings extends Component
         }
     }
 
+    /**
+     * Clear all messages and images from database and filesystem
+     * This allows the scraper to start fresh
+     */
+    public function clearAllData()
+    {
+        \Log::info('Settings: clearAllData called - Starting data cleanup');
+
+        try {
+            // Get count of messages and images before deletion
+            $messagesCount = \App\Models\Message::count();
+            $imagesCount = \App\Models\Message::where('image_generated', true)->count();
+
+            \Log::info('Settings: clearAllData - Current data stats', [
+                'messages_count' => $messagesCount,
+                'images_count' => $imagesCount
+            ]);
+
+            // Delete all image files from filesystem
+            $imageDir = '/var/www/scrapper-alexis/data/message_images';
+            $deletedFiles = 0;
+
+            if (is_dir($imageDir)) {
+                $files = glob($imageDir . '/*');
+                
+                foreach ($files as $file) {
+                    if (is_file($file)) {
+                        if (unlink($file)) {
+                            $deletedFiles++;
+                            \Log::info('Settings: clearAllData - Deleted image file', ['file' => basename($file)]);
+                        } else {
+                            \Log::warning('Settings: clearAllData - Failed to delete file', ['file' => $file]);
+                        }
+                    }
+                }
+
+                \Log::info('Settings: clearAllData - Image files deleted', ['count' => $deletedFiles]);
+            } else {
+                \Log::warning('Settings: clearAllData - Image directory does not exist', ['dir' => $imageDir]);
+            }
+
+            // Delete all messages from database (this will cascade delete related data)
+            \App\Models\Message::truncate();
+            \App\Models\ScrapingSession::truncate();
+
+            \Log::info('Settings: clearAllData - Database tables truncated successfully', [
+                'messages_deleted' => $messagesCount,
+                'images_deleted_from_disk' => $deletedFiles
+            ]);
+
+            session()->flash('success', "✅ Todos los datos eliminados correctamente. Se eliminaron {$messagesCount} mensajes y {$deletedFiles} imágenes. El scraper puede comenzar desde cero.");
+
+        } catch (\Exception $e) {
+            \Log::error('Settings: clearAllData - Error during cleanup', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            session()->flash('error', 'Error al eliminar los datos: ' . $e->getMessage());
+        }
+    }
+
     public function render()
     {
         return view('livewire.settings-modular')->layout('components.layouts.app', ['title' => 'Settings']);

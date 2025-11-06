@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Console\Scheduling\Schedule;
 use App\Models\ScraperSettings;
 use App\Models\PostingSetting;
+use Illuminate\Support\Facades\Cache;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,11 +21,52 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function (Schedule $schedule): void {
-        // Facebook Scraper - Hourly with database control
+        // Helper function to check if enough time has passed based on dynamic interval
+        $shouldRun = function (string $job, int $minMinutes, int $maxMinutes): bool {
+            $lastRunKey = "scheduler_last_run_{$job}";
+            $intervalKey = "scheduler_next_interval_{$job}";
+            
+            $lastRun = Cache::get($lastRunKey);
+            $nextInterval = Cache::get($intervalKey);
+            
+            // First run or cache cleared
+            if (!$lastRun || !$nextInterval) {
+                // Set random interval for next run
+                $nextInterval = rand($minMinutes, $maxMinutes);
+                Cache::put($intervalKey, $nextInterval, now()->addHours(24));
+                Cache::put($lastRunKey, now(), now()->addHours(24));
+                return true;
+            }
+            
+            // Check if enough time has passed
+            $minutesSinceLastRun = now()->diffInMinutes($lastRun);
+            
+            if ($minutesSinceLastRun >= $nextInterval) {
+                // Time to run - set new random interval for next time
+                $nextInterval = rand($minMinutes, $maxMinutes);
+                Cache::put($intervalKey, $nextInterval, now()->addHours(24));
+                Cache::put($lastRunKey, now(), now()->addHours(24));
+                return true;
+            }
+            
+            return false;
+        };
+        
+        // Facebook Scraper - Dynamic interval from database (UI controlled)
         $schedule->command('scraper:facebook')
-            ->hourly()
-            ->when(function () {
-                return ScraperSettings::getSettings()->facebook_enabled;
+            ->everyMinute()
+            ->when(function () use ($shouldRun) {
+                $settings = ScraperSettings::getSettings();
+                
+                if (!$settings->facebook_enabled) {
+                    return false;
+                }
+                
+                return $shouldRun(
+                    'facebook',
+                    $settings->facebook_interval_min ?? 40,
+                    $settings->facebook_interval_max ?? 80
+                );
             })
             ->withoutOverlapping()
             ->runInBackground()
@@ -36,32 +78,42 @@ return Application::configure(basePath: dirname(__DIR__))
         // Twitter posting functionality has been removed from the application.
         // The app now focuses on image generation only.
         // =============================================================================
-        //
-        // $schedule->command('scraper:twitter')
-        //     ->hourly()
-        //     ->at(':15')
-        //     ->when(function () {
-        //         return ScraperSettings::getSettings()->twitter_enabled;
-        //     })
-        //     ->withoutOverlapping()
-        //     ->runInBackground()
-        //     ->onOneServer();
         
-        // Facebook Page Poster - Every 30 minutes
+        // Facebook Page Poster - Dynamic interval from database (UI controlled)
         $schedule->command('scraper:page-poster')
-            ->everyThirtyMinutes()
-            ->when(function () {
-                return PostingSetting::getSettings()->enabled;
+            ->everyMinute()
+            ->when(function () use ($shouldRun) {
+                $settings = PostingSetting::getSettings();
+                
+                if (!$settings->enabled) {
+                    return false;
+                }
+                
+                return $shouldRun(
+                    'page_poster',
+                    $settings->interval_min ?? 60,
+                    $settings->interval_max ?? 120
+                );
             })
             ->withoutOverlapping()
             ->runInBackground()
             ->onOneServer();
         
-        // Image Generator - Every 5 minutes with database control
+        // Image Generator - Dynamic interval from database (UI controlled)
         $schedule->command('scraper:generate-images')
-            ->everyFiveMinutes()
-            ->when(function () {
-                return ScraperSettings::getSettings()->image_generator_enabled;
+            ->everyMinute()
+            ->when(function () use ($shouldRun) {
+                $settings = ScraperSettings::getSettings();
+                
+                if (!$settings->image_generator_enabled) {
+                    return false;
+                }
+                
+                return $shouldRun(
+                    'image_generator',
+                    $settings->image_generator_interval_min ?? 30,
+                    $settings->image_generator_interval_max ?? 60
+                );
             })
             ->withoutOverlapping()
             ->runInBackground()

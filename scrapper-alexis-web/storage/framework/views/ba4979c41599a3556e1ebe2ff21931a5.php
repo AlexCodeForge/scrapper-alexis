@@ -1,4 +1,0 @@
-<svg class="w-3 h-3 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="12" cy="12" r="10"/>
-  <polyline points="12 6 12 12 16 14"/>
-</svg><?php /**PATH /var/www/alexis-scrapper-docker/scrapper-alexis-web/storage/framework/views/89d51c5adc2d0c3dc94c635364820c3e.blade.php ENDPATH**/ ?>

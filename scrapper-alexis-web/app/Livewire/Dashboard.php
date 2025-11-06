@@ -75,7 +75,8 @@ class Dashboard extends Component
             'posted_to_page' => $pageStats['posted'],
         ];
 
-        // Get date range for filter (use database-level date comparisons for timezone safety)
+        // BUGFIX: Timezone-aware date filtering
+        // Dates are stored in UTC, so we need to convert filter dates to UTC for comparison
         $startDate = null;
         $endDate = now();
 
@@ -95,17 +96,19 @@ class Dashboard extends Component
                 break;
         }
 
+        // Convert filter dates to UTC for database comparison
+        // Database stores dates in UTC, but we filter in app timezone
+        $startDateUTC = $startDate ? $startDate->copy()->timezone('UTC') : null;
+        $endDateUTC = $endDate->copy()->timezone('UTC');
+
         // Get latest 5 posted messages for the selected date range
-        // BUGFIX: Use database-level date comparison for timezone-safe filtering
         $messagesQuery = Message::where('posted_to_page', true);
-        
-        if ($this->dateFilter === 'today') {
-            $messagesQuery->whereTodayOrBefore('posted_to_page_at');
-        } elseif ($startDate) {
-            $messagesQuery->whereDate('posted_to_page_at', '>=', $startDate->toDateString())
-                         ->whereDate('posted_to_page_at', '<=', $endDate->toDateString());
+
+        if ($startDateUTC) {
+            $messagesQuery->whereRaw('posted_to_page_at >= ?', [$startDateUTC->toDateTimeString()])
+                         ->whereRaw('posted_to_page_at <= ?', [$endDateUTC->toDateTimeString()]);
         }
-        
+
         $postedMessagesFiltered = $messagesQuery
             ->latest('posted_to_page_at')
             ->limit(5)
@@ -113,14 +116,12 @@ class Dashboard extends Component
 
         // Calculate stats for filtered period
         $statsQuery = Message::where('posted_to_page', true);
-        
-        if ($this->dateFilter === 'today') {
-            $statsQuery->whereTodayOrBefore('posted_to_page_at');
-        } elseif ($startDate) {
-            $statsQuery->whereDate('posted_to_page_at', '>=', $startDate->toDateString())
-                      ->whereDate('posted_to_page_at', '<=', $endDate->toDateString());
+
+        if ($startDateUTC) {
+            $statsQuery->whereRaw('posted_to_page_at >= ?', [$startDateUTC->toDateTimeString()])
+                      ->whereRaw('posted_to_page_at <= ?', [$endDateUTC->toDateTimeString()]);
         }
-        
+
         $postedStats = [
             'count' => $statsQuery->count(),
             'with_images' => (clone $statsQuery)->where('image_generated', true)->count(),

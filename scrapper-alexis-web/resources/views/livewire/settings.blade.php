@@ -661,4 +661,51 @@
                         </form>
                     </x-card.content>
                 </x-card>
+
+                <!-- Danger Zone: Clear All Data -->
+                <x-card class="mb-6 border-2 border-red-500">
+                    <x-card.header class="bg-red-50">
+                        <x-card.title class="flex items-center gap-2 text-red-800">
+                            <x-lucide-alert-triangle class="h-5 w-5" />
+                            Zona de Peligro
+                        </x-card.title>
+                        <x-card.description class="text-red-700">Acciones irreversibles que eliminarán todos los datos</x-card.description>
+                    </x-card.header>
+                    <x-card.content class="bg-red-50/30">
+                        <div class="space-y-4">
+                            <!-- Warning Message -->
+                            <div class="rounded-lg bg-red-100 border border-red-300 p-4">
+                                <div class="flex items-start gap-3">
+                                    <x-lucide-alert-circle class="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                    <div class="text-sm text-red-800">
+                                        <p class="font-semibold mb-2">⚠️ Advertencia: Esta acción eliminará permanentemente:</p>
+                                        <ul class="list-disc list-inside space-y-1 text-xs ml-2">
+                                            <li>Todos los mensajes scrapeados de la base de datos</li>
+                                            <li>Todas las imágenes generadas del almacenamiento</li>
+                                            <li>Todas las sesiones de scraping</li>
+                                            <li>Todo el historial de publicaciones</li>
+                                        </ul>
+                                        <p class="mt-3 font-semibold">✅ El scraper continuará funcionando y comenzará a scrapear mensajes desde cero.</p>
+                                        <p class="mt-2 text-xs text-red-700">Esta acción NO puede deshacerse. Se te pedirá confirmar antes de eliminar.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Clear Data Button -->
+                            <div class="flex justify-end">
+                                <button
+                                    type="button"
+                                    wire:click="clearAllData"
+                                    wire:confirm="¿Estás ABSOLUTAMENTE SEGURO de que deseas eliminar TODOS los mensajes e imágenes? Esta acción NO puede deshacerse. El scraper continuará funcionando y comenzará desde cero."
+                                    wire:loading.attr="disabled"
+                                    wire:target="clearAllData"
+                                    class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                    <x-lucide-trash-2 class="mr-2 h-4 w-4" />
+                                    <span wire:loading.remove wire:target="clearAllData">Eliminar Todos los Datos</span>
+                                    <span wire:loading wire:target="clearAllData">Eliminando...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </x-card.content>
+                </x-card>
         </div>
