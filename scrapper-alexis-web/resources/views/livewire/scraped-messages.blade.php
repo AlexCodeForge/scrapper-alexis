@@ -262,14 +262,7 @@
                                 </td>
                                 <td class="max-md:hidden px-6 py-4 whitespace-nowrap align-top">
                                     <div class="text-sm text-muted-foreground">
-                                        <div class="flex items-center">
-                                            <x-lucide-calendar class="h-4 w-4 mr-1" />
-                                            {{ $message->scraped_at ? $message->scraped_at->format('d/m/Y') : 'N/A' }}
-                                        </div>
-                                        <div class="flex items-center text-xs mt-1">
-                                            <x-lucide-clock class="h-3 w-3 mr-1" />
-                                            {{ $message->scraped_at ? $message->scraped_at->format('h:i A') : 'N/A' }}
-                                        </div>
+                                        {{ $message->scraped_at ? $message->scraped_at->diffForHumans() : 'N/A' }}
                                     </div>
                                 </td>
                                 <td class="max-md:hidden px-6 py-4 whitespace-nowrap align-top">

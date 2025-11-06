@@ -587,21 +587,111 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
             logger.debug(f"No error indicators found (this is good): {e}")
         
         # Check if we're back on the page (post composer should be closed)
+        dialog_still_open = False
         try:
-            # If the post dialog is still open, posting might have failed
-            post_dialog = page.locator('div[role="dialog"]').first
-            if post_dialog.is_visible(timeout=2000):
-                logger.warning("⚠️  Post dialog still open - post might have failed")
-                take_debug_screenshot(page, "WARNING_dialog_still_open", "page_posting", "WARNING: Dialog still open")
-                # Don't return False yet, wait a bit more
-                page.wait_for_timeout(3000)
-        except:
-            logger.info("✅ Post dialog closed - good sign")
+            # Bugfix: More robust dialog detection - try multiple selectors
+            dialog_selectors = [
+                'div[role="dialog"]',
+                'div[aria-label="Create post"]',
+                'div[aria-label="Crear publicación"]',
+                'form[method="POST"]',  # Post creation form
+            ]
+            
+            for selector in dialog_selectors:
+                try:
+                    dialog = page.locator(selector).first
+                    if dialog.is_visible(timeout=1000):
+                        logger.warning(f"⚠️  Dialog still open (detected via {selector}) - post might have failed")
+                        take_debug_screenshot(page, "WARNING_dialog_still_open", "page_posting", "WARNING: Dialog still open")
+                        dialog_still_open = True
+                        break
+                except:
+                    continue
+            
+            if dialog_still_open:
+                # Wait a bit more and re-check
+                logger.info("Waiting 5 more seconds and re-checking dialog status...")
+                page.wait_for_timeout(5000)
+                
+                # Re-check if any dialog is still visible
+                still_open_after_wait = False
+                for selector in dialog_selectors:
+                    try:
+                        dialog = page.locator(selector).first
+                        if dialog.is_visible(timeout=1000):
+                            still_open_after_wait = True
+                            break
+                    except:
+                        continue
+                
+                if still_open_after_wait:
+                    logger.error("❌ Post dialog STILL open after extended wait - posting FAILED")
+                    take_debug_screenshot(page, "ERROR_dialog_still_open_after_wait", "page_posting", "ERROR: Dialog still open after wait")
+                    dialog_still_open = True
+                else:
+                    logger.info("✅ Post dialog closed after extended wait")
+                    dialog_still_open = False
+        except Exception as e:
+            logger.info(f"✅ Post dialog check passed: {e}")
+        
+        # If dialog is still open, posting failed - return False
+        if dialog_still_open:
+            logger.error("❌ Cannot mark as posted - dialog verification failed")
+            return False
         
         # Wait a bit more for the post to appear
         page.wait_for_timeout(3000)
         
         take_debug_screenshot(page, "09_final_verification", "page_posting", "Final verification")
+        
+        # Bugfix: CRITICAL - Actually verify the post appeared by checking for composer
+        # If we can still see the post composer on the page, posting likely succeeded
+        # If we can still click "What's on your mind", the posting flow is complete
+        try:
+            logger.info("Verifying post appeared on page...")
+            page.wait_for_timeout(2000)
+            
+            # Check current URL
+            current_url = page.url
+            if 'facebook.com' not in current_url or 'TeamMiltonero' not in current_url:
+                logger.error(f"❌ Unexpected URL after posting: {current_url}")
+                return False
+            
+            # Bugfix: Check if composer is available again (indicates we're back to normal page view)
+            # This is a strong indicator that the posting flow completed
+            try:
+                composer_indicators = [
+                    'text=¿Qué estás pensando',
+                    'text=What\'s on your mind',
+                    'div[role="button"]:has-text("Crear publicación")',
+                    'div[role="button"]:has-text("Create post")',
+                ]
+                
+                composer_found = False
+                for indicator in composer_indicators:
+                    try:
+                        elem = page.locator(indicator).first
+                        if elem.is_visible(timeout=2000):
+                            logger.info(f"✅ Composer visible again ({indicator}) - posting likely succeeded")
+                            composer_found = True
+                            break
+                    except:
+                        continue
+                
+                if not composer_found:
+                    logger.error("❌ Composer not found after posting - post might have failed")
+                    logger.error("Aborting - will retry in next attempt")
+                    return False
+                    
+            except Exception as e:
+                logger.warning(f"Could not verify composer visibility: {e}")
+                # Don't fail here, just warn
+            
+            logger.info("✅ All verification checks passed")
+            
+        except Exception as e:
+            logger.error(f"❌ Post verification failed: {e}")
+            return False
         
         # Log success
         logger.info("✅ Image posted successfully!")
@@ -824,18 +914,44 @@ def main():
                     logger.info("Will attempt to post anyway...")
                 
                 # Post the image (pass page_name for composer detection)
-                logger.info("Posting image to page...")
-                success = post_image_to_page(page, image_data['image_path'], page_name)
+                # Bugfix: Add retry logic for posting failures
+                max_post_attempts = 3
+                post_success = False
                 
-                if success:
-                    # Mark as posted
-                    mark_as_posted(image_data['id'])
+                for post_attempt in range(1, max_post_attempts + 1):
                     logger.info("="*70)
-                    logger.info("✅ POST SUCCESSFUL")
+                    logger.info(f"POSTING ATTEMPT {post_attempt}/{max_post_attempts}")
                     logger.info("="*70)
+                    
+                    success = post_image_to_page(page, image_data['image_path'], page_name)
+                    
+                    if success:
+                        # Mark as posted
+                        mark_as_posted(image_data['id'])
+                        logger.info("="*70)
+                        logger.info("✅ POST SUCCESSFUL")
+                        logger.info("="*70)
+                        post_success = True
+                        break
+                    else:
+                        logger.error(f"❌ Posting attempt {post_attempt}/{max_post_attempts} failed")
+                        
+                        if post_attempt < max_post_attempts:
+                            wait_time = 5
+                            logger.info(f"⏳ Waiting {wait_time} seconds before retry...")
+                            page.wait_for_timeout(wait_time * 1000)
+                            
+                            # Refresh the page before retrying
+                            logger.info("🔄 Refreshing page before retry...")
+                            page.reload()
+                            page.wait_for_timeout(3000)
+                        else:
+                            logger.error("❌ All posting attempts exhausted")
+                
+                if post_success:
                     return 0
                 else:
-                    logger.error("Failed to post image")
+                    logger.error("Failed to post image after all retry attempts")
                     return 1
                 
             finally:
