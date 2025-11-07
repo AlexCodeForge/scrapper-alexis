@@ -1,34 +1,21 @@
+# ===================================
+# ROOT .gitignore
+# For clean deployments: no logs, images, or databases should be committed
+# ===================================
+
 # Environment files
-scrapper-alexis/.env
-scrapper-alexis-web/.env
 .env
 *.env
-!env.docker.template
+!.env.example
+scrapper-alexis/.env
+scrapper-alexis-web/.env
 
-# Docker volumes data
-data/
+# ===================================
+# PYTHON SCRAPER (scrapper-alexis/)
+# ===================================
 
-# Logs
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.cursor/
-.idea/
-*.swp
-*.swo
-
-# Temporary files
-*.tmp
-*.bak
-
-# Node modules
-scrapper-alexis-web/node_modules/
-node_modules/
+# Virtual Environment
+scrapper-alexis/venv/
 
 # Python cache
 scrapper-alexis/__pycache__/
@@ -38,17 +25,102 @@ scrapper-alexis/**/__pycache__/
 *.pyd
 .Python
 
-# Build artifacts
-scrapper-alexis-web/build/
-scrapper-alexis-web/dist/
-scrapper-alexis-web/.next/
+# Databases (NEVER commit - must be fresh on install)
+scrapper-alexis/*.db
+scrapper-alexis/*.sqlite
+scrapper-alexis/*.sqlite3
+scrapper-alexis/data/*.db
+scrapper-alexis/data/*.sqlite
+
+# Logs (NEVER commit - generated at runtime)
+scrapper-alexis/logs/
+scrapper-alexis/*.log
+
+# Debug output (NEVER commit - can be huge)
+scrapper-alexis/debug_output/
+
+# Generated images (NEVER commit - generated content)
+scrapper-alexis/data/message_images/*.png
+scrapper-alexis/data/message_images/*.jpg
+scrapper-alexis/data/message_images/*.jpeg
+scrapper-alexis/data/message_images/*.gif
+scrapper-alexis/data/message_images/*.webp
+
+# Browser authentication states (NEVER commit - sensitive)
+scrapper-alexis/data/auth_states/
+
+# Screenshots (NEVER commit - generated content)
+scrapper-alexis/screenshots/
+scrapper-alexis/*.png
+scrapper-alexis/*.jpg
+
+# Keep directory structure markers
+!scrapper-alexis/data/.gitkeep
+!scrapper-alexis/logs/.gitkeep
+!scrapper-alexis/data/message_images/.gitkeep
+!scrapper-alexis/data/auth_states/.gitkeep
+
+# ===================================
+# LARAVEL WEB APP (scrapper-alexis-web/)
+# ===================================
 
 # Dependencies
-scrapper-alexis-web/package-lock.json
-scrapper-alexis-web/yarn.lock
-scrapper-alexis-web/pnpm-lock.yaml
+scrapper-alexis-web/node_modules/
+scrapper-alexis-web/vendor/
 
+# Database (NEVER commit - must be fresh on install)
+scrapper-alexis-web/database/*.sqlite
+scrapper-alexis-web/database/*.sqlite3
+scrapper-alexis-web/database/*.db
+
+# Laravel storage (logs, cache, sessions)
+scrapper-alexis-web/storage/logs/*.log
+scrapper-alexis-web/storage/framework/cache/*
+scrapper-alexis-web/storage/framework/sessions/*
+scrapper-alexis-web/storage/framework/views/*
+scrapper-alexis-web/bootstrap/cache/*
+
+# Keep directory structure
+!scrapper-alexis-web/storage/logs/.gitignore
+!scrapper-alexis-web/storage/framework/.gitignore
+!scrapper-alexis-web/bootstrap/cache/.gitignore
+
+# Build artifacts
+scrapper-alexis-web/public/hot
+scrapper-alexis-web/public/build
+scrapper-alexis-web/public/storage
+
+# Testing
+scrapper-alexis-web/.phpunit.result.cache
+
+# ===================================
+# SYSTEM / IDE
+# ===================================
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.cursor/
+.idea/
+.fleet/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# MCP
 .playwright-mcp/
-scrapper-alexis-web/storage/framework/views/
-scrapper-alexis/debug_output/
+
+# ===================================
+# KEEP THESE (Examples and Templates)
+# ===================================
+!.env.example
+!env.docker.template
 

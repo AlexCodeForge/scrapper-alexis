@@ -1,2 +1,49 @@
+# Virtual Environment
 /venv/
+venv/
+
+# Images (generated content)
 *.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Debug output
+debug_output/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files
+.env
+.env.local
+.env.*.local
+copy.env
+
+# Browser authentication states
+data/auth_states/
+
+# Generated message images
+data/message_images/*.png
+data/message_images/*.jpg
+data/message_images/*.jpeg
+
+# Scraped data
+data/*.db
+data/*.sqlite
+
+# Keep directory structure but not content
+!data/.gitkeep
+!logs/.gitkeep
+!debug_output/.gitkeep
