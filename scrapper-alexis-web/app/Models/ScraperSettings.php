@@ -35,6 +35,10 @@ class ScraperSettings extends Model
         'image_generator_interval_max',
         'image_generator_debug_enabled',
         'timezone',
+        'posting_start_hour',
+        'posting_start_period',
+        'posting_stop_hour',
+        'posting_stop_period',
     ];
 
     protected $casts = [
@@ -53,6 +57,8 @@ class ScraperSettings extends Model
         'image_generator_interval_min' => 'integer',
         'image_generator_interval_max' => 'integer',
         'image_generator_debug_enabled' => 'boolean',
+        'posting_start_hour' => 'integer',
+        'posting_stop_hour' => 'integer',
     ];
 
     /**
@@ -126,6 +132,10 @@ class ScraperSettings extends Model
             'image_generator_interval_max' => 60,
             'image_generator_debug_enabled' => false,
             'timezone' => 'America/Mexico_City',
+            'posting_start_hour' => 7,
+            'posting_start_period' => 'AM',
+            'posting_stop_hour' => 1,
+            'posting_stop_period' => 'AM',
         ]);
     }
 

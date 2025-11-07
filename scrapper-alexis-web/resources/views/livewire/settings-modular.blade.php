@@ -112,6 +112,23 @@
             </x-card.content>
         </x-card>
 
+        <!-- Operating Hours -->
+        <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('operating-hours')">
+            <x-card.content class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <x-lucide-clock class="h-5 w-5 text-teal-600" />
+                            Horario de Funcionamiento
+                            <x-lucide-check-circle class="h-5 w-5 text-green-600" />
+                        </h3>
+                        <p class="text-sm text-muted-foreground mt-1">{{ $postingStopHour }} {{ $postingStopPeriod }} - {{ $postingStartHour }} {{ $postingStartPeriod }}</p>
+                    </div>
+                    <x-lucide-chevron-right class="h-5 w-5 text-muted-foreground" />
+                </div>
+            </x-card.content>
+        </x-card>
+
         <!-- Cron Scheduling -->
         <x-card class="hover:shadow-lg transition-shadow cursor-pointer" @click="openModal('cron-schedule')">
             <x-card.content class="p-6">
@@ -789,6 +806,102 @@
                                 <x-button type="submit" wire:loading.attr="disabled" wire:target="saveApplicationSettings">
                                     <x-lucide-save class="mr-2 h-4 w-4" />
                                     Guardar Zona Horaria
+                                </x-button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- Operating Hours Modal -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'operating-hours'"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="closeModal()">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Horario de Funcionamiento</h2>
+                    <button @click="closeModal()" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="saveOperatingHoursSettings">
+                    <div class="space-y-6">
+                        <!-- Description -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <p class="text-sm text-blue-900">
+                                <x-lucide-info class="h-4 w-4 inline mr-1" />
+                                Configure el horario en el que el sistema debe <strong>detenerse</strong> y <strong>reanudar</strong> las publicaciones. Use formato de 12 horas (AM/PM).
+                            </p>
+                        </div>
+
+                        <!-- Stop Time -->
+                        <div class="space-y-2">
+                            <x-label>Hora de Detención</x-label>
+                            <p class="text-xs text-muted-foreground mb-2">Las publicaciones se detendrán a esta hora</p>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <select wire:model.blur="postingStopHour"
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                                        @for($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}">{{ $i }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="w-24">
+                                    <select wire:model.blur="postingStopPeriod"
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                                        <option value="AM">AM</option>
+                                        <option value="PM">PM</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Start Time -->
+                        <div class="space-y-2">
+                            <x-label>Hora de Inicio</x-label>
+                            <p class="text-xs text-muted-foreground mb-2">Las publicaciones se reanudarán a esta hora</p>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <select wire:model.blur="postingStartHour"
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                                        @for($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}">{{ $i }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="w-24">
+                                    <select wire:model.blur="postingStartPeriod"
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                                        <option value="AM">AM</option>
+                                        <option value="PM">PM</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Example -->
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <p class="text-sm text-gray-700">
+                                <strong>Ejemplo:</strong> Si configura detención a las <strong>{{ $postingStopHour }} {{ $postingStopPeriod }}</strong> e inicio a las <strong>{{ $postingStartHour }} {{ $postingStartPeriod }}</strong>, el sistema no publicará entre esas horas.
+                            </p>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex justify-end gap-3">
+                                <x-button type="button" variant="outline" @click="closeModal()">Cancelar</x-button>
+                                <x-button type="submit" wire:loading.attr="disabled" wire:target="saveOperatingHoursSettings">
+                                    <x-lucide-save class="mr-2 h-4 w-4" />
+                                    Guardar Horario
                                 </x-button>
                             </div>
                         </div>

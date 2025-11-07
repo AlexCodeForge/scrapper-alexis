@@ -42,11 +42,12 @@ def get_posting_settings():
     try:
         import sqlite3
         
-        # Connect to shared database
+        # Connect to shared database (Laravel web app uses this primary database)
         possible_paths = [
-            '/var/www/scrapper-alexis/data/scraper.db',
-            '/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db',
-            'data/scraper.db',
+            '/var/www/alexis-scrapper-docker/scrapper-alexis-web/database/database.sqlite',  # Primary: Laravel web app database
+            '/var/www/scrapper-alexis/data/scraper.db',  # Legacy path
+            '/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db',  # Current Python path
+            'data/scraper.db',  # Relative path fallback
         ]
         
         db_path = None
@@ -60,24 +61,109 @@ def get_posting_settings():
             return None
         
         conn = sqlite3.connect(db_path)
+        
+        # Get posting settings
         cursor = conn.execute("SELECT page_name, page_url, interval_min, interval_max, enabled FROM posting_settings LIMIT 1")
         result = cursor.fetchone()
+        
+        if not result:
+            conn.close()
+            return None
+        
+        settings = {
+            'page_name': result[0],
+            'page_url': result[1],
+            'interval_min': result[2],
+            'interval_max': result[3],
+            'enabled': bool(result[4])
+        }
+        
+        # Get operating hours from scraper_settings
+        cursor = conn.execute("SELECT posting_start_hour, posting_start_period, posting_stop_hour, posting_stop_period FROM scraper_settings LIMIT 1")
+        hours_result = cursor.fetchone()
         conn.close()
         
-        if result:
-            return {
-                'page_name': result[0],
-                'page_url': result[1],
-                'interval_min': result[2],
-                'interval_max': result[3],
-                'enabled': bool(result[4])
-            }
+        if hours_result:
+            settings['posting_start_hour'] = hours_result[0]
+            settings['posting_start_period'] = hours_result[1]
+            settings['posting_stop_hour'] = hours_result[2]
+            settings['posting_stop_period'] = hours_result[3]
+        else:
+            # Default values if not set
+            settings['posting_start_hour'] = 7
+            settings['posting_start_period'] = 'AM'
+            settings['posting_stop_hour'] = 1
+            settings['posting_stop_period'] = 'AM'
         
-        return None
+        return settings
         
     except Exception as e:
         logger.error(f"Failed to get posting settings: {e}")
         return None
+
+
+def is_within_operating_hours(start_hour: int, start_period: str, stop_hour: int, stop_period: str) -> bool:
+    """
+    Check if current time is within operating hours.
+    System should STOP posting at stop_hour and RESUME at start_hour.
+    
+    Args:
+        start_hour: Hour to resume posting (1-12)
+        start_period: AM or PM for start time
+        stop_hour: Hour to stop posting (1-12)
+        stop_period: AM or PM for stop time
+    
+    Returns:
+        True if posting should occur, False if in quiet period
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    
+    # Get current time in configured timezone
+    now = datetime.now(tz=ZoneInfo("America/Mexico_City"))
+    current_hour_24 = now.hour  # 0-23
+    
+    # Convert 12-hour format to 24-hour format
+    def to_24_hour(hour_12: int, period: str) -> int:
+        if period == 'AM':
+            return 0 if hour_12 == 12 else hour_12
+        else:  # PM
+            return 12 if hour_12 == 12 else hour_12 + 12
+    
+    start_hour_24 = to_24_hour(start_hour, start_period)
+    stop_hour_24 = to_24_hour(stop_hour, stop_period)
+    
+    logger.info(f"Operating hours check: Current={current_hour_24:02d}:00, Stop={stop_hour_24:02d}:00 ({stop_hour} {stop_period}), Start={start_hour_24:02d}:00 ({start_hour} {start_period})")
+    
+    # If stop time is AFTER start time (in 24h), we have an overnight quiet period
+    # Example: Stop at 11 PM (23:00), Start at 6 AM (06:00)
+    # Quiet period is: 23:00 - 06:00 (overnight)
+    if stop_hour_24 > start_hour_24:
+        # Overnight quiet period: between stop and start (crossing midnight)
+        # Current hour is in quiet period if >= stop OR < start
+        is_in_quiet_period = current_hour_24 >= stop_hour_24 or current_hour_24 < start_hour_24
+        if is_in_quiet_period:
+            logger.info(f"❌ Currently in overnight quiet period (between {stop_hour} {stop_period} and {start_hour} {start_period})")
+            return False
+        else:
+            logger.info(f"✅ Within operating hours (outside overnight quiet period)")
+            return True
+    else:
+        # Normal daytime quiet period (or same hour - always allowed)
+        # Example: Stop at 6 AM (06:00), Start at 11 PM (23:00)
+        # Quiet period is: 06:00 - 23:00 (daytime)
+        if stop_hour_24 == start_hour_24:
+            # Same hour means no restrictions
+            logger.info(f"✅ No operating hours restrictions (start == stop)")
+            return True
+        
+        is_in_quiet_period = current_hour_24 >= stop_hour_24 and current_hour_24 < start_hour_24
+        if is_in_quiet_period:
+            logger.info(f"❌ Currently in quiet period (between {stop_hour} {stop_period} and {start_hour} {start_period})")
+            return False
+        else:
+            logger.info(f"✅ Within operating hours")
+            return True
 
 
 def get_next_approved_image():
@@ -740,6 +826,21 @@ def main():
         if not is_manual_run and not settings['enabled']:
             logger.info("Page posting is disabled in settings (scheduled runs only)")
             return 0
+        
+        # Feature: Check operating hours (only for scheduled runs, not manual runs)
+        if not is_manual_run:
+            logger.info("Checking operating hours...")
+            within_hours = is_within_operating_hours(
+                settings.get('posting_start_hour', 7),
+                settings.get('posting_start_period', 'AM'),
+                settings.get('posting_stop_hour', 1),
+                settings.get('posting_stop_period', 'AM')
+            )
+            if not within_hours:
+                logger.info("⏸️  Posting paused due to operating hours restrictions")
+                return 0
+        else:
+            logger.info("Manual run - bypassing operating hours check")
         
         page_name = settings['page_name']
         page_url = settings['page_url']

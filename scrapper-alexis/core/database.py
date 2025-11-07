@@ -346,9 +346,12 @@ class DatabaseManager:
         
         with self.get_connection() as conn:
             try:
-                # BUGFIX: Include scraped_at timestamp (required NOT NULL field)
-                from datetime import datetime
-                scraped_at = datetime.now().isoformat()
+                # BUGFIX: Store timestamp in UTC format for Laravel compatibility
+                # Laravel's accessor expects UTC timestamps and converts to app timezone (America/Mexico_City)
+                # Format: YYYY-MM-DD HH:MM:SS (matches Laravel's datetime expectations)
+                from datetime import datetime, timezone
+                scraped_at = datetime.now(tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+                logger.debug(f"Bugfix: Storing scraped_at in UTC: {scraped_at}")
                 
                 cursor = conn.execute(
                     '''INSERT INTO messages (profile_id, message_text, message_hash, scraped_at) 

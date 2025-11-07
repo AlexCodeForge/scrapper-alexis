@@ -56,6 +56,12 @@ class Settings extends Component
     // Application Settings
     public $timezone = 'America/Mexico_City';
 
+    // Posting Operating Hours (12-hour format)
+    public $postingStartHour = 7;
+    public $postingStartPeriod = 'AM';
+    public $postingStopHour = 1;
+    public $postingStopPeriod = 'AM';
+
     // File uploads for auth
     public $facebookAuthFile;
     
@@ -122,13 +128,20 @@ class Settings extends Component
         // Load application settings
         $this->timezone = $settings->timezone ?? 'America/Mexico_City';
 
+        // Load posting operating hours
+        $this->postingStartHour = $settings->posting_start_hour ?? 7;
+        $this->postingStartPeriod = $settings->posting_start_period ?? 'AM';
+        $this->postingStopHour = $settings->posting_stop_hour ?? 1;
+        $this->postingStopPeriod = $settings->posting_stop_period ?? 'AM';
+
         \Log::info('Settings: Loaded from database', [
             'facebook_enabled' => $this->facebookEnabled,
             'twitter_enabled' => $this->twitterEnabled,
             'facebook_debug' => $this->facebookDebugEnabled,
             'twitter_debug' => $this->twitterDebugEnabled,
             'page_posting_debug' => $this->pagePostingDebugEnabled,
-            'image_generator_enabled' => $this->imageGeneratorEnabled
+            'image_generator_enabled' => $this->imageGeneratorEnabled,
+            'posting_hours' => "{$this->postingStartHour} {$this->postingStartPeriod} - {$this->postingStopHour} {$this->postingStopPeriod}"
         ]);
     }
 
@@ -793,6 +806,40 @@ class Settings extends Component
         } else {
             \Log::error('Settings: saveApplicationSettings failed');
             $this->dispatch('settings-error', message: 'Error al guardar configuración de aplicación');
+        }
+    }
+
+    public function saveOperatingHoursSettings()
+    {
+        \Log::info('Settings: saveOperatingHoursSettings called', [
+            'start' => "{$this->postingStartHour} {$this->postingStartPeriod}",
+            'stop' => "{$this->postingStopHour} {$this->postingStopPeriod}"
+        ]);
+
+        // Small delay to ensure loading modal is visible to users
+        usleep(300000); // 300ms
+
+        $this->validate([
+            'postingStartHour' => 'required|integer|min:1|max:12',
+            'postingStartPeriod' => 'required|in:AM,PM',
+            'postingStopHour' => 'required|integer|min:1|max:12',
+            'postingStopPeriod' => 'required|in:AM,PM',
+        ]);
+
+        // Update database
+        $result = ScraperSettings::updateSettings([
+            'posting_start_hour' => $this->postingStartHour,
+            'posting_start_period' => $this->postingStartPeriod,
+            'posting_stop_hour' => $this->postingStopHour,
+            'posting_stop_period' => $this->postingStopPeriod,
+        ]);
+
+        if ($result) {
+            \Log::info('Settings: saveOperatingHoursSettings success');
+            $this->dispatch('settings-saved', message: 'Horario de funcionamiento guardado correctamente. Las publicaciones se detendrán a las ' . $this->postingStopHour . ' ' . $this->postingStopPeriod . ' y comenzarán a las ' . $this->postingStartHour . ' ' . $this->postingStartPeriod . '.');
+        } else {
+            \Log::error('Settings: saveOperatingHoursSettings failed');
+            $this->dispatch('settings-error', message: 'Error al guardar horario de funcionamiento');
         }
     }
 
