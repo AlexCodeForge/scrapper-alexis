@@ -40,62 +40,77 @@ return Application::configure(basePath: dirname(__DIR__))
          * - Each time job runs, we pick random minutes between min-max
          * - This creates natural variance while respecting settings
          */
-        $shouldRun = function (string $job, int $minMinutes, int $maxMinutes): bool {
-            $state = SchedulerState::getForJob($job);
+        /**
+         * BUGFIX: This callback now ONLY checks if the job should run.
+         * State is updated AFTER successful execution via onSuccess() callback.
+         * This prevents the "ghost run" bug where state updates but command never executes.
+         */
+        $shouldRunCheck = function (string $job): bool {
+            try {
+                $state = SchedulerState::getForJob($job);
 
-            // First run or never run before
-            if (!$state->last_run_at || !$state->next_interval_minutes) {
-                $nextInterval = rand($minMinutes, $maxMinutes);
-                $state->markAsRun($nextInterval);
+                // First run or never run before
+                if (!$state->last_run_at || !$state->next_interval_minutes) {
+                    return true;
+                }
 
-                \Log::info("Scheduler FIRST RUN: {$job}", [
-                    'next_interval' => $nextInterval . ' minutes'
-                ]);
+                // Calculate elapsed time since last run
+                $minutesSinceLastRun = $state->last_run_at->diffInMinutes();
+                $shouldRun = $minutesSinceLastRun >= $state->next_interval_minutes;
 
+                return $shouldRun;
+            } catch (\Exception $e) {
+                // If there's any error, allow the job to run
                 return true;
             }
+        };
 
-            // Calculate elapsed time since last run
-            $minutesSinceLastRun = $state->last_run_at->diffInMinutes();
-            $shouldRun = $minutesSinceLastRun >= $state->next_interval_minutes;
-
-            \Log::info("Scheduler check: {$job}", [
-                'last_run' => $state->last_run_at->format('Y-m-d H:i:s'),
-                'minutes_elapsed' => $minutesSinceLastRun,
-                'interval_needed' => $state->next_interval_minutes,
-                'should_run' => $shouldRun
-            ]);
-
-            if ($shouldRun) {
-                // Pick NEW random interval for next run
-                $nextInterval = rand($minMinutes, $maxMinutes);
-                $state->markAsRun($nextInterval);
-
-                \Log::info("Scheduler RUNNING: {$job}", [
-                    'next_interval' => $nextInterval . ' minutes'
-                ]);
-
-                return true;
-            }
-
-            return false;
+        /**
+         * Closure to update state AFTER successful job execution
+         * This ensures state only updates when the job actually completes successfully
+         */
+        $updateStateOnSuccess = function (string $job, int $minMinutes, int $maxMinutes) {
+            return function () use ($job, $minMinutes, $maxMinutes) {
+                try {
+                    $state = SchedulerState::getForJob($job);
+                    $nextInterval = rand($minMinutes, $maxMinutes);
+                    $state->markAsRun($nextInterval);
+                } catch (\Exception $e) {
+                    // Silently fail - better to continue than to break the scheduler
+                }
+            };
         };
 
         // Facebook Scraper - Dynamic interval from database (UI controlled)
-        $schedule->command('scraper:facebook')
+        $schedule->command('scraper:facebook --skip-delay')
             ->everyMinute()
-            ->when(function () use ($shouldRun) {
-                $settings = ScraperSettings::getSettings();
+            ->when(function () {
+                try {
+                    $settings = ScraperSettings::getSettings();
+                    if (!$settings->facebook_enabled) {
+                        return false;
+                    }
 
-                if (!$settings->facebook_enabled) {
-                    return false;
+                    $state = SchedulerState::getForJob('facebook');
+                    if (!$state->last_run_at || !$state->next_interval_minutes) {
+                        return true; // First run
+                    }
+
+                    $minutesSinceLastRun = $state->last_run_at->diffInMinutes();
+                    return $minutesSinceLastRun >= $state->next_interval_minutes;
+                } catch (\Exception $e) {
+                    return true; // On error, allow run
                 }
-
-                return $shouldRun(
-                    'facebook',
-                    $settings->facebook_interval_min ?? 40,
-                    $settings->facebook_interval_max ?? 80
-                );
+            })
+            ->onSuccess(function () {
+                try {
+                    $settings = ScraperSettings::getSettings();
+                    $state = SchedulerState::getForJob('facebook');
+                    $nextInterval = rand($settings->facebook_interval_min ?? 40, $settings->facebook_interval_max ?? 80);
+                    $state->markAsRun($nextInterval);
+                } catch (\Exception $e) {
+                    // Silently fail
+                }
             })
             ->withoutOverlapping()
             ->runInBackground()
@@ -109,40 +124,70 @@ return Application::configure(basePath: dirname(__DIR__))
         // =============================================================================
 
         // Facebook Page Poster - Dynamic interval from database (UI controlled)
-        $schedule->command('scraper:page-poster')
+        $schedule->command('scraper:page-poster --skip-delay')
             ->everyMinute()
-            ->when(function () use ($shouldRun) {
-                $settings = PostingSetting::getSettings();
+            ->when(function () {
+                try {
+                    $settings = PostingSetting::getSettings();
+                    if (!$settings->enabled) {
+                        return false;
+                    }
 
-                if (!$settings->enabled) {
-                    return false;
+                    $state = SchedulerState::getForJob('page_poster');
+                    if (!$state->last_run_at || !$state->next_interval_minutes) {
+                        return true; // First run
+                    }
+
+                    $minutesSinceLastRun = $state->last_run_at->diffInMinutes();
+                    return $minutesSinceLastRun >= $state->next_interval_minutes;
+                } catch (\Exception $e) {
+                    return true; // On error, allow run
                 }
-
-                return $shouldRun(
-                    'page_poster',
-                    $settings->interval_min ?? 60,
-                    $settings->interval_max ?? 120
-                );
+            })
+            ->onSuccess(function () {
+                try {
+                    $settings = PostingSetting::getSettings();
+                    $state = SchedulerState::getForJob('page_poster');
+                    $nextInterval = rand($settings->interval_min ?? 60, $settings->interval_max ?? 120);
+                    $state->markAsRun($nextInterval);
+                } catch (\Exception $e) {
+                    // Silently fail
+                }
             })
             ->withoutOverlapping()
             ->runInBackground()
             ->onOneServer();
 
         // Image Generator - Dynamic interval from database (UI controlled)
-        $schedule->command('scraper:generate-images')
+        $schedule->command('scraper:generate-images --skip-delay')
             ->everyMinute()
-            ->when(function () use ($shouldRun) {
-                $settings = ScraperSettings::getSettings();
+            ->when(function () {
+                try {
+                    $settings = ScraperSettings::getSettings();
+                    if (!$settings->image_generator_enabled) {
+                        return false;
+                    }
 
-                if (!$settings->image_generator_enabled) {
-                    return false;
+                    $state = SchedulerState::getForJob('image_generator');
+                    if (!$state->last_run_at || !$state->next_interval_minutes) {
+                        return true; // First run
+                    }
+
+                    $minutesSinceLastRun = $state->last_run_at->diffInMinutes();
+                    return $minutesSinceLastRun >= $state->next_interval_minutes;
+                } catch (\Exception $e) {
+                    return true; // On error, allow run
                 }
-
-                return $shouldRun(
-                    'image_generator',
-                    $settings->image_generator_interval_min ?? 30,
-                    $settings->image_generator_interval_max ?? 60
-                );
+            })
+            ->onSuccess(function () {
+                try {
+                    $settings = ScraperSettings::getSettings();
+                    $state = SchedulerState::getForJob('image_generator');
+                    $nextInterval = rand($settings->image_generator_interval_min ?? 30, $settings->image_generator_interval_max ?? 60);
+                    $state->markAsRun($nextInterval);
+                } catch (\Exception $e) {
+                    // Silently fail
+                }
             })
             ->withoutOverlapping()
             ->runInBackground()

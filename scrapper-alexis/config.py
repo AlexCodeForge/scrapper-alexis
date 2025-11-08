@@ -178,7 +178,7 @@ SLOW_MO = int(os.getenv('SLOW_MO', '50'))
 
 # Timeouts (in milliseconds)
 DEFAULT_TIMEOUT = int(os.getenv('DEFAULT_TIMEOUT', '30000'))
-NAVIGATION_TIMEOUT = int(os.getenv('NAVIGATION_TIMEOUT', '30000'))
+NAVIGATION_TIMEOUT = int(os.getenv('NAVIGATION_TIMEOUT', '60000'))  # Bugfix: Increased from 30s to 60s to prevent navigation timeouts
 LOGIN_TIMEOUT = int(os.getenv('LOGIN_TIMEOUT', '60000'))
 
 # Rate Limiting

@@ -572,83 +572,133 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
         logger.info("Checking for intermediate dialogs...")
         page.wait_for_timeout(3000)
         
-        # Check if Facebook is showing an event creation dialog or confirmation
-        intermediate_dialog_handled = False
+        # Bugfix: NEW - Check for "Habla con las personas directamente" modal and click "Ahora no"
+        # CRITICAL: This modal is a PROMO overlay - clicking "Ahora no" dismisses it and post CONTINUES TO PUBLISH
+        # NO second Publicar click is needed after this modal!
+        ahora_no_modal_handled = False
         try:
-            # Look for "Realizar publicación original" or similar buttons
-            original_post_buttons = [
-                'button:has-text("Realizar publicación original")',
-                'button:has-text("Make original post")',
-                'div[role="button"]:has-text("Realizar publicación original")',
-                'div[role="button"]:has-text("Make original post")',
-                # Also try getByRole
+            logger.info("Checking for 'Habla con las personas directamente' modal...")
+            dismiss_buttons = [
+                'button:has-text("Ahora no")',
+                'button:has-text("Not now")',
+                'div[role="button"]:has-text("Ahora no")',
+                'div[role="button"]:has-text("Not now")',
             ]
             
-            for selector in original_post_buttons:
+            for selector in dismiss_buttons:
                 try:
-                    original_btn = page.locator(selector).first
-                    if original_btn.is_visible(timeout=2000):
-                        logger.info(f"Found intermediate dialog button: {selector}")
-                        take_debug_screenshot(page, "09_intermediate_dialog_found", "page_posting", "Intermediate dialog found")
-                        original_btn.click(timeout=3000)
-                        logger.info("Clicked 'Realizar publicación original' button")
-                        page.wait_for_timeout(2000)
-                        intermediate_dialog_handled = True
+                    dismiss_btn = page.locator(selector).first
+                    if dismiss_btn.is_visible(timeout=2000):
+                        logger.info(f"Bugfix: Found 'Ahora no' button - dismissing promo modal: {selector}")
+                        take_debug_screenshot(page, "09_habla_personas_modal_found", "page_posting", "Habla con personas modal found")
+                        dismiss_btn.click(timeout=3000)
+                        logger.info("Bugfix: Clicked 'Ahora no' - promo dismissed, post continues to publish automatically")
+                        page.wait_for_timeout(3000)  # Wait for post to finish publishing
+                        ahora_no_modal_handled = True
                         break
                 except:
                     continue
             
-            # Try with getByRole as well
-            if not intermediate_dialog_handled:
+            # Try with getByRole as well for "Ahora no"
+            if not ahora_no_modal_handled:
                 try:
-                    original_btn = page.get_by_role('button', name='Realizar publicación original')
-                    if original_btn.is_visible(timeout=2000):
-                        logger.info("Found 'Realizar publicación original' with getByRole")
-                        take_debug_screenshot(page, "09_intermediate_dialog_found", "page_posting", "Intermediate dialog found")
-                        original_btn.click(timeout=3000)
-                        logger.info("Clicked 'Realizar publicación original' button")
-                        page.wait_for_timeout(2000)
-                        intermediate_dialog_handled = True
+                    dismiss_btn = page.get_by_role('button', name='Ahora no')
+                    if dismiss_btn.is_visible(timeout=2000):
+                        logger.info("Bugfix: Found 'Ahora no' button with getByRole - dismissing promo modal")
+                        take_debug_screenshot(page, "09_habla_personas_modal_found", "page_posting", "Habla con personas modal found")
+                        dismiss_btn.click(timeout=3000)
+                        logger.info("Bugfix: Clicked 'Ahora no' - promo dismissed, post continues to publish automatically")
+                        page.wait_for_timeout(3000)  # Wait for post to finish publishing
+                        ahora_no_modal_handled = True
                 except:
                     pass
         except Exception as e:
-            logger.debug(f"No intermediate dialog found: {e}")
+            logger.debug(f"Bugfix: No 'Ahora no' modal found: {e}")
         
-        if intermediate_dialog_handled:
-            logger.info("Intermediate dialog handled - now clicking Publicar again...")
-            take_debug_screenshot(page, "10_after_dialog_dismissed", "page_posting", "After dismissing intermediate dialog")
-            
-            # Click "Publicar" AGAIN after handling the dialog
-            second_post_clicked = False
+        # Bugfix: If "Ahora no" was handled, post is ALREADY PUBLISHED - skip to verification
+        if ahora_no_modal_handled:
+            logger.info("Bugfix: 'Ahora no' modal was dismissed - post should be published, proceeding to verification")
+            take_debug_screenshot(page, "10_after_ahora_no_dismissed", "page_posting", "After dismissing Ahora no - post published")
+        else:
+            # Check if Facebook is showing an event creation dialog or confirmation
+            # ONLY these dialogs require a second Publicar click
+            original_post_dialog_handled = False
             try:
-                post_button = page.get_by_role('button', name='Publicar', exact=True)
-                if post_button.is_visible(timeout=5000):
-                    logger.info("Found Publicar button again (Spanish)")
-                    post_button.click(timeout=3000)
-                    page.wait_for_timeout(5000)
-                    second_post_clicked = True
+                # Look for "Realizar publicación original" or similar buttons
+                original_post_buttons = [
+                    'button:has-text("Realizar publicación original")',
+                    'button:has-text("Make original post")',
+                    'div[role="button"]:has-text("Realizar publicación original")',
+                    'div[role="button"]:has-text("Make original post")',
+                    # Also try getByRole
+                ]
+                
+                for selector in original_post_buttons:
+                    try:
+                        original_btn = page.locator(selector).first
+                        if original_btn.is_visible(timeout=2000):
+                            logger.info(f"Found intermediate dialog button: {selector}")
+                            take_debug_screenshot(page, "09_intermediate_dialog_found", "page_posting", "Intermediate dialog found")
+                            original_btn.click(timeout=3000)
+                            logger.info("Clicked 'Realizar publicación original' button")
+                            page.wait_for_timeout(2000)
+                            original_post_dialog_handled = True
+                            break
+                    except:
+                        continue
+                
+                # Try with getByRole as well
+                if not original_post_dialog_handled:
+                    try:
+                        original_btn = page.get_by_role('button', name='Realizar publicación original')
+                        if original_btn.is_visible(timeout=2000):
+                            logger.info("Found 'Realizar publicación original' with getByRole")
+                            take_debug_screenshot(page, "09_intermediate_dialog_found", "page_posting", "Intermediate dialog found")
+                            original_btn.click(timeout=3000)
+                            logger.info("Clicked 'Realizar publicación original' button")
+                            page.wait_for_timeout(2000)
+                            original_post_dialog_handled = True
+                    except:
+                        pass
             except Exception as e:
-                logger.debug(f"Spanish Publicar button not found second time: {e}")
+                logger.debug(f"No intermediate dialog found: {e}")
             
-            if not second_post_clicked:
+            # ONLY if "Realizar publicación original" was handled, we need second Publicar click
+            if original_post_dialog_handled:
+                logger.info("Intermediate dialog handled - now clicking Publicar again...")
+                take_debug_screenshot(page, "10_after_dialog_dismissed", "page_posting", "After dismissing intermediate dialog")
+                
+                # Click "Publicar" AGAIN after handling the dialog
+                second_post_clicked = False
                 try:
-                    post_button = page.get_by_role('button', name='Post', exact=True)
+                    post_button = page.get_by_role('button', name='Publicar', exact=True)
                     if post_button.is_visible(timeout=5000):
-                        logger.info("Found Post button again (English)")
+                        logger.info("Found Publicar button again (Spanish)")
                         post_button.click(timeout=3000)
                         page.wait_for_timeout(5000)
                         second_post_clicked = True
                 except Exception as e:
-                    logger.debug(f"English Post button not found second time: {e}")
-            
-            if not second_post_clicked:
-                logger.error("Could not find Publicar button after handling intermediate dialog")
-                take_debug_screenshot(page, "ERROR_no_second_publicar", "page_posting", "ERROR: No Publicar after dialog")
-                return False
-            
-            take_debug_screenshot(page, "11_after_second_publicar_click", "page_posting", "After clicking Publicar second time")
-        else:
-            logger.info("No intermediate dialog detected - proceeding with verification")
+                    logger.debug(f"Spanish Publicar button not found second time: {e}")
+                
+                if not second_post_clicked:
+                    try:
+                        post_button = page.get_by_role('button', name='Post', exact=True)
+                        if post_button.is_visible(timeout=5000):
+                            logger.info("Found Post button again (English)")
+                            post_button.click(timeout=3000)
+                            page.wait_for_timeout(5000)
+                            second_post_clicked = True
+                    except Exception as e:
+                        logger.debug(f"English Post button not found second time: {e}")
+                
+                if not second_post_clicked:
+                    logger.error("Could not find Publicar button after handling intermediate dialog")
+                    take_debug_screenshot(page, "ERROR_no_second_publicar", "page_posting", "ERROR: No Publicar after dialog")
+                    return False
+                
+                take_debug_screenshot(page, "11_after_second_publicar_click", "page_posting", "After clicking Publicar second time")
+            else:
+                logger.info("No intermediate dialog detected - proceeding with verification")
         
         # Bugfix: VERIFY the post actually succeeded
         logger.info("Verifying post was published...")

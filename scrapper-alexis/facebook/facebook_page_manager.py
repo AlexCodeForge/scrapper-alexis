@@ -7,6 +7,7 @@ This module handles detecting and switching to Facebook page mode for posting.
 import logging
 import time
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,7 @@ def switch_to_page_mode(page: Page, page_name: str, page_url: str = None, max_re
         # Bugfix: Always navigate to Facebook home FIRST before switching
         # This ensures we're not already on the target page, which can cause switch issues
         logger.info("Navigating to Facebook home before switching profiles...")
-        page.goto('https://www.facebook.com', wait_until='domcontentloaded')
+        page.goto('https://www.facebook.com', wait_until='domcontentloaded', timeout=config.NAVIGATION_TIMEOUT)
         page.wait_for_timeout(2000)
         
         for attempt in range(1, max_retries + 1):
@@ -274,7 +275,7 @@ def switch_to_page_mode(page: Page, page_name: str, page_url: str = None, max_re
                             logger.info("✅ Post button found after reload!")
                         else:
                             logger.info("Post button not found after reload, trying page URL as fallback...")
-                            page.goto(page_url, wait_until='domcontentloaded')
+                            page.goto(page_url, wait_until='domcontentloaded', timeout=config.NAVIGATION_TIMEOUT)
                             page.wait_for_timeout(3000)
                             logger.info(f"Navigated to page URL: {page.url}")
                     except Exception as check_e:
@@ -332,7 +333,7 @@ def ensure_page_mode(page: Page, page_name: str, page_url: str = None) -> bool:
         if page_url:
             logger.info(f"Method 1: Attempting direct navigation to page URL: {page_url}")
             try:
-                page.goto(page_url, wait_until='domcontentloaded')
+                page.goto(page_url, wait_until='domcontentloaded', timeout=config.NAVIGATION_TIMEOUT)
                 page.wait_for_timeout(3000)
                 
                 # Verify we can now post

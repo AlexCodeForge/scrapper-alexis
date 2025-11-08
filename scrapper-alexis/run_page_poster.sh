@@ -5,6 +5,26 @@
 
 cd /var/www/alexis-scrapper-docker/scrapper-alexis
 
+# Process lock to prevent duplicate execution
+LOCKFILE="/var/lock/page_poster.lock"
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Page poster already running - skipping" >> logs/cron_execution.log
+    exit 0
+fi
+
+# BUGFIX: Cleanup function to kill Firefox even on script failure
+cleanup_firefox() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cleaning up Firefox processes..." >> logs/cron_execution.log
+    # Kill any Firefox processes started by this script
+    pkill -P $$ firefox 2>/dev/null || true
+    # Also kill any orphaned Firefox processes from this user
+    ps aux | grep -E "firefox.*playwright" | grep -v grep | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
+}
+
+# Set trap to cleanup on exit (success or failure)
+trap cleanup_firefox EXIT INT TERM
+
 # Activate virtual environment
 source venv/bin/activate
 

@@ -5,6 +5,24 @@
 
 cd /var/www/alexis-scrapper-docker/scrapper-alexis
 
+# Process lock to prevent duplicate execution
+LOCKFILE="/var/lock/image_generator.lock"
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Image generator already running - skipping" >> logs/cron_execution.log
+    exit 0
+fi
+
+# Image generator doesn't use Firefox, but add cleanup just in case
+cleanup_processes() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cleaning up any stray processes..." >> logs/cron_execution.log
+    # Kill any child processes
+    pkill -P $$ 2>/dev/null || true
+}
+
+# Set trap to cleanup on exit (success or failure)
+trap cleanup_processes EXIT INT TERM
+
 # Activate virtual environment if it exists
 if [ -d "venv" ]; then
     source venv/bin/activate

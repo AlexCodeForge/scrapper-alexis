@@ -325,17 +325,23 @@ function getJobStatus(string $job): bool
  */
 function getJobLogs(string $job, int $lines = 100): string
 {
-    // Get log file path from configuration
-    $logFiles = config('scraper.log_files', []);
+    // Bugfix: Dynamic log file names to avoid config cache issues
+    $logFilePatterns = [
+        'facebook' => 'relay_agent_' . now()->format('Ymd') . '.log',
+        'twitter' => 'twitter_cron.log',
+        'page-poster' => 'page_poster_' . now()->format('Ymd') . '.log',
+        'image-generator' => 'image_generator_' . now()->format('Ymd') . '.log',
+        'execution' => 'cron_execution.log',
+    ];
 
-    if (!isset($logFiles[$job])) {
+    if (!isset($logFilePatterns[$job])) {
         return "Invalid job type: {$job}";
     }
 
     // Build full path: python_path/logs_dir/log_file
     $pythonPath = config('scraper.python_path');
     $logsDir = config('scraper.logs_dir');
-    $logFile = $pythonPath . '/' . $logsDir . '/' . $logFiles[$job];
+    $logFile = $pythonPath . '/' . $logsDir . '/' . $logFilePatterns[$job];
 
     if (!file_exists($logFile)) {
         return "Log file not found: {$logFile}\n\nThe job may not have run yet.";
