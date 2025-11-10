@@ -307,7 +307,7 @@
                                 </td>
                                 <td class="max-md:hidden px-6 py-4 whitespace-nowrap align-top">
                                     <div class="text-sm text-muted-foreground">
-                                        {{ $message->scraped_at ? $message->scraped_at->diffForHumans() : 'N/A' }}
+                                        {{ $message->scraped_at ? $message->scraped_at->locale('es')->diffForHumans() : 'N/A' }}
                                     </div>
                                 </td>
                                 <td class="max-md:hidden px-6 py-4 whitespace-nowrap align-top">
@@ -549,6 +549,9 @@
                 <x-button 
                     type="button"
                     wire:click="saveManualMessageAndGenerateImage('auto')"
+                    wire:loading.attr="disabled"
+                    wire:target="saveManualMessageAndGenerateImage"
+                    @click="console.log('Auto posting clicked'); showCreateModal = false; showImageGenerationModal = false"
                     class="w-full flex items-center justify-center gap-2">
                     <x-lucide-zap class="w-4 h-4" />
                     Auto Posting
@@ -558,6 +561,9 @@
                     type="button"
                     variant="outline"
                     wire:click="saveManualMessageAndGenerateImage('manual')"
+                    wire:loading.attr="disabled"
+                    wire:target="saveManualMessageAndGenerateImage"
+                    @click="console.log('Manual posting clicked'); showCreateModal = false; showImageGenerationModal = false"
                     class="w-full flex items-center justify-center gap-2">
                     <x-lucide-hand class="w-4 h-4" />
                     Manual Posting
@@ -566,7 +572,7 @@
                 <x-button 
                     type="button"
                     variant="ghost"
-                    @click="showImageGenerationModal = false"
+                    @click="showImageGenerationModal = false; console.log('Image modal cancelled')"
                     class="w-full">
                     Cancelar
                 </x-button>

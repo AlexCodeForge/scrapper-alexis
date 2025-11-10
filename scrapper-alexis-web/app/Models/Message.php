@@ -31,6 +31,7 @@ class Message extends Model
         'approval_type',
         'posted_to_page',
         'posted_to_page_at',
+        'scraped_at', // Added to allow mass assignment
     ];
 
     protected $casts = [

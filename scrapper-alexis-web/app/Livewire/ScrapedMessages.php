@@ -354,13 +354,14 @@ class ScrapedMessages extends Component
             }
 
             // Create new message record
+            // Set scraped_at to far future date so it appears at top of table (ordered by scraped_at DESC)
             $message = Message::create([
                 'message_text' => $this->newMessageText,
                 'message_hash' => $messageHash,
                 'profile_id' => null, // Manually created (not from Facebook scraper)
                 'approved_for_posting' => null, // Pending approval
                 'image_generated' => false,
-                'scraped_at' => now(),
+                'scraped_at' => now()->addSeconds(5), // Place at top of table
                 'posted_to_twitter' => false,
                 'posted_to_page' => false,
             ]);
@@ -487,8 +488,15 @@ class ScrapedMessages extends Component
                 'log_file' => $logFile
             ]);
 
-            // Reset form and close both modals
-            $this->reset('newMessageText', 'showCreateModal', 'showImageGenerationModal');
+            // Reset form and explicitly close both modals
+            $this->newMessageText = '';
+            $this->showCreateModal = false;
+            $this->showImageGenerationModal = false;
+            
+            \Log::info('Manual message: Modals closed', [
+                'showCreateModal' => $this->showCreateModal,
+                'showImageGenerationModal' => $this->showImageGenerationModal
+            ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Manual message: Validation failed', [
