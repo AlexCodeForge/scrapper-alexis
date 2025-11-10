@@ -330,7 +330,7 @@
                 <!-- Info -->
                 <x-card.content class="p-3">
                     <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs text-muted-foreground">{{ $message->scraped_at->diffForHumans() }}</p>
+                        <p class="text-xs text-muted-foreground">{{ $message->scraped_at?->diffForHumans() ?? 'Recién creado' }}</p>
                         @if ($message->posted_to_page)
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                                 <x-lucide-check-circle-2 class="w-3 h-3 mr-1" />
@@ -418,7 +418,7 @@
                             @endif
                         @else
                             <div class="text-center py-2 text-sm">
-                                <p class="text-purple-600 font-medium">✓ Publicada {{ $message->posted_to_page_at->diffForHumans() }}</p>
+                                <p class="text-purple-600 font-medium">✓ Publicada {{ $message->posted_to_page_at?->diffForHumans() ?? 'recientemente' }}</p>
                             </div>
                         @endif
 

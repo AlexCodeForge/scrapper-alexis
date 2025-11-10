@@ -2,7 +2,7 @@
 
 namespace App\Logging;
 
-use Monolog\Logger;
+use Illuminate\Log\Logger;
 use Monolog\Formatter\LineFormatter;
 
 class CustomizeFormatter
@@ -10,7 +10,7 @@ class CustomizeFormatter
     /**
      * Customize the given logger instance.
      *
-     * @param  \Monolog\Logger  $logger
+     * @param  \Illuminate\Log\Logger  $logger
      * @return void
      */
     public function __invoke(Logger $logger): void

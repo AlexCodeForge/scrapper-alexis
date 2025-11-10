@@ -124,3 +124,4 @@ Thumbs.db
 !.env.example
 !env.docker.template
 
+scrapper-alexis-web/storage/framework/views/*

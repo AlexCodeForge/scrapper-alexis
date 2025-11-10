@@ -1,4 +1,41 @@
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+     x-data="{
+        showCreateModal: @entangle('showCreateModal'),
+        showImageGenerationModal: @entangle('showImageGenerationModal'),
+        clipboardPasted: false,
+        async pasteFromClipboard() {
+            // Check if Clipboard API is available (requires HTTPS or localhost)
+            if (!navigator.clipboard || !navigator.clipboard.readText) {
+                console.warn('Clipboard API not available (requires HTTPS)');
+                // Focus the textarea and show helpful message
+                const textarea = document.getElementById('newMessageText');
+                if (textarea) {
+                    textarea.focus();
+                }
+                alert('Para pegar desde el portapapeles:\n\n' + 
+                      '1. Haz clic en el área de texto\n' +
+                      '2. Usa Ctrl+V (Windows/Linux) o Cmd+V (Mac)\n\n' +
+                      'Nota: La función automática requiere HTTPS');
+                return;
+            }
+            
+            try {
+                const text = await navigator.clipboard.readText();
+                @this.set('newMessageText', text);
+                this.clipboardPasted = true;
+                console.log('Clipboard paste:', text.substring(0, 50));
+                setTimeout(() => this.clipboardPasted = false, 2000);
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                const textarea = document.getElementById('newMessageText');
+                if (textarea) {
+                    textarea.focus();
+                }
+                alert('No se pudo acceder al portapapeles.\n\n' +
+                      'Por favor, pega el texto manualmente con Ctrl+V o Cmd+V');
+            }
+        }
+    }">
     <!-- Cache buster: v2.0 -->
     <!-- Flash Messages -->
     @if (session()->has('success'))
@@ -103,6 +140,14 @@
                         <option value="50">50 por página</option>
                         <option value="100">100 por página</option>
                     </x-select>
+
+                    <x-button 
+                        type="button"
+                        @click="showCreateModal = true; console.log('Create modal opened')"
+                        class="min-w-[200px]">
+                        <x-lucide-plus class="w-4 h-4 mr-2" />
+                        Crear Mensaje
+                    </x-button>
                 </div>
 
                 <!-- Bulk Actions -->
@@ -393,5 +438,141 @@
             @endif
         </x-card.content>
     </x-card>
+
+    <!-- Create Message Modal -->
+    <template x-teleport="body">
+        <div x-show="showCreateModal && !showImageGenerationModal"
+             x-transition.opacity
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="showCreateModal = false; showImageGenerationModal = false">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-foreground">Crear Nuevo Mensaje</h2>
+                    <button @click="showCreateModal = false" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+            <div class="space-y-4">
+                <!-- Textarea for message -->
+                <div>
+                    <label for="newMessageText" class="block text-sm font-medium text-foreground mb-2">
+                        Texto del Mensaje
+                    </label>
+                    <textarea
+                        id="newMessageText"
+                        wire:model="newMessageText"
+                        rows="6"
+                        class="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-input"
+                        placeholder="Escribe tu mensaje aquí... (mínimo 5 palabras, máximo 500 caracteres)"></textarea>
+                    @error('newMessageText')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Paste from clipboard button -->
+                <div class="flex items-center gap-2">
+                    <x-button 
+                        type="button"
+                        variant="outline"
+                        @click="pasteFromClipboard()"
+                        class="flex items-center gap-2">
+                        <x-lucide-clipboard class="w-4 h-4" />
+                        Pegar desde Portapapeles
+                    </x-button>
+                    <span x-show="clipboardPasted" 
+                          x-transition
+                          class="text-sm text-green-600 flex items-center gap-1">
+                        <x-lucide-check class="w-4 h-4" />
+                        ¡Pegado!
+                    </span>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex flex-wrap gap-3 pt-4 border-t border-border">
+                    <x-button 
+                        type="button"
+                        @click="showImageGenerationModal = true; console.log('Image generation modal opened')"
+                        x-bind:disabled="!$wire.newMessageText || $wire.newMessageText.length < 10"
+                        class="flex items-center gap-2">
+                        <x-lucide-image class="w-4 h-4" />
+                        Generar Imagen
+                    </x-button>
+
+                    <x-button 
+                        type="button"
+                        variant="outline"
+                        wire:click="saveManualMessageForLater"
+                        x-bind:disabled="!$wire.newMessageText || $wire.newMessageText.length < 10"
+                        class="flex items-center gap-2">
+                        <x-lucide-save class="w-4 h-4" />
+                        Agregar para Aprobar
+                    </x-button>
+
+                    <x-button 
+                        type="button"
+                        variant="ghost"
+                        @click="showCreateModal = false">
+                        Cancelar
+                    </x-button>
+                </div>
+            </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Image Generation Type Modal (Sub-modal) -->
+    <template x-teleport="body">
+        <div x-show="showImageGenerationModal"
+             x-transition.opacity
+             class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+             style="display: none;"
+             @click="showImageGenerationModal = false">
+            <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4"
+                 @click.stop
+                 x-transition.scale.80>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-foreground">Tipo de Publicación</h2>
+                    <button @click="showImageGenerationModal = false" class="text-muted-foreground hover:text-foreground">
+                        <x-lucide-x class="h-6 w-6" />
+                    </button>
+                </div>
+
+            <p class="text-sm text-muted-foreground mb-6">
+                Selecciona cómo deseas publicar este mensaje después de generar la imagen:
+            </p>
+
+            <div class="space-y-3">
+                <x-button 
+                    type="button"
+                    wire:click="saveManualMessageAndGenerateImage('auto')"
+                    class="w-full flex items-center justify-center gap-2">
+                    <x-lucide-zap class="w-4 h-4" />
+                    Auto Posting
+                </x-button>
+
+                <x-button 
+                    type="button"
+                    variant="outline"
+                    wire:click="saveManualMessageAndGenerateImage('manual')"
+                    class="w-full flex items-center justify-center gap-2">
+                    <x-lucide-hand class="w-4 h-4" />
+                    Manual Posting
+                </x-button>
+
+                <x-button 
+                    type="button"
+                    variant="ghost"
+                    @click="showImageGenerationModal = false"
+                    class="w-full">
+                    Cancelar
+                </x-button>
+            </div>
+            </div>
+        </div>
+    </template>
 </div>
 

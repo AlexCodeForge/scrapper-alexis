@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Message;
 use App\Services\PostingService;
 use Livewire\Attributes\Url;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -21,6 +22,18 @@ class ScrapedMessages extends Component
 
     #[Url(keep: true)]
     public $search = '';
+    
+    // Manual message creation properties
+    #[Validate('required|min:10|max:500')]
+    public $newMessageText = '';
+    
+    protected $messages = [
+        'newMessageText.required' => 'El texto del mensaje es obligatorio.',
+        'newMessageText.min' => 'El mensaje debe tener al menos 10 caracteres (aproximadamente 5 palabras).',
+        'newMessageText.max' => 'El mensaje no puede exceder 500 caracteres.',
+    ];
+    public $showCreateModal = false;
+    public $showImageGenerationModal = false;
 
     protected $queryString = ['perPage', 'filter', 'search'];
 
@@ -299,6 +312,195 @@ class ScrapedMessages extends Component
                 ->toArray();
         } else {
             $this->selected = [];
+        }
+    }
+
+    /**
+     * Save manually created message for later approval (without image generation)
+     */
+    public function saveManualMessageForLater()
+    {
+        try {
+            // Validate message text
+            $this->validate();
+            
+            // Additional validation: Check word count (must have more than 4 words to appear in Images page)
+            $wordCount = str_word_count($this->newMessageText);
+            if ($wordCount <= 4) {
+                session()->flash('error', 'El mensaje debe contener al menos 5 palabras para ser procesado correctamente.');
+                \Log::warning('Manual message: Insufficient word count', [
+                    'word_count' => $wordCount,
+                    'text' => $this->newMessageText
+                ]);
+                return;
+            }
+
+            \Log::info('Manual message: Saving for later approval', [
+                'text_length' => strlen($this->newMessageText),
+                'word_count' => $wordCount
+            ]);
+
+            // Create message hash for deduplication
+            $messageHash = hash('sha256', $this->newMessageText);
+
+            // Check if message already exists
+            $existingMessage = Message::where('message_hash', $messageHash)->first();
+            if ($existingMessage) {
+                session()->flash('error', 'Este mensaje ya existe en el sistema.');
+                \Log::warning('Manual message: Duplicate message detected', [
+                    'hash' => $messageHash
+                ]);
+                return;
+            }
+
+            // Create new message record
+            $message = Message::create([
+                'message_text' => $this->newMessageText,
+                'message_hash' => $messageHash,
+                'profile_id' => null, // Manually created (not from Facebook scraper)
+                'approved_for_posting' => null, // Pending approval
+                'image_generated' => false,
+                'scraped_at' => now(),
+                'posted_to_twitter' => false,
+                'posted_to_page' => false,
+            ]);
+
+            session()->flash('success', 'Mensaje agregado correctamente. Aparecerá en la tabla para su aprobación.');
+            
+            \Log::info('Manual message: Created successfully', [
+                'message_id' => $message->id,
+                'text_preview' => substr($this->newMessageText, 0, 50)
+            ]);
+
+            // Reset form and close modal
+            $this->reset('newMessageText', 'showCreateModal');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Manual message: Validation failed', [
+                'errors' => $e->errors()
+            ]);
+            throw $e;
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error al guardar el mensaje: ' . $e->getMessage());
+            \Log::error('Manual message: Error saving message', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    /**
+     * Save manually created message and generate image immediately
+     * 
+     * @param string $postingType 'auto' or 'manual'
+     */
+    public function saveManualMessageAndGenerateImage($postingType)
+    {
+        try {
+            // Validate message text
+            $this->validate();
+            
+            // Additional validation: Check word count (must have more than 4 words to appear in Images page)
+            $wordCount = str_word_count($this->newMessageText);
+            if ($wordCount <= 4) {
+                session()->flash('error', 'El mensaje debe contener al menos 5 palabras para generar imagen correctamente.');
+                \Log::warning('Manual message: Insufficient word count for image generation', [
+                    'word_count' => $wordCount,
+                    'text' => $this->newMessageText
+                ]);
+                return;
+            }
+
+            \Log::info('Manual message: Generating image with type', [
+                'posting_type' => $postingType,
+                'text_length' => strlen($this->newMessageText),
+                'word_count' => $wordCount
+            ]);
+
+            // Create message hash for deduplication
+            $messageHash = hash('sha256', $this->newMessageText);
+
+            // Check if message already exists
+            $existingMessage = Message::where('message_hash', $messageHash)->first();
+            if ($existingMessage) {
+                session()->flash('error', 'Este mensaje ya existe en el sistema.');
+                \Log::warning('Manual message: Duplicate message detected', [
+                    'hash' => $messageHash
+                ]);
+                return;
+            }
+
+            // Create new message record with approval
+            $message = Message::create([
+                'message_text' => $this->newMessageText,
+                'message_hash' => $messageHash,
+                'profile_id' => null, // Manually created (not from Facebook scraper)
+                'approved_for_posting' => true,
+                'approved_at' => now(),
+                'auto_post_enabled' => ($postingType === 'auto'),
+                'approval_type' => $postingType,
+                'post_priority' => 1, // High priority - will be posted next
+                'image_generated' => false,
+                'scraped_at' => now(),
+                'posted_to_twitter' => false,
+                'posted_to_page' => false,
+            ]);
+
+            \Log::info('Manual message: Created with approval, triggering image generation', [
+                'message_id' => $message->id,
+                'posting_type' => $postingType,
+                'text_preview' => substr($this->newMessageText, 0, 50)
+            ]);
+
+            // Trigger Python image generation script (reuse logic from approveAndGenerateImage)
+            $pythonPath = config('scraper.python_path');
+            $scriptPath = $pythonPath . '/scrapper-alexis';
+            $timestamp = date('YmdHis');
+            $logFile = $pythonPath . '/' . config('scraper.logs_dir') . "/manual_image_{$message->id}_{$timestamp}.log";
+
+            // Run image generator with MESSAGE_ID environment variable
+            // Set HEADLESS=true to avoid "no DISPLAY" error when running from web UI
+            $command = sprintf(
+                'cd %s && sudo -u root /bin/bash -c "export HEADLESS=true && export MESSAGE_ID=%d && source venv/bin/activate && python3 generate_message_images.py" > %s 2>&1 &',
+                escapeshellarg($scriptPath),
+                $message->id,
+                escapeshellarg($logFile)
+            );
+
+            \Log::info('Manual message: Executing image generation command', [
+                'message_id' => $message->id,
+                'command' => $command,
+                'log_file' => $logFile
+            ]);
+
+            exec($command, $output, $returnVar);
+
+            // Give script a moment to start
+            usleep(500000); // 0.5 seconds
+
+            $postingTypeText = $postingType === 'auto' ? 'auto-publicación' : 'publicación manual';
+            session()->flash('success', "Mensaje creado y aprobado para {$postingTypeText}. La imagen se está generando ahora.");
+            
+            \Log::info('Manual message: Image generation initiated', [
+                'message_id' => $message->id,
+                'posting_type' => $postingType,
+                'log_file' => $logFile
+            ]);
+
+            // Reset form and close both modals
+            $this->reset('newMessageText', 'showCreateModal', 'showImageGenerationModal');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Manual message: Validation failed', [
+                'errors' => $e->errors()
+            ]);
+            throw $e;
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error al generar imagen: ' . $e->getMessage());
+            \Log::error('Manual message: Error generating image', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 

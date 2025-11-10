@@ -22,3 +22,4 @@ if [ "$FIREFOX_COUNT" -gt 3 ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Found $FIREFOX_COUNT Firefox instances (max should be 3)"
 fi
 
+

@@ -901,7 +901,7 @@
 <?php endif; ?>
 <?php $component->withAttributes(['class' => 'p-3']); ?>
                     <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs text-muted-foreground"><?php echo e($message->scraped_at->diffForHumans()); ?></p>
+                        <p class="text-xs text-muted-foreground"><?php echo e($message->scraped_at?->diffForHumans() ?? 'Recién creado'); ?></p>
                         <!--[if BLOCK]><![endif]--><?php if($message->posted_to_page): ?>
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                                 <?php if (isset($component)) { $__componentOriginal643fe1b47aec0b76658e1a0200b34b2c = $component; } ?>
@@ -1193,7 +1193,7 @@
                             <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                         <?php else: ?>
                             <div class="text-center py-2 text-sm">
-                                <p class="text-purple-600 font-medium">✓ Publicada <?php echo e($message->posted_to_page_at->diffForHumans()); ?></p>
+                                <p class="text-purple-600 font-medium">✓ Publicada <?php echo e($message->posted_to_page_at?->diffForHumans() ?? 'recientemente'); ?></p>
                             </div>
                         <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
