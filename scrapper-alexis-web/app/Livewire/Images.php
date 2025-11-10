@@ -219,11 +219,13 @@ class Images extends Component
             return;
         }
 
-        // Prevent deletion of approved but not posted images
-        if ($message->approved_for_posting && !$message->posted_to_page) {
-            session()->flash('error', 'No se puede eliminar una imagen aprobada que aún no ha sido publicada');
-            return;
-        }
+        // Bugfix: Allow deletion of approved images - no longer require rejection first
+        \Log::info('Bugfix: Deleting image', [
+            'message_id' => $messageId,
+            'approved_for_posting' => $message->approved_for_posting,
+            'posted_to_page' => $message->posted_to_page,
+            'auto_post_enabled' => $message->auto_post_enabled
+        ]);
 
         $message->delete();
         session()->flash('success', 'Imagen eliminada correctamente');
@@ -237,16 +239,15 @@ class Images extends Component
             return;
         }
 
-        // Check if any selected images are approved but not posted
-        $protectedImages = Message::whereIn('id', $this->selected)
-            ->where('approved_for_posting', true)
-            ->where('posted_to_page', false)
-            ->count();
-
-        if ($protectedImages > 0) {
-            session()->flash('error', "No se pueden eliminar {$protectedImages} imagen(es) aprobada(s) que aún no ha(n) sido publicada(s)");
-            return;
-        }
+        // Bugfix: Allow deletion of approved images - no longer require rejection first
+        $imagesToDelete = Message::whereIn('id', $this->selected)->get();
+        
+        \Log::info('Bugfix: Bulk delete images', [
+            'count' => $imagesToDelete->count(),
+            'approved_count' => $imagesToDelete->where('approved_for_posting', true)->count(),
+            'posted_count' => $imagesToDelete->where('posted_to_page', true)->count(),
+            'ids' => $this->selected
+        ]);
 
         Message::whereIn('id', $this->selected)->delete();
         $count = count($this->selected);
