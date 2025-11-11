@@ -243,6 +243,16 @@ def main():
                     logger.info(f"URL: {profile['url']}")
                     logger.info(f"{'='*60}")
                     
+                    # Bugfix: Check if browser is still alive before attempting to scrape
+                    # If browser closed during previous profile, stop processing remaining profiles
+                    from facebook.facebook_auth import is_page_alive
+                    if not is_page_alive(page):
+                        logger.error("❌ Bugfix: Browser has been closed - cannot continue scraping")
+                        logger.error(f"   ⏭️  Stopping at profile {i}/{len(profiles)}")
+                        logger.error(f"   ℹ️  Successfully scraped {profiles_scraped - 1} profiles before browser closure")
+                        logger.error(f"   💡 Browser likely closed due to proxy timeout or resource limits")
+                        break  # Exit loop - can't scrape more profiles with closed browser
+                    
                     # BUGFIX: Count profile as processed regardless of outcome
                     # This ensures accurate statistics even when profiles fail due to duplicates
                     profiles_scraped += 1
@@ -278,7 +288,21 @@ def main():
                         # Wait between profiles to be respectful
                         if i < len(profiles):  # Don't wait after the last profile
                             logger.info("⏳ Waiting 30 seconds before next profile...")
-                            page.wait_for_timeout(30000)
+                            # Bugfix: Wait in chunks to detect browser closure early
+                            # Split 30 seconds into 6× 5-second chunks with browser checks
+                            try:
+                                for wait_chunk in range(6):
+                                    from facebook.facebook_auth import is_page_alive
+                                    if not is_page_alive(page):
+                                        logger.error(f"❌ Bugfix: Browser closed during inter-profile wait (chunk {wait_chunk + 1}/6)")
+                                        logger.error("   ⏭️  Stopping profile iteration - browser is closed")
+                                        break
+                                    page.wait_for_timeout(5000)  # 5 seconds × 6 = 30 seconds total
+                            except Exception as wait_error:
+                                error_msg = str(wait_error).lower()
+                                if 'closed' in error_msg or 'target' in error_msg:
+                                    logger.error(f"❌ Bugfix: Browser closed during inter-profile wait: {str(wait_error)[:100]}")
+                                    break  # Exit profile loop
                     
                     except NavigationError as e:
                         logger.error(f"❌ Navigation error for profile {profile['username']}: {e}")
@@ -295,10 +319,31 @@ def main():
                         if "No quality messages extracted" in str(e):
                             logger.info(f"   ℹ️  All messages from this profile are already in the database")
                             logger.info(f"   ✅ Profile counted as processed (no new content)")
+                        
+                        # Bugfix: Check if browser closed during extraction error
+                        # If so, stop processing remaining profiles
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error("❌ Bugfix: Browser closed during extraction - stopping profile iteration")
+                            logger.error(f"   ℹ️  Successfully processed {profiles_scraped} profiles before closure")
+                            break  # Exit loop
+                        
                         continue
                     
                     except Exception as e:
                         logger.error(f"❌ Error scraping profile {profile['username']}: {e}")
+                        
+                        # Bugfix: Check if error was due to browser closure
+                        # If so, stop processing remaining profiles
+                        error_msg = str(e).lower()
+                        if 'closed' in error_msg or 'target' in error_msg:
+                            logger.error("❌ Bugfix: Browser closed during scraping - stopping profile iteration")
+                            logger.error(f"   ℹ️  Successfully processed {profiles_scraped} profiles before closure")
+                            from facebook.facebook_auth import is_page_alive
+                            if not is_page_alive(page):
+                                logger.error("   ✅ Confirmed: Browser is closed")
+                                break  # Exit loop
+                        
                         continue
                 
                 # Display overall results

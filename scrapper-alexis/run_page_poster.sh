@@ -13,13 +13,22 @@ if ! flock -n 9; then
     exit 0
 fi
 
-# BUGFIX: Cleanup function to kill Firefox even on script failure
+# Bugfix: Store Python PID to track our own Firefox processes
+PYTHON_PID=""
+
+# Bugfix: Cleanup function - ONLY kill Firefox processes from THIS script's Python process
 cleanup_firefox() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cleaning up Firefox processes..." >> logs/cron_execution.log
-    # Kill any Firefox processes started by this script
+    
+    # Kill only Firefox processes that are children of our Python process
+    if [ -n "$PYTHON_PID" ]; then
+        # Get all child processes of our Python process (including Firefox)
+        pkill -P "$PYTHON_PID" 2>/dev/null || true
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Killed Firefox children of Python PID $PYTHON_PID" >> logs/cron_execution.log
+    fi
+    
+    # Kill any direct Firefox children of this shell
     pkill -P $$ firefox 2>/dev/null || true
-    # Also kill any orphaned Firefox processes from this user
-    ps aux | grep -E "firefox.*playwright" | grep -v grep | awk '{print $2}' | xargs -r kill -9 2>/dev/null || true
 }
 
 # Set trap to cleanup on exit (success or failure)
@@ -119,8 +128,12 @@ if [ -d "venv" ]; then
 fi
 
 # Run the page poster with Xvfb (virtual display)
-xvfb-run -a python3 facebook_page_poster.py
+# Bugfix: Run in background and capture PID so cleanup only kills OUR Firefox
+xvfb-run -a python3 facebook_page_poster.py &
+PYTHON_PID=$!
 
+# Wait for Python to finish
+wait $PYTHON_PID
 EXIT_CODE=$?
 
 # If successful, update last post time
