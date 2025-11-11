@@ -204,10 +204,22 @@ class ProfileManager:
         Returns:
             Dictionary with username and password, or None if not found
         """
-        if not self.credentials:
-            self.parse_profiles_from_env()
+        # Bugfix: parse_profiles_from_env() returns a dict but doesn't save to self.credentials
+        # We need to call it and extract facebook_credentials from the returned data
+        data = self.parse_profiles_from_env()
         
-        return self.credentials.get('facebook')
+        if not data:
+            logger.error("Bugfix: parse_profiles_from_env() returned empty data")
+            return None
+        
+        facebook_creds = data.get('facebook_credentials')
+        
+        if not facebook_creds:
+            logger.error("Bugfix: No facebook_credentials in parsed data")
+            return None
+        
+        logger.info(f"Bugfix: Returning Facebook credentials for user: {facebook_creds.get('username', 'unknown')}")
+        return facebook_creds
     
     def get_twitter_credentials(self) -> Optional[Dict[str, str]]:
         """
@@ -216,10 +228,21 @@ class ProfileManager:
         Returns:
             Dictionary with username and password, or None if not found
         """
-        if not self.credentials:
-            self.parse_profiles_from_env()
+        # Bugfix: Same fix as get_facebook_credentials()
+        data = self.parse_profiles_from_env()
         
-        return self.credentials.get('twitter')
+        if not data:
+            logger.error("Bugfix: parse_profiles_from_env() returned empty data")
+            return None
+        
+        twitter_creds = data.get('twitter_credentials')
+        
+        if not twitter_creds:
+            logger.error("Bugfix: No twitter_credentials in parsed data")
+            return None
+        
+        logger.info(f"Bugfix: Returning Twitter credentials for user: {twitter_creds.get('username', 'unknown')}")
+        return twitter_creds
     
     def mark_profile_as_scraped(self, profile_id: int) -> bool:
         """

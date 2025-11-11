@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import logging
 from datetime import datetime
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError, Page
 
 import config
 from core.exceptions import LoginError, NavigationError
@@ -35,6 +35,32 @@ log_file = logs_dir / f'page_poster_{datetime.now(tz=ZoneInfo("America/Mexico_Ci
 setup_basicConfig_with_mexico_timezone(log_file, getattr(logging, config.LOG_LEVEL))
 
 logger = logging.getLogger(__name__)
+
+
+def is_page_alive(page: Page) -> bool:
+    """
+    Check if page/context/browser is still alive and operational.
+    
+    Bugfix: Prevents TargetClosedError when trying to use a closed page.
+    
+    Args:
+        page: Playwright Page instance
+        
+    Returns:
+        True if page is alive, False otherwise
+    """
+    try:
+        # Try to access page properties - will fail if closed
+        _ = page.url
+        return True
+    except Exception as e:
+        error_msg = str(e).lower()
+        if 'closed' in error_msg or 'target' in error_msg:
+            logger.error(f"❌ Bugfix: Page is closed and cannot be used: {str(e)[:100]}")
+            return False
+        # Other errors might not mean the page is closed
+        logger.warning(f"⚠️ Bugfix: Page state check returned error: {str(e)[:100]}")
+        return False
 
 
 def get_posting_settings():
@@ -1091,13 +1117,24 @@ def main():
                         
                         if post_attempt < max_post_attempts:
                             wait_time = 5
-                            logger.info(f"⏳ Waiting {wait_time} seconds before retry...")
-                            page.wait_for_timeout(wait_time * 1000)
-                            
-                            # Refresh the page before retrying
-                            logger.info("🔄 Refreshing page before retry...")
-                            page.reload()
-                            page.wait_for_timeout(3000)
+                            # Bugfix: Check if page is still alive before waiting
+                            if is_page_alive(page):
+                                logger.info(f"⏳ Waiting {wait_time} seconds before retry...")
+                                try:
+                                    page.wait_for_timeout(wait_time * 1000)
+                                    
+                                    # Refresh the page before retrying
+                                    logger.info("🔄 Refreshing page before retry...")
+                                    page.reload()
+                                    page.wait_for_timeout(3000)
+                                except PlaywrightError as timeout_error:
+                                    logger.error(f"❌ Bugfix: Cannot wait or reload - page closed during timeout: {str(timeout_error)[:100]}")
+                                    logger.error(f"❌ Bugfix: Posting failed due to browser/page closure - cannot retry")
+                                    return 1
+                            else:
+                                logger.error(f"❌ Bugfix: Page is closed - cannot wait or retry posting")
+                                logger.error(f"❌ Bugfix: Posting failed due to browser/page closure on attempt {post_attempt}")
+                                return 1
                         else:
                             logger.error("❌ All posting attempts exhausted")
                 

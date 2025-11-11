@@ -10,7 +10,7 @@ import random
 import json
 import re
 from pathlib import Path
-from playwright.sync_api import Page, BrowserContext, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Page, BrowserContext, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
 import config
 from core.exceptions import LoginError
@@ -18,6 +18,32 @@ from utils.selector_strategies import EMAIL_SELECTORS, PASSWORD_SELECTORS, try_s
 from core.debug_helper import take_debug_screenshot, log_page_state, log_debug_info
 
 logger = logging.getLogger(__name__)
+
+
+def is_page_alive(page: Page) -> bool:
+    """
+    Check if page/context/browser is still alive and operational.
+    
+    Bugfix: Prevents TargetClosedError when trying to use a closed page.
+    
+    Args:
+        page: Playwright Page instance
+        
+    Returns:
+        True if page is alive, False otherwise
+    """
+    try:
+        # Try to access page properties - will fail if closed
+        _ = page.url
+        return True
+    except Exception as e:
+        error_msg = str(e).lower()
+        if 'closed' in error_msg or 'target' in error_msg:
+            logger.error(f"❌ Bugfix: Page is closed and cannot be used: {str(e)[:100]}")
+            return False
+        # Other errors might not mean the page is closed
+        logger.warning(f"⚠️ Bugfix: Page state check returned error: {str(e)[:100]}")
+        return False
 
 
 def check_auth_state() -> bool:
@@ -304,26 +330,61 @@ def login_facebook_with_retry(page: Page, max_retries: int = 3, wait_time: int =
                     logger.warning("")
                     
                     if attempt < max_retries:
-                        logger.info(f"⏳ Waiting {wait_time} seconds before retry {attempt + 1}...")
-                        page.wait_for_timeout(wait_time * 1000)
-                        logger.info(f"🔄 Retrying login (attempt {attempt + 1})...")
+                        # Bugfix: Check if page is still alive before waiting
+                        if is_page_alive(page):
+                            logger.info(f"⏳ Waiting {wait_time} seconds before retry {attempt + 1}...")
+                            try:
+                                page.wait_for_timeout(wait_time * 1000)
+                                logger.info(f"🔄 Retrying login (attempt {attempt + 1})...")
+                            except PlaywrightError as timeout_error:
+                                logger.error(f"❌ Bugfix: Cannot wait - page closed during timeout: {str(timeout_error)[:100]}")
+                                logger.error(f"❌ Bugfix: Login verification failed - cannot retry")
+                                raise LoginError(f"Browser closed during retry wait on attempt {attempt}")
+                        else:
+                            logger.error(f"❌ Bugfix: Page is closed - cannot wait or retry after verification failure")
+                            raise LoginError(f"Browser closed after failed verification on attempt {attempt}")
                     continue
             else:
                 logger.warning(f"⚠️ ATTEMPT {attempt}: Login function returned False")
                 if attempt < max_retries:
-                    logger.info(f"⏳ Waiting {wait_time} seconds before retry...")
-                    page.wait_for_timeout(wait_time * 1000)
+                    # Bugfix: Check if page is still alive before waiting
+                    if is_page_alive(page):
+                        logger.info(f"⏳ Waiting {wait_time} seconds before retry...")
+                        try:
+                            page.wait_for_timeout(wait_time * 1000)
+                        except PlaywrightError as timeout_error:
+                            logger.error(f"❌ Bugfix: Cannot wait - page closed during timeout: {str(timeout_error)[:100]}")
+                            raise LoginError(f"Browser closed during retry wait on attempt {attempt}")
+                    else:
+                        logger.error(f"❌ Bugfix: Page is closed - cannot wait or retry")
+                        raise LoginError(f"Browser closed on attempt {attempt}")
                 continue
                 
         except Exception as login_error:
             logger.error(f"❌ ATTEMPT {attempt} ERROR: {str(login_error)[:200]}")
-            take_debug_screenshot(page, f"retry_{attempt}_error", "errors", f"Attempt {attempt} failed with error")
+            
+            # Bugfix: Check if page is still alive before taking screenshot
+            if is_page_alive(page):
+                take_debug_screenshot(page, f"retry_{attempt}_error", "errors", f"Attempt {attempt} failed with error")
+            else:
+                logger.error(f"❌ Bugfix: Cannot take screenshot - page/context/browser has been closed")
             
             if attempt < max_retries:
-                logger.info(f"⏳ Waiting {wait_time} seconds before retry {attempt + 1}...")
-                page.wait_for_timeout(wait_time * 1000)
-                logger.info(f"🔄 Retrying after error...")
-                continue
+                # Bugfix: Check if page is still alive before waiting
+                if is_page_alive(page):
+                    logger.info(f"⏳ Waiting {wait_time} seconds before retry {attempt + 1}...")
+                    try:
+                        page.wait_for_timeout(wait_time * 1000)
+                        logger.info(f"🔄 Retrying after error...")
+                        continue
+                    except PlaywrightError as timeout_error:
+                        logger.error(f"❌ Bugfix: Cannot wait - page closed during timeout: {str(timeout_error)[:100]}")
+                        logger.error(f"❌ Bugfix: Login failed due to browser/page closure - cannot retry")
+                        raise LoginError(f"Browser closed during retry wait on attempt {attempt}")
+                else:
+                    logger.error(f"❌ Bugfix: Page is closed - cannot wait or retry")
+                    logger.error(f"❌ Bugfix: Login failed due to browser/page closure on attempt {attempt}")
+                    raise LoginError(f"Browser closed before retry on attempt {attempt}")
             else:
                 # Last attempt failed
                 logger.error("="*70)
