@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ============================================================================
-# Alexis Scraper - Fresh Installation Script
+# Alexis Scraper - Automated Installation Script
 # ============================================================================
-# This script automates the installation of the Alexis Scraper application
-# on a fresh VPS. It handles all dependencies, permissions, and configuration.
+# This script automatically installs all dependencies and configures the
+# Alexis Scraper application on a fresh VPS with ZERO hardcoded paths.
 # ============================================================================
 
 set -e  # Exit on error
@@ -16,10 +16,25 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# ============================================================================
+# Detect Installation Directory (NO HARDCODED PATHS!)
+# ============================================================================
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+INSTALL_DIR="$SCRIPT_DIR"
+
 # Configuration
-INSTALL_DIR="/var/www/alexis-scrapper-docker"
 WEBUSER="www-data"
 PHP_VERSION="8.2"
+
+echo ""
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}Alexis Scraper - Installation${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo ""
+echo -e "Installation directory: ${GREEN}${INSTALL_DIR}${NC}"
+echo ""
 
 # ============================================================================
 # Helper Functions
@@ -69,7 +84,12 @@ install_system_packages() {
         unzip \
         software-properties-common \
         sqlite3 \
-        xvfb
+        xvfb \
+        cron
+    
+    # Ensure cron is enabled and running
+    systemctl enable cron
+    systemctl start cron
     
     print_success "System packages installed"
 }
@@ -96,11 +116,12 @@ install_php() {
     
     # Check if PHP is already installed
     if command -v php &> /dev/null; then
-        PHP_CURRENT=$(php -r 'echo PHP_VERSION;')
+        PHP_CURRENT=$(php -r 'echo PHP_VERSION;' 2>/dev/null || echo "unknown")
         print_warning "PHP $PHP_CURRENT is already installed"
-        read -p "Do you want to install PHP $PHP_VERSION anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        
+        # Check if it's the right version
+        if [[ "$PHP_CURRENT" == "$PHP_VERSION"* ]]; then
+            print_success "PHP $PHP_VERSION already installed, skipping..."
             return
         fi
     fi
@@ -150,7 +171,18 @@ install_composer() {
         return
     fi
     
-    curl -sS https://getcomposer.org/installer | php
+    EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+
+    if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]; then
+        print_error "Composer installer corrupt"
+        rm composer-setup.php
+        exit 1
+    fi
+
+    php composer-setup.php
+    rm composer-setup.php
     mv composer.phar /usr/local/bin/composer
     chmod +x /usr/local/bin/composer
     
@@ -163,11 +195,13 @@ install_nodejs() {
     print_header "Installing Node.js 18.x"
     
     if command -v node &> /dev/null; then
-        NODE_CURRENT=$(node -v)
+        NODE_CURRENT=$(node -v 2>/dev/null || echo "unknown")
         print_warning "Node.js $NODE_CURRENT is already installed"
-        read -p "Do you want to install Node.js 18.x anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        
+        # Check if it's version 18 or higher
+        NODE_MAJOR=$(echo "$NODE_CURRENT" | cut -d'v' -f2 | cut -d'.' -f1)
+        if [ "$NODE_MAJOR" -ge 18 ] 2>/dev/null; then
+            print_success "Node.js 18+ already installed, skipping..."
             return
         fi
     fi
@@ -186,33 +220,51 @@ install_nginx() {
     
     if command -v nginx &> /dev/null; then
         print_warning "Nginx is already installed"
-        nginx -v
-        return
+        nginx -v 2>&1
+    else
+        apt install -y nginx
+        print_success "Nginx installed"
     fi
-    
-    apt install -y nginx
     
     systemctl enable nginx
     systemctl start nginx
-    
-    nginx -v
-    
-    print_success "Nginx installed"
 }
 
 setup_application() {
-    print_header "Setting Up Application"
+    print_header "Verifying Application Directory"
     
-    # Check if we're already in the install directory
-    if [ "$PWD" = "$INSTALL_DIR" ]; then
-        print_warning "Already in installation directory"
-    else
-        print_error "This script should be run from: $INSTALL_DIR"
-        print_error "Current directory: $PWD"
+    if [ ! -d "$INSTALL_DIR/scrapper-alexis" ] || [ ! -d "$INSTALL_DIR/scrapper-alexis-web" ]; then
+        print_error "Application directories not found!"
+        print_error "Expected: $INSTALL_DIR/scrapper-alexis and $INSTALL_DIR/scrapper-alexis-web"
         exit 1
     fi
     
-    print_success "Application directory verified"
+    print_success "Application directories verified"
+}
+
+setup_directories() {
+    print_header "Creating Required Directories"
+    
+    # Python scraper directories
+    mkdir -p "$INSTALL_DIR/scrapper-alexis/data/message_images"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis/data/auth_states"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis/logs"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis/debug_output"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis/avatar_cache"
+    
+    # Laravel directories
+    mkdir -p "$INSTALL_DIR/scrapper-alexis-web/storage/app/avatars"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis-web/storage/app/public/avatars"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis-web/storage/framework/cache"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis-web/storage/framework/sessions"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis-web/storage/framework/views"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis-web/storage/logs"
+    mkdir -p "$INSTALL_DIR/scrapper-alexis-web/bootstrap/cache"
+    
+    # Backup directory
+    mkdir -p "$INSTALL_DIR/backups"
+    
+    print_success "Directories created"
 }
 
 install_python_dependencies() {
@@ -231,9 +283,18 @@ install_python_dependencies() {
     # Activate and install
     source venv/bin/activate
     pip install --upgrade pip
-    pip install -r requirements.txt
     
-    # Install Playwright
+    # Install requirements
+    if [ -f "requirements.txt" ]; then
+        pip install -r requirements.txt
+        print_success "Python packages installed"
+    else
+        print_error "requirements.txt not found!"
+        deactivate
+        exit 1
+    fi
+    
+    # Install Playwright and browsers
     playwright install firefox
     playwright install-deps firefox
     
@@ -247,8 +308,13 @@ install_php_dependencies() {
     
     cd "$INSTALL_DIR/scrapper-alexis-web"
     
+    if [ ! -f "composer.json" ]; then
+        print_error "composer.json not found!"
+        exit 1
+    fi
+    
     # Install Composer dependencies
-    composer install --no-dev --optimize-autoloader
+    composer install --no-dev --optimize-autoloader --no-interaction
     
     print_success "PHP dependencies installed"
 }
@@ -258,13 +324,18 @@ install_node_dependencies() {
     
     cd "$INSTALL_DIR/scrapper-alexis-web"
     
+    if [ ! -f "package.json" ]; then
+        print_error "package.json not found!"
+        exit 1
+    fi
+    
     # Install npm dependencies
     npm install
     
     # Build assets
     npm run build
     
-    print_success "Node.js dependencies installed"
+    print_success "Node.js dependencies installed and assets built"
 }
 
 setup_environment() {
@@ -274,14 +345,24 @@ setup_environment() {
     
     # Laravel .env
     if [ ! -f ".env" ]; then
-        cp .env.example .env
-        php artisan key:generate
-        print_success "Laravel .env created"
+        if [ -f ".env.example" ]; then
+            cp .env.example .env
+            print_success ".env created from .env.example"
+        else
+            print_error ".env.example not found!"
+            exit 1
+        fi
+        
+        # Generate application key
+        php artisan key:generate --force
+        print_success "Application key generated"
+        
+        # Update database path in .env to use absolute path
+        sed -i "s|DB_DATABASE=.*|DB_DATABASE=$INSTALL_DIR/scrapper-alexis-web/database/database.sqlite|g" .env
+        print_success "Database path configured in .env"
     else
-        print_warning "Laravel .env already exists"
+        print_warning ".env already exists, skipping..."
     fi
-    
-    print_success "Environment files configured"
 }
 
 setup_database() {
@@ -292,89 +373,131 @@ setup_database() {
     # Create database file
     if [ ! -f "database/database.sqlite" ]; then
         touch database/database.sqlite
+        chmod 664 database/database.sqlite
         print_success "Database file created"
+        
+        # Run migrations
+        php artisan migrate --force
+        print_success "Database migrations completed"
+        
+        # Seed admin user
+        php artisan db:seed --class=DatabaseSeeder --force
+        print_success "Database seeded with admin user"
+        
+        echo ""
+        print_warning "Default admin credentials:"
+        echo "  Email: admin@scraper.local"
+        echo "  Password: password"
+        echo ""
+        echo -e "${YELLOW}⚠ IMPORTANT: Change this password after first login!${NC}"
     else
-        print_warning "Database file already exists"
-        read -p "Do you want to recreate the database? This will delete all data! (y/n) " -n 1 -r
+        print_warning "Database already exists"
+        read -p "Do you want to reset the database? This will delete all data! (y/n) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rm -f database/database.sqlite
             touch database/database.sqlite
-            print_success "Database recreated"
+            chmod 664 database/database.sqlite
+            php artisan migrate --force
+            php artisan db:seed --class=DatabaseSeeder --force
+            print_success "Database reset and seeded"
+        else
+            print_warning "Keeping existing database"
         fi
     fi
-    
-    # Run migrations
-    php artisan migrate --force
-    
-    # Seed admin user
-    php artisan db:seed --class=DatabaseSeeder
-    
-    print_success "Database initialized"
-    print_warning "Default admin credentials:"
-    echo "  Email: admin@scraper.local"
-    echo "  Password: password"
-    echo ""
-    echo -e "${YELLOW}⚠ IMPORTANT: Change this password after first login!${NC}"
-}
-
-setup_directories() {
-    print_header "Creating Required Directories"
-    
-    # Python scraper directories
-    mkdir -p "$INSTALL_DIR/scrapper-alexis/data/message_images"
-    mkdir -p "$INSTALL_DIR/scrapper-alexis/data/auth_states"
-    mkdir -p "$INSTALL_DIR/scrapper-alexis/logs"
-    mkdir -p "$INSTALL_DIR/scrapper-alexis/debug_output"
-    
-    # Backup directory
-    mkdir -p "$INSTALL_DIR/backups"
-    
-    print_success "Directories created"
 }
 
 setup_permissions() {
     print_header "Setting File Permissions"
     
+    cd "$INSTALL_DIR"
+    
     # Set ownership for entire directory
     chown -R $WEBUSER:$WEBUSER "$INSTALL_DIR"
     
-    # Laravel directories
+    # Laravel specific permissions
     cd "$INSTALL_DIR/scrapper-alexis-web"
     chmod -R 775 storage bootstrap/cache
     chmod 775 database/
-    chmod 664 database/database.sqlite
-    
-    # Python scraper directories
-    cd "$INSTALL_DIR/scrapper-alexis"
-    chmod 755 run_*.sh
-    chmod 775 data/ logs/ debug_output/
-    chmod 775 data/message_images data/auth_states
-    
-    # Keep venv owned by current user for development
-    if [ -d "venv" ]; then
-        chown -R $SUDO_USER:$SUDO_USER venv/
+    if [ -f "database/database.sqlite" ]; then
+        chmod 664 database/database.sqlite
     fi
     
-    print_success "Permissions set"
+    # Create storage link
+    php artisan storage:link 2>/dev/null || true
+    
+    # Python scraper permissions
+    cd "$INSTALL_DIR/scrapper-alexis"
+    
+    # Make shell scripts executable
+    if ls run_*.sh 1> /dev/null 2>&1; then
+        chmod 755 run_*.sh
+    fi
+    
+    # Data directories
+    chmod 775 data/ logs/ debug_output/ avatar_cache/ 2>/dev/null || true
+    chmod 775 data/message_images data/auth_states 2>/dev/null || true
+    
+    print_success "Permissions set for www-data user"
 }
 
 setup_nginx() {
     print_header "Configuring Nginx"
     
-    NGINX_CONF="$INSTALL_DIR/scrapper-alexis-web/nginx.conf"
+    NGINX_TEMPLATE="$INSTALL_DIR/scrapper-alexis-web/nginx.conf"
     NGINX_AVAILABLE="/etc/nginx/sites-available/scraper-admin"
     NGINX_ENABLED="/etc/nginx/sites-enabled/scraper-admin"
     
-    if [ ! -f "$NGINX_CONF" ]; then
-        print_error "Nginx configuration file not found: $NGINX_CONF"
+    if [ ! -f "$NGINX_TEMPLATE" ]; then
+        print_error "Nginx configuration template not found: $NGINX_TEMPLATE"
         return
     fi
     
-    # Copy configuration
-    cp "$NGINX_CONF" "$NGINX_AVAILABLE"
+    # Create Nginx config with dynamic path
+    cat > "$NGINX_AVAILABLE" << EOF
+server {
+    listen 80;
+    server_name scraper-admin.local localhost _;
+    root $INSTALL_DIR/scrapper-alexis-web/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php${PHP_VERSION}-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOF
     
-    # Create symlink if not exists
+    print_success "Nginx configuration created with dynamic paths"
+    
+    # Remove default site if it exists
+    if [ -f "/etc/nginx/sites-enabled/default" ]; then
+        rm -f /etc/nginx/sites-enabled/default
+        print_success "Removed default Nginx site"
+    fi
+    
+    # Create symlink
     if [ ! -L "$NGINX_ENABLED" ]; then
         ln -s "$NGINX_AVAILABLE" "$NGINX_ENABLED"
         print_success "Nginx site enabled"
@@ -383,12 +506,14 @@ setup_nginx() {
     fi
     
     # Test configuration
-    nginx -t
-    
-    # Reload Nginx
-    systemctl reload nginx
-    
-    print_success "Nginx configured"
+    if nginx -t 2>&1; then
+        print_success "Nginx configuration test passed"
+        systemctl reload nginx
+        print_success "Nginx reloaded"
+    else
+        print_error "Nginx configuration test failed!"
+        exit 1
+    fi
 }
 
 setup_cron() {
@@ -396,14 +521,14 @@ setup_cron() {
     
     # Check if cron entry already exists
     if crontab -u $WEBUSER -l 2>/dev/null | grep -q "schedule:run"; then
-        print_warning "Cron job already exists"
+        print_warning "Cron job already exists for $WEBUSER"
         return
     fi
     
-    # Add cron entry for Laravel scheduler
+    # Add cron entry for Laravel scheduler with dynamic path
     (crontab -u $WEBUSER -l 2>/dev/null; echo "* * * * * cd $INSTALL_DIR/scrapper-alexis-web && php artisan schedule:run >> /dev/null 2>&1") | crontab -u $WEBUSER -
     
-    print_success "Cron job configured"
+    print_success "Cron job configured for $WEBUSER"
     
     # Verify
     echo ""
@@ -412,56 +537,167 @@ setup_cron() {
     echo ""
 }
 
+setup_sudoers() {
+    print_header "Configuring Sudoers for www-data"
+    
+    # Check if sudoers file already exists
+    if [ -f "/etc/sudoers.d/scraper-web" ]; then
+        print_warning "Sudoers configuration already exists"
+        return
+    fi
+    
+    # Create sudoers file to allow www-data to run bash as root
+    # This is required for Python scripts that need elevated privileges
+    cat > /etc/sudoers.d/scraper-web << 'EOF'
+# Allow www-data to run bash as root (for Python scripts)
+www-data ALL=(root) NOPASSWD: /bin/bash
+EOF
+    
+    chmod 0440 /etc/sudoers.d/scraper-web
+    
+    # Verify syntax
+    if visudo -c -f /etc/sudoers.d/scraper-web; then
+        print_success "Sudoers configuration created and verified"
+    else
+        print_error "Sudoers configuration has syntax errors!"
+        rm -f /etc/sudoers.d/scraper-web
+        exit 1
+    fi
+}
+
 restart_services() {
     print_header "Restarting Services"
     
     systemctl restart php${PHP_VERSION}-fpm
     systemctl restart nginx
+    systemctl restart cron
     
-    print_success "Services restarted"
+    print_success "All services restarted"
+}
+
+run_health_check() {
+    print_header "Running Post-Installation Health Check"
+    
+    cd "$INSTALL_DIR"
+    
+    # Check 1: Timezone
+    echo -n "1. Checking timezone... "
+    current_tz=$(timedatectl | grep "Time zone" | awk '{print $3}')
+    if [[ "$current_tz" == "America/Mexico_City" ]]; then
+        echo -e "${GREEN}✓${NC}"
+    else
+        echo -e "${RED}✗ (Current: $current_tz)${NC}"
+    fi
+    
+    # Check 2: Cron
+    echo -n "2. Checking cron job... "
+    if crontab -u $WEBUSER -l 2>/dev/null | grep -q "schedule:run"; then
+        echo -e "${GREEN}✓${NC}"
+    else
+        echo -e "${RED}✗${NC}"
+    fi
+    
+    # Check 3: Database
+    echo -n "3. Checking database... "
+    if [ -f "$INSTALL_DIR/scrapper-alexis-web/database/database.sqlite" ]; then
+        echo -e "${GREEN}✓${NC}"
+    else
+        echo -e "${RED}✗${NC}"
+    fi
+    
+    # Check 4: Python venv
+    echo -n "4. Checking Python venv... "
+    if [ -d "$INSTALL_DIR/scrapper-alexis/venv" ]; then
+        echo -e "${GREEN}✓${NC}"
+    else
+        echo -e "${RED}✗${NC}"
+    fi
+    
+    # Check 5: Storage symlink
+    echo -n "5. Checking storage symlink... "
+    if [ -L "$INSTALL_DIR/scrapper-alexis-web/public/storage" ]; then
+        echo -e "${GREEN}✓${NC}"
+    else
+        echo -e "${RED}✗${NC}"
+    fi
+    
+    # Check 6: Nginx config
+    echo -n "6. Checking Nginx config... "
+    if nginx -t 2>&1 | grep -q "successful"; then
+        echo -e "${GREEN}✓${NC}"
+    else
+        echo -e "${RED}✗${NC}"
+    fi
+    
+    # Check 7: Services
+    echo -n "7. Checking services... "
+    if systemctl is-active --quiet nginx && systemctl is-active --quiet php${PHP_VERSION}-fpm; then
+        echo -e "${GREEN}✓${NC}"
+    else
+        echo -e "${RED}✗${NC}"
+    fi
+    
+    echo ""
 }
 
 print_final_info() {
     print_header "Installation Complete!"
     
+    # Get server IP
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+    
     echo -e "${GREEN}✓ All components installed successfully!${NC}"
     echo ""
     echo "================================================================"
     echo ""
-    echo "🎉 Next Steps:"
+    echo "🎉 Your Alexis Scraper is ready!"
     echo ""
-    echo "1. Access the admin panel:"
-    echo "   http://$(hostname -I | awk '{print $1}')"
+    echo "📍 Installation Location:"
+    echo "   $INSTALL_DIR"
     echo ""
-    echo "2. Login with default credentials:"
-    echo "   Email: admin@scraper.local"
+    echo "🌐 Access the Admin Panel:"
+    echo "   http://$SERVER_IP"
+    echo ""
+    echo "🔐 Default Login Credentials:"
+    echo "   Email:    admin@scraper.local"
     echo "   Password: password"
     echo ""
-    echo "3. ⚠️  IMPORTANT: Change the default password!"
+    echo -e "${YELLOW}⚠️  CRITICAL: Change the default password immediately!${NC}"
     echo ""
-    echo "4. Configure scraper settings:"
-    echo "   - Go to Settings page"
-    echo "   - Add Facebook/Twitter credentials"
-    echo "   - Add Facebook profiles to scrape"
-    echo "   - Configure intervals"
+    echo "================================================================"
     echo ""
-    echo "5. Test the scraper:"
-    echo "   - Go to Dashboard"
+    echo "📝 Next Steps:"
+    echo ""
+    echo "1. Open your browser and go to: http://$SERVER_IP"
+    echo "2. Login with the default credentials above"
+    echo "3. Change your password (Profile → Change Password)"
+    echo "4. Configure scraper settings (Settings page):"
+    echo "   - Facebook credentials"
+    echo "   - Twitter credentials"
+    echo "   - Twitter profile info (display name, avatar, verified)"
+    echo "   - Facebook profiles to monitor"
+    echo "   - Scraping intervals"
+    echo "   - Proxy settings (optional)"
+    echo "5. Test the scraper (Dashboard):"
     echo "   - Click 'Run Facebook Scraper Now'"
-    echo "   - Check logs"
+    echo "   - Click 'Run Twitter Flow Now'"
+    echo "6. Monitor logs:"
+    echo "   - tail -f $INSTALL_DIR/scrapper-alexis/logs/manual_run.log"
     echo ""
     echo "================================================================"
     echo ""
     echo "📚 Documentation:"
-    echo "   - Migration Guide: $INSTALL_DIR/MIGRATION_GUIDE.md"
-    echo "   - Quick Start: $INSTALL_DIR/scrapper-alexis-web/QUICKSTART.md"
+    echo "   $INSTALL_DIR/INSTALLATION.md"
     echo ""
-    echo "📝 Useful Commands:"
-    echo "   - View logs: tail -f $INSTALL_DIR/scrapper-alexis/logs/manual_run.log"
-    echo "   - Test scheduler: cd $INSTALL_DIR/scrapper-alexis-web && php artisan schedule:run"
+    echo "🔧 Useful Commands:"
+    echo "   - Fix permissions:  cd $INSTALL_DIR/scrapper-alexis-web && sudo ./setup.sh"
+    echo "   - Test scheduler:   cd $INSTALL_DIR/scrapper-alexis-web && php artisan schedule:run"
+    echo "   - View logs:        tail -f $INSTALL_DIR/scrapper-alexis/logs/manual_run.log"
     echo "   - Restart services: sudo systemctl restart nginx php${PHP_VERSION}-fpm"
     echo ""
     echo "================================================================"
+    echo ""
+    echo -e "${GREEN}Happy scraping! 🚀${NC}"
     echo ""
 }
 
@@ -472,11 +708,18 @@ print_final_info() {
 main() {
     clear
     
-    print_header "Alexis Scraper - Fresh Installation"
-    
-    echo "This script will install all dependencies and configure the application."
     echo ""
-    echo "Installation directory: $INSTALL_DIR"
+    echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║   Alexis Scraper - Installation       ║${NC}"
+    echo -e "${BLUE}║   Dynamic Path Detection Enabled       ║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "This script will automatically install all dependencies"
+    echo "and configure the application."
+    echo ""
+    echo -e "Installation directory: ${GREEN}${INSTALL_DIR}${NC}"
+    echo ""
+    echo "The installation will take approximately 10-15 minutes."
     echo ""
     read -p "Do you want to continue? (y/n) " -n 1 -r
     echo
@@ -506,12 +749,15 @@ main() {
     setup_permissions
     setup_nginx
     setup_cron
+    setup_sudoers
     restart_services
+    
+    # Post-installation checks
+    run_health_check
     
     # Final info
     print_final_info
 }
 
 # Run main installation
-main
-
+main "$@"

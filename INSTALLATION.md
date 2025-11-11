@@ -1,125 +1,370 @@
-# Alexis Scraper - Installation Guide
+# Alexis Scraper - Complete Installation Guide
 
-Complete guide for installing on a new VPS via Git.
+**One-stop guide for installing and verifying the Alexis Scraper on any VPS.**
 
 ---
 
-## 📋 Requirements
+## 📋 Table of Contents
 
-- Ubuntu 20.04+ or Debian 11+
-- PHP 8.2+, Python 3.9+, Composer, Node.js 18+, Nginx
-- 2GB RAM minimum, 5GB disk space
-- **System timezone MUST be set to Mexico (America/Mexico_City)**
+1. [System Requirements](#system-requirements)
+2. [Quick Installation](#quick-installation)
+3. [Post-Installation Verification](#post-installation-verification)
+4. [Troubleshooting Common Issues](#troubleshooting-common-issues)
+5. [Configuration](#configuration)
+6. [Useful Commands](#useful-commands)
+
+---
+
+## 📋 System Requirements
+
+### Minimum Specifications
+- **OS**: Ubuntu 20.04+ or Debian 11+
+- **RAM**: 2GB minimum (4GB recommended)
+- **Disk**: 5GB free space
+- **CPU**: 2 cores minimum
+
+### Required Software
+All of these will be installed automatically by the install script:
+- PHP 8.2+ with extensions (sqlite3, mbstring, xml, curl, zip, bcmath)
+- Python 3.9+ with pip and venv
+- Composer (PHP dependency manager)
+- Node.js 18+ with npm
+- Nginx web server
+- SQLite3
+- Xvfb (for headless browser)
+- Cron service
+
+### Network Requirements
+- Ports 80 and 443 open for web access
+- Port 22 for SSH access
+- Internet connectivity for downloading dependencies
 
 ---
 
 ## 🚀 Quick Installation
 
+### Step 1: Clone the Repository
+
 ```bash
-# 1. Clone repository
+# Navigate to web root directory
 cd /var/www
+
+# Clone the repository (replace with your Git URL)
 sudo git clone <YOUR_GIT_REPO_URL> alexis-scrapper-docker
 cd alexis-scrapper-docker
+```
 
-# 2. Run installer
+**Note:** You can install to any directory, not just `/var/www/alexis-scrapper-docker`. The install script will automatically detect the installation path.
+
+### Step 2: Run the Installer
+
+```bash
+# Make the installer executable
+sudo chmod +x install.sh
+
+# Run the installation script
 sudo ./install.sh
+```
 
-# 3. Access web interface
-# http://your-server-ip
-# Login: admin@scraper.local / password
-# ⚠️ CHANGE PASSWORD IMMEDIATELY!
+The installer will:
+1. Install all system packages and dependencies
+2. Set system timezone to Mexico (America/Mexico_City)
+3. Install and configure PHP, Python, Node.js, and Nginx
+4. Set up Python virtual environment and install packages
+5. Install PHP and Node.js dependencies
+6. Configure Laravel environment
+7. Initialize the database with admin user
+8. Set up proper file permissions
+9. Configure Nginx with the correct paths
+10. Set up cron jobs for automated scraping
+
+**Installation takes approximately 10-15 minutes** depending on your server speed.
+
+### Step 3: Access the Web Interface
+
+After installation completes, you'll see the server IP address. Access the admin panel:
+
+```
+http://YOUR_SERVER_IP
+```
+
+**Default Login Credentials:**
+- Email: `admin@scraper.local`
+- Password: `password`
+
+**⚠️ IMPORTANT: Change the default password immediately after first login!**
+
+---
+
+## ✅ Post-Installation Verification
+
+Run these checks immediately after installation to ensure everything is working correctly.
+
+### 1. Check System Timezone
+
+The system MUST be set to Mexico timezone for proper scheduling:
+
+```bash
+timedatectl
+```
+
+**Expected Output:**
+```
+Time zone: America/Mexico_City (CST, -0600)
+```
+
+**If incorrect:**
+```bash
+sudo timedatectl set-timezone America/Mexico_City
 ```
 
 ---
 
-## 🔐 Critical: File Permissions & Deletion
+### 2. Check Web Interface Access
 
-**Why this matters:** The web app needs to DELETE images/logs created by the Python scraper.
-
-### The Rule
-- **ALL processes MUST run as `www-data` user**
-- This includes: cron jobs, web app, Python scripts
-- Files created by `www-data` can be deleted by `www-data`
-
-### Cron Setup (CRITICAL)
 ```bash
-# Cron MUST run as www-data (NOT root!)
-sudo crontab -e -u www-data
+# Check Nginx is running
+sudo systemctl status nginx
 
-# Add this line:
-* * * * * cd /var/www/alexis-scrapper-docker/scrapper-alexis-web && php artisan schedule:run >> /dev/null 2>&1
+# Test web server response
+curl -I http://localhost
 ```
 
-### Fix Permissions Anytime
-```bash
-cd /var/www/alexis-scrapper-docker/scrapper-alexis-web
-sudo ./setup.sh
-```
-
-This fixes:
-- All directory permissions (775)
-- All file ownership (www-data:www-data)
-- **Existing images/logs ownership** (so web app can delete them)
-
-### Permission Reference
-
-| Path | Permission | Owner | Purpose |
-|------|------------|-------|---------|
-| `scrapper-alexis-web/storage/` | 775 | www-data:www-data | Laravel logs/cache |
-| `scrapper-alexis-web/database/database.sqlite` | 664 | www-data:www-data | Database |
-| `scrapper-alexis/data/message_images/` | 775 | www-data:www-data | Generated images |
-| **Images inside (*.png, *.jpg)** | **664** | **www-data:www-data** | **For deletion!** |
-| `scrapper-alexis/logs/` | 775 | www-data:www-data | Scraper logs |
-| **Log files (*.log)** | **664** | **www-data:www-data** | **For deletion!** |
-| `scrapper-alexis/run_*.sh` | 755 | www-data:www-data | Shell scripts |
+**Expected:** HTTP 200 OK response
 
 ---
 
-## 🐛 Common Issues
+### 3. Verify Cron Job Configuration
 
-### Issue: Cannot delete images from web interface
+**CRITICAL**: Cron MUST run as `www-data` user (not root!) for proper file permissions.
 
-**Symptom:** "Permission denied" when deleting images
-
-**Cause:** Files have wrong owner (not www-data)
-
-**Fix:**
-```bash
-cd /var/www/alexis-scrapper-docker/scrapper-alexis
-
-# Check ownership
-ls -la data/message_images/ | head -5
-
-# Fix it
-sudo chown -R www-data:www-data data/message_images/
-sudo find data/message_images -type f -exec chmod 664 {} \;
-
-# Verify (should show www-data:www-data)
-ls -la data/message_images/ | head -5
-```
-
-**Prevent:** Make sure cron runs as www-data (not root!)
-
-### Issue: Cron jobs not running
-
-**Fix:**
 ```bash
 # Check cron is configured for www-data
 sudo crontab -l -u www-data
-
-# If empty, add it:
-sudo crontab -e -u www-data
-# Add: * * * * * cd /var/www/alexis-scrapper-docker/scrapper-alexis-web && php artisan schedule:run >> /dev/null 2>&1
-
-# Test manually
-sudo -u www-data bash -c 'cd /var/www/alexis-scrapper-docker/scrapper-alexis-web && php artisan schedule:run'
 ```
 
-### Issue: 500 error on web interface
+**Expected Output:**
+```
+* * * * * cd /path/to/alexis-scrapper-docker/scrapper-alexis-web && php artisan schedule:run >> /dev/null 2>&1
+```
+
+**If missing:**
+```bash
+sudo crontab -e -u www-data
+# Add the line above, replacing /path/to with your actual installation path
+```
+
+---
+
+### 4. Verify Database Connection
+
+```bash
+# Navigate to Laravel directory
+cd scrapper-alexis-web
+
+# Test database connection
+php artisan tinker --execute="echo 'Messages: ' . \App\Models\Message::count();"
+```
+
+**Expected:** Shows count of messages (0 for fresh install)
+
+---
+
+### 5. Check Python Environment
+
+```bash
+# Navigate to Python scraper directory
+cd scrapper-alexis
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Check cryptography module (CRITICAL for proxy authentication)
+python3 -c "from cryptography.hazmat.primitives.ciphers import Cipher; print('✅ Cryptography module OK')"
+
+# Check database path
+python3 -c "import config; print('Database:', config.DATABASE_PATH)" 2>&1 | grep database.sqlite
+
+# Deactivate
+deactivate
+```
+
+**Expected:**
+- "✅ Cryptography module OK"
+- Database path should point to `scrapper-alexis-web/database/database.sqlite`
+
+---
+
+### 6. Verify File Permissions
+
+```bash
+# Check Laravel storage permissions
+ls -la scrapper-alexis-web/storage | head -5
+
+# Check database permissions
+ls -la scrapper-alexis-web/database/database.sqlite
+
+# Check Python data directory
+ls -la scrapper-alexis/data
+```
+
+**Expected:** All files and directories should be owned by `www-data:www-data`
+
+---
+
+### 7. Test Proxy Configuration (Optional)
+
+Only run if you've configured proxy settings in the web interface:
+
+```bash
+cd scrapper-alexis
+source venv/bin/activate
+
+timeout 15 python3 -c "
+from playwright.sync_api import sync_playwright
+import config
+print('Proxy server:', config.PROXY_CONFIG['server'] if config.PROXY_CONFIG else 'NONE')
+print('Password length:', len(config.PROXY_PASSWORD) if config.PROXY_PASSWORD else 0)
+p = sync_playwright().start()
+browser = p.firefox.launch(headless=True, proxy=config.PROXY_CONFIG)
+page = browser.new_page()
+page.goto('https://www.google.com', timeout=10000)
+print('✅ Proxy works!')
+browser.close()
+" 2>&1 | tail -5
+
+deactivate
+```
+
+**Expected:** Should show proxy server, password length, and "✅ Proxy works!"
+
+---
+
+### 8. Run Complete Health Check
+
+Quick one-liner to check all critical components:
+
+```bash
+echo "=== SCRAPER HEALTH CHECK ===" && \
+cd /var/www/alexis-scrapper-docker && \
+echo "1. Installation Path:" && pwd && \
+echo "2. Cron:" && sudo crontab -l -u www-data | grep schedule:run && \
+echo "3. Database:" && ls -la scrapper-alexis-web/database/database.sqlite && \
+echo "4. Python venv:" && ls -d scrapper-alexis/venv && \
+echo "5. Storage:" && ls -ld scrapper-alexis-web/public/storage && \
+echo "=== ALL CHECKS PASSED ==="
+```
+
+---
+
+## 🔧 Troubleshooting Common Issues
+
+### Issue 1: "Permission denied" when deleting images
+
+**Symptom:** Cannot delete images from web interface
+
+**Cause:** Files created by root instead of www-data
 
 **Fix:**
 ```bash
-cd /var/www/alexis-scrapper-docker/scrapper-alexis-web
+# Navigate to installation directory
+cd /path/to/alexis-scrapper-docker
+
+# Run setup script to fix permissions
+cd scrapper-alexis-web
+sudo ./setup.sh
+```
+
+**Prevent:** Ensure cron runs as `www-data`, not root!
+
+---
+
+### Issue 2: "NS_ERROR_PROXY_CONNECTION_REFUSED"
+
+**Symptom:** Scraper fails to connect through proxy
+
+**Causes:**
+1. Missing `cryptography` Python module → passwords stay encrypted
+2. Incorrect proxy credentials in web settings
+
+**Fix:**
+```bash
+cd /path/to/alexis-scrapper-docker/scrapper-alexis
+source venv/bin/activate
+pip install cryptography
+
+# Verify password decryption
+python3 -c "import config; print('Password length:', len(config.PROXY_PASSWORD))"
+deactivate
+```
+
+---
+
+### Issue 3: Messages not appearing in web interface
+
+**Symptom:** Scraper runs but messages don't show up
+
+**Cause:** Python scripts writing to wrong database
+
+**Fix:**
+```bash
+cd /path/to/alexis-scrapper-docker/scrapper-alexis
+source venv/bin/activate
+
+# Check database path
+python3 -c "import config; print('Database:', config.DATABASE_PATH)"
+deactivate
+
+# Should output: .../scrapper-alexis-web/database/database.sqlite
+# If wrong, the config.py will auto-detect the correct path after the installation
+```
+
+---
+
+### Issue 4: Avatar image not showing
+
+**Causes:**
+1. Missing storage symlink
+2. Avatar directory doesn't exist
+3. Wrong permissions
+
+**Fix:**
+```bash
+cd /path/to/alexis-scrapper-docker/scrapper-alexis-web
+
+# Create storage symlink
+php artisan storage:link
+
+# Create avatar directories
+mkdir -p storage/app/avatars storage/app/public/avatars
+
+# Fix permissions
+sudo chown -R www-data:www-data storage/app
+sudo chmod -R 775 storage/app
+```
+
+---
+
+### Issue 5: "Image generation fails with 'no DISPLAY' error"
+
+**Symptom:** Image generation fails in headless mode
+
+**Cause:** Not using xvfb-run for Firefox
+
+**Fix:**
+Always run image generation with:
+```bash
+export HEADLESS=true
+xvfb-run -a python3 generate_message_images.py
+```
+
+---
+
+### Issue 6: 500 error on web interface
+
+**Fix:**
+```bash
+cd /path/to/alexis-scrapper-docker/scrapper-alexis-web
 
 # Check logs
 tail -50 storage/logs/laravel.log
@@ -135,11 +380,13 @@ php artisan config:clear
 sudo systemctl restart php8.2-fpm nginx
 ```
 
-### Issue: Database locked errors
+---
+
+### Issue 7: Database locked errors
 
 **Fix:**
 ```bash
-cd /var/www/alexis-scrapper-docker/scrapper-alexis-web
+cd /path/to/alexis-scrapper-docker/scrapper-alexis-web
 
 # Fix database permissions
 sudo chmod 664 database/database.sqlite
@@ -152,244 +399,359 @@ sudo systemctl restart php8.2-fpm nginx
 
 ---
 
-## 📝 Manual Installation Steps
+### Issue 8: Cron jobs not running
 
-If you can't use `install.sh`, follow these steps:
-
-### 1. Install System Packages & Set Timezone
+**Check cron status:**
 ```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y git curl wget unzip software-properties-common sqlite3 xvfb
+# Check cron service is running
+sudo systemctl status cron
 
-# Set timezone to Mexico (REQUIRED - must match application)
-sudo timedatectl set-timezone America/Mexico_City
+# Check cron logs
+journalctl -u cron -n 20 --no-pager | grep www-data
 
-# Verify timezone
-timedatectl
-# Should show: Time zone: America/Mexico_City (CST, -0600)
+# Test manually
+sudo -u www-data bash -c 'cd /path/to/alexis-scrapper-docker/scrapper-alexis-web && php artisan schedule:run'
 ```
 
-### 2. Install PHP 8.2
-```bash
-sudo add-apt-repository ppa:ondrej/php -y
-sudo apt update
-sudo apt install -y php8.2 php8.2-cli php8.2-fpm php8.2-sqlite3 \
-    php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath
-```
+---
 
-### 3. Install Python 3.9+
-```bash
-sudo apt install -y python3 python3-pip python3-venv xvfb
-```
+## ⚙️ Configuration
 
-### 4. Install Composer
-```bash
-curl -sS https://getcomposer.org/installer | php
-sudo mv composer.phar /usr/local/bin/composer
-sudo chmod +x /usr/local/bin/composer
-```
+### Initial Setup Steps
 
-### 5. Install Node.js 18
-```bash
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
-```
+After successful installation and verification:
 
-### 6. Install Nginx
-```bash
-sudo apt install -y nginx
-sudo systemctl enable nginx
-sudo systemctl start nginx
-```
+1. **Login** to web interface with default credentials
+2. **Change password** immediately (Profile → Change Password)
+3. **Configure Settings** (Settings page):
+   - Facebook credentials (email & password)
+   - Twitter/X credentials (email & password)
+   - Twitter profile settings (display name, username, avatar URL, verified badge)
+   - Facebook profile URLs to scrape (comma-separated)
+   - Scraping intervals (in minutes)
+   - Proxy settings (optional but recommended):
+     - Format: `http://IP:PORT`
+     - Username and password
+4. **Test scraper** (Dashboard):
+   - Click "Run Facebook Scraper Now"
+   - Click "Run Twitter Flow Now"
+   - Check logs in real-time
 
-### 7. Clone Repository
-```bash
-cd /var/www
-sudo git clone <YOUR_GIT_REPO_URL> alexis-scrapper-docker
-cd alexis-scrapper-docker
-```
+### Configuration Reference
 
-### 8. Install Python Dependencies
-```bash
-cd scrapper-alexis
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-playwright install firefox
-playwright install-deps firefox
-deactivate
-```
+| Setting | Location | Purpose |
+|---------|----------|---------|
+| **System Timezone** | `timedatectl` | Must be Mexico (America/Mexico_City) |
+| **App Credentials** | Web Interface → Settings | Facebook and Twitter login |
+| **Profile Info** | Web Interface → Settings | Twitter display name, avatar, verified |
+| **Scraping Targets** | Web Interface → Settings | Facebook profiles to monitor |
+| **Intervals** | Web Interface → Settings | How often to scrape (minutes) |
+| **Proxy Settings** | Web Interface → Settings | Proxy for browser requests |
+| **Environment** | `.env` file | Laravel configuration (auto-generated) |
 
-### 9. Install PHP Dependencies
-```bash
-cd ../scrapper-alexis-web
-composer install --no-dev --optimize-autoloader
-npm install
-npm run build
-```
+### Environment Variables
 
-### 10. Setup Environment
-```bash
-cp .env.example .env
-php artisan key:generate
-```
+The `.env` file in `scrapper-alexis-web/` is auto-generated during installation. Key settings:
 
-Edit `.env`:
 ```env
 APP_ENV=production
 APP_DEBUG=false
 DB_CONNECTION=sqlite
-DB_DATABASE=/var/www/alexis-scrapper-docker/scrapper-alexis-web/database/database.sqlite
+DB_DATABASE=/path/to/scrapper-alexis-web/database/database.sqlite
 ```
 
-### 11. Initialize Database
-```bash
-touch database/database.sqlite
-php artisan migrate --force
-php artisan db:seed --class=DatabaseSeeder
-```
+**Note:** Scraper credentials and settings are stored in the database, NOT in `.env` or environment variables. Configure them via the web interface.
 
-### 12. Create Required Directories
-```bash
-cd ../scrapper-alexis
-mkdir -p data/message_images data/auth_states logs debug_output
-```
+---
 
-### 13. Set Permissions
-```bash
-cd ../scrapper-alexis-web
-sudo ./setup.sh
-```
+## 📝 Useful Commands
 
-### 14. Configure Nginx
-```bash
-sudo cp nginx.conf /etc/nginx/sites-available/scraper-admin
-sudo ln -s /etc/nginx/sites-available/scraper-admin /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
+### Service Management
 
-### 15. Configure Cron (as www-data!)
 ```bash
-sudo crontab -e -u www-data
-# Add: * * * * * cd /var/www/alexis-scrapper-docker/scrapper-alexis-web && php artisan schedule:run >> /dev/null 2>&1
-```
-
-### 16. Start Services
-```bash
+# Restart all services
 sudo systemctl restart php8.2-fpm nginx
+
+# Check service status
+sudo systemctl status nginx
+sudo systemctl status php8.2-fpm
+sudo systemctl status cron
+
+# View service logs
+sudo journalctl -u nginx -n 50
+sudo journalctl -u php8.2-fpm -n 50
 ```
 
----
-
-## ✅ Verification
+### Application Logs
 
 ```bash
-# Check timezone (MUST be Mexico)
-timedatectl
-# Should show: Time zone: America/Mexico_City (CST, -0600)
-
-# Check web interface
-curl -I http://localhost  # Should return 200 OK
-
-# Check cron
-sudo crontab -l -u www-data
-
-# Check permissions
-cd /var/www/alexis-scrapper-docker/scrapper-alexis
-ls -la data/message_images/  # Should show www-data:www-data
-
-# Test scheduler
-cd ../scrapper-alexis-web
-php artisan schedule:run
-
-# Check logs
-tail -20 storage/logs/laravel.log
-```
-
----
-
-## 🔒 Security Checklist
-
-- [ ] **System timezone set to Mexico (America/Mexico_City)**
-- [ ] Changed default admin password
-- [ ] Set `APP_DEBUG=false` in .env
-- [ ] Set `APP_ENV=production` in .env
-- [ ] Cron configured for www-data user
-- [ ] Firewall configured (ports 22, 80, 443)
-- [ ] SSL certificate installed (production)
-- [ ] All files owned by www-data
-- [ ] Tested image deletion from web interface
-
----
-
-## 📞 Useful Commands
-
-```bash
-# Restart services
-sudo systemctl restart nginx php8.2-fpm
-
-# View logs
+# Laravel logs
 tail -f scrapper-alexis-web/storage/logs/laravel.log
+
+# Scraper logs
 tail -f scrapper-alexis/logs/manual_run.log
 
-# Fix permissions
-cd scrapper-alexis-web && sudo ./setup.sh
+# System logs
+journalctl -f
+```
 
-# Test scheduler
-cd scrapper-alexis-web && php artisan schedule:run
+### Database Operations
 
-# Check disk space
-df -h /var/www
-du -sh scrapper-alexis/logs
-du -sh scrapper-alexis/data/message_images
-
-# Clear Laravel cache
+```bash
 cd scrapper-alexis-web
-php artisan cache:clear
-php artisan config:clear
 
-# Check database
-cd scrapper-alexis-web
+# View messages count
+php artisan tinker --execute="echo \App\Models\Message::count();"
+
+# View recent messages
+php artisan tinker --execute="\App\Models\Message::latest()->take(5)->get(['content', 'created_at'])->each(fn(\$m) => print_r(\$m->toArray()));"
+
+# Direct SQLite query
 sqlite3 database/database.sqlite "SELECT COUNT(*) FROM messages;"
 ```
 
+### Maintenance Tasks
+
+```bash
+# Fix permissions (run anytime)
+cd scrapper-alexis-web
+sudo ./setup.sh
+
+# Clear Laravel cache
+php artisan cache:clear
+php artisan config:clear
+php artisan view:clear
+
+# Test scheduler manually
+php artisan schedule:run
+
+# Check disk usage
+df -h
+du -sh scrapper-alexis/logs
+du -sh scrapper-alexis/data/message_images
+```
+
+### Manual Scraper Execution
+
+```bash
+cd scrapper-alexis
+source venv/bin/activate
+
+# Run Facebook scraper
+./run_facebook_flow.sh
+
+# Run Twitter poster
+./run_twitter_flow.sh
+
+# Run page posting
+./run_page_poster.sh
+
+# Generate message images
+export HEADLESS=true
+xvfb-run -a python3 generate_message_images.py
+
+deactivate
+```
+
 ---
 
-## 📚 What's NOT Committed to Git
+## 🔐 Security Checklist
 
-The repository excludes:
-- ❌ Database files (*.db, *.sqlite)
-- ❌ Log files (*.log)
-- ❌ Generated images (*.png, *.jpg)
+After installation, verify these security measures:
+
+- [ ] **System timezone** set to Mexico (America/Mexico_City)
+- [ ] **Default admin password** changed
+- [ ] **APP_DEBUG=false** in `.env`
+- [ ] **APP_ENV=production** in `.env`
+- [ ] **Cron configured** for www-data user (not root)
+- [ ] **Firewall configured** (UFW or iptables)
+  - Allow ports: 22 (SSH), 80 (HTTP), 443 (HTTPS)
+  - Deny all other incoming ports
+- [ ] **SSL certificate** installed (Let's Encrypt recommended)
+- [ ] **All files** owned by www-data
+- [ ] **Sensitive logs** excluded from Git (already configured in .gitignore)
+- [ ] **Image deletion** tested from web interface
+
+### Firewall Setup (Optional but Recommended)
+
+```bash
+# Install UFW
+sudo apt install ufw
+
+# Configure rules
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp    # SSH
+sudo ufw allow 80/tcp    # HTTP
+sudo ufw allow 443/tcp   # HTTPS
+
+# Enable firewall
+sudo ufw enable
+
+# Check status
+sudo ufw status verbose
+```
+
+### SSL Certificate Setup (Production)
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get certificate (replace with your domain)
+sudo certbot --nginx -d your-domain.com
+
+# Auto-renewal is configured automatically
+```
+
+---
+
+## 📚 File Structure
+
+```
+alexis-scrapper-docker/
+├── install.sh                          # Automated installation script
+├── INSTALLATION.md                     # This file
+├── scrapper-alexis/                    # Python scraper application
+│   ├── venv/                           # Python virtual environment
+│   ├── config.py                       # Dynamic configuration (auto-detects paths)
+│   ├── requirements.txt                # Python dependencies
+│   ├── run_facebook_flow.sh            # Facebook scraper runner
+│   ├── run_twitter_flow.sh             # Twitter poster runner
+│   ├── run_page_poster.sh              # Page posting runner
+│   ├── generate_message_images.py      # Image generator
+│   ├── data/                           # Application data
+│   │   ├── message_images/             # Generated tweet images
+│   │   └── auth_states/                # Browser authentication sessions
+│   └── logs/                           # Scraper logs
+└── scrapper-alexis-web/                # Laravel web interface
+    ├── setup.sh                        # Permission fix script
+    ├── nginx.conf                      # Nginx configuration template
+    ├── .env                            # Laravel environment (auto-generated)
+    ├── database/                       # SQLite database
+    │   └── database.sqlite             # Main database file
+    ├── storage/                        # Laravel storage
+    │   ├── app/                        # App files
+    │   │   └── avatars/                # Uploaded avatar images
+    │   └── logs/                       # Laravel logs
+    └── public/                         # Web root
+        └── storage/                    # Storage symlink (created automatically)
+```
+
+---
+
+## 🔄 What's NOT Committed to Git
+
+The repository excludes these files (automatically ignored):
+
+- ❌ Database files (`*.db`, `*.sqlite`)
+- ❌ Log files (`*.log`)
+- ❌ Generated images (`*.png`, `*.jpg`)
 - ❌ Debug output
 - ❌ Browser auth sessions
-- ❌ Environment files (.env)
-- ❌ Dependencies (venv/, node_modules/, vendor/)
+- ❌ Environment files (`.env`)
+- ❌ Dependencies (`venv/`, `node_modules/`, `vendor/`)
 
-Fresh installations start with:
-- ✅ Clean database
-- ✅ Only admin user (admin@scraper.local / password)
+Fresh installations start clean with:
+
+- ✅ Empty database with admin user only
 - ✅ No old messages or images
-- ✅ All permissions set correctly
+- ✅ Correct file permissions
+- ✅ Proper configuration
 
 ---
 
-## 🎯 Post-Installation
+## 🆘 Getting Help
 
-1. Access: `http://your-server-ip`
-2. Login: `admin@scraper.local` / `password`
-3. **Change password immediately!**
-4. Go to Settings → Configure:
-   - Facebook credentials
-   - Twitter credentials
-   - Facebook profile URLs
-   - Scraping intervals
-5. Test: Dashboard → "Run Facebook Scraper Now"
-6. Check logs: `tail -f scrapper-alexis/logs/manual_run.log`
+### Log Locations
+
+1. **Laravel Application**: `scrapper-alexis-web/storage/logs/laravel.log`
+2. **Python Scraper**: `scrapper-alexis/logs/manual_run.log`
+3. **Nginx Access**: `/var/log/nginx/access.log`
+4. **Nginx Error**: `/var/log/nginx/error.log`
+5. **PHP-FPM**: `/var/log/php8.2-fpm.log`
+6. **Cron**: `journalctl -u cron`
+
+### Debug Mode
+
+To enable debug output for troubleshooting:
+
+1. Go to **Settings** in web interface
+2. Enable debug for specific script type:
+   - Facebook Scraper Debug
+   - Twitter Flow Debug
+   - Page Posting Debug
+3. Debug screenshots saved to `scrapper-alexis/debug_output/`
+
+### Common Debug Commands
+
+```bash
+# Check if processes are running
+ps aux | grep php
+ps aux | grep firefox
+
+# Check open ports
+sudo netstat -tlnp | grep -E ':(80|443|9000)'
+
+# Check disk space
+df -h
+
+# Check memory usage
+free -h
+
+# Check system resources
+htop  # or top
+```
 
 ---
 
-**Version:** 1.0  
-**Last Updated:** November 2025
+## 📝 Important Notes
 
+### Proxy Configuration
+- **Format**: Must include `http://` prefix (e.g., `http://65.195.104.91:50100`)
+- **Required for**: Twitter avatar downloads, some Facebook operations
+- **Authentication**: Automatically encrypted in database
+
+### Database
+- **Shared Database**: Both Python and Laravel use the same SQLite database
+- **Location**: `scrapper-alexis-web/database/database.sqlite`
+- **Permissions**: Must be readable/writable by www-data (664)
+- **Automatic Detection**: Python config automatically finds the correct database
+
+### File Permissions
+- **Critical for**: Image deletion, log rotation, file operations
+- **Owner**: All files must be owned by www-data:www-data
+- **Quick Fix**: Run `sudo ./setup.sh` in `scrapper-alexis-web/` directory
+
+### Cron Jobs
+- **Runs every minute**: Checks intervals in database before executing
+- **Must run as**: www-data user (NOT root!)
+- **Purpose**: Triggers Laravel scheduler which manages all periodic tasks
+
+### Image Paths
+- **Stored in DB**: As relative paths (e.g., `data/message_images/msg_123.png`)
+- **Accessible via**: Laravel storage symlink at `/public/storage/`
+- **Format**: PNG with transparent background for Twitter posts
+
+---
+
+## 🎯 Next Steps After Installation
+
+1. ✅ Complete all post-installation verification checks
+2. ✅ Login and change default password
+3. ✅ Configure Facebook and Twitter credentials
+4. ✅ Add Facebook profiles to monitor
+5. ✅ Set appropriate scraping intervals
+6. ✅ Configure proxy settings (recommended)
+7. ✅ Test manual scraper execution
+8. ✅ Monitor logs for first few runs
+9. ✅ Set up SSL certificate (production)
+10. ✅ Configure firewall rules
+
+---
+
+**Version:** 2.0  
+**Last Updated:** November 2025  
+**Installation Method:** Fully automated with dynamic path detection
+
+For issues or questions, check the logs first, then review the Troubleshooting section above.

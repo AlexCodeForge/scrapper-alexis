@@ -22,18 +22,34 @@ except ImportError:
     logging.warning("Laravel decrypt utility not available - encrypted passwords will not work")
 
 # Database path for dynamic settings (single source of truth)
-# Search for database in multiple possible locations
+# DYNAMIC PATH DETECTION - No hardcoded paths!
 def _get_database_path():
-    possible_paths = [
-        '/var/www/scrapper-alexis/data/scraper.db',  # Laravel database (shared)
-        '/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db',  # Local path
-        'data/scraper.db',  # Relative path (fallback)
-    ]
-    for path in possible_paths:
-        if os.path.exists(path):
-            return path
-    # Default to relative path if none found
-    return 'data/scraper.db'
+    """
+    Dynamically detect the Laravel database location.
+    Searches relative to the script location, no hardcoded paths.
+    """
+    # Get the directory where this config.py file is located
+    current_dir = Path(__file__).parent.resolve()
+    
+    # Navigate to the Laravel database from scrapper-alexis directory
+    # Structure: alexis-scrapper-docker/scrapper-alexis/config.py
+    #         -> alexis-scrapper-docker/scrapper-alexis-web/database/database.sqlite
+    laravel_db = current_dir.parent / 'scrapper-alexis-web' / 'database' / 'database.sqlite'
+    
+    if laravel_db.exists():
+        return str(laravel_db)
+    
+    # Fallback: Check for old database location (relative to current directory)
+    old_db = current_dir / 'data' / 'scraper.db'
+    if old_db.exists():
+        import logging
+        logging.warning(f"Using old database location: {old_db}")
+        logging.warning("Consider migrating to Laravel database for web interface integration")
+        return str(old_db)
+    
+    # Last resort: Return expected Laravel path even if it doesn't exist yet
+    # (it will be created during installation)
+    return str(laravel_db)
 
 DATABASE_PATH = os.getenv('DATABASE_PATH') or _get_database_path()
 
@@ -42,29 +58,23 @@ def get_settings_from_db():
     Load dynamic settings from database.
     This allows live updates from the web interface without restarting scripts.
     
+    DYNAMIC PATH DETECTION - Uses DATABASE_PATH constant (auto-detected, no hardcoded paths).
+    
     Raises:
         Exception: If database is not accessible or settings are not configured.
     """
     import logging
     
     try:
-        # Laravel database path (shared with web interface)
-        # This is where the scraper_settings table lives
-        possible_paths = [
-            '/var/www/alexis-scrapper-docker/scrapper-alexis-web/database/database.sqlite',  # Laravel database (Nginx)
-            '/var/www/scrapper-alexis/data/scraper.db',  # OLD Laravel database
-            '/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db',  # Fallback
-            'data/scraper.db',  # Relative path
-        ]
-        
-        db_path = None
-        for path in possible_paths:
-            if os.path.exists(path):
-                db_path = path
-                break
+        # Use the dynamically detected DATABASE_PATH
+        db_path = DATABASE_PATH
         
         if not db_path or not os.path.exists(db_path):
-            raise FileNotFoundError(f"Laravel database not found. Tried: {possible_paths}. Please configure settings via web interface.")
+            raise FileNotFoundError(
+                f"Laravel database not found at: {db_path}. "
+                f"Please ensure the application is installed correctly and database exists. "
+                f"Configure settings via web interface."
+            )
         
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -73,12 +83,16 @@ def get_settings_from_db():
         conn.close()
         
         if not row:
-            raise ValueError("No settings found in database. Please configure settings via web interface at http://213.199.33.207:8006/settings")
+            raise ValueError(
+                "No settings found in database. "
+                "Please configure settings via web interface Settings page."
+            )
         
         return dict(row)
         
     except Exception as e:
         logging.error(f"CRITICAL: Failed to load settings from database: {e}")
+        logging.error(f"Database path attempted: {DATABASE_PATH}")
         logging.error("Settings MUST be configured in the database via the web interface.")
         logging.error("No .env fallback - database is the single source of truth.")
         raise
