@@ -325,11 +325,11 @@ def main():
     print("MESSAGE IMAGE GENERATOR")
     print("="*50)
     
-    # Force correct database path
-    os.environ['DATABASE_PATH'] = 'data/scraper.db'
+    # Use database path from config (Laravel database)
+    db_path = config.DATABASE_PATH
     
     # Initialize database
-    db = initialize_database('data/scraper.db')
+    db = initialize_database(db_path)
     
     # Check if specific MESSAGE_ID is provided via environment variable
     specific_message_id = os.getenv('MESSAGE_ID')

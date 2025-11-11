@@ -698,6 +698,37 @@ class Settings extends Component
                 $this->dispatch('settings-error', message: 'Error al subir el avatar: ' . $e->getMessage());
                 return;
             }
+        } else {
+            // Bugfix: Even if no new avatar uploaded, ensure existing avatar is synced to Python project
+            // This handles cases where avatar was uploaded before but copy failed
+            if ($this->twitterAvatarUrl) {
+                try {
+                    $publicAvatarPath = storage_path('app/public/' . $this->twitterAvatarUrl);
+                    $pythonPath = config('scraper.python_path');
+                    $pythonAvatarPath = $pythonPath . '/scrapper-alexis/avatar_cache/user_avatar.jpg';
+                    
+                    // Ensure avatar_cache directory exists
+                    $pythonAvatarDir = dirname($pythonAvatarPath);
+                    if (!is_dir($pythonAvatarDir)) {
+                        mkdir($pythonAvatarDir, 0755, true);
+                    }
+                    
+                    // Copy file if source exists and destination doesn't exist or is older
+                    if (file_exists($publicAvatarPath)) {
+                        if (!file_exists($pythonAvatarPath) || filemtime($publicAvatarPath) > filemtime($pythonAvatarPath)) {
+                            copy($publicAvatarPath, $pythonAvatarPath);
+                            chmod($pythonAvatarPath, 0644);
+                            \Log::info('Settings: Synced existing avatar to Python project', [
+                                'from' => $publicAvatarPath,
+                                'to' => $pythonAvatarPath
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Settings: Failed to sync existing avatar', ['error' => $e->getMessage()]);
+                    // Don't fail the whole save if avatar sync fails
+                }
+            }
         }
 
         // Update database

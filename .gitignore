@@ -125,3 +125,4 @@ Thumbs.db
 !env.docker.template
 
 scrapper-alexis-web/storage/framework/views/*
+scrapper-alexis/avatar_cache/user_avatar.jpg

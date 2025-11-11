@@ -272,6 +272,12 @@ install_python_dependencies() {
     
     cd "$INSTALL_DIR/scrapper-alexis"
     
+    # Remove broken symlink if it exists
+    if [ -L "venv" ] && [ ! -e "venv" ]; then
+        rm venv
+        print_warning "Removed broken venv symlink"
+    fi
+    
     # Create virtual environment
     if [ ! -d "venv" ]; then
         python3 -m venv venv
