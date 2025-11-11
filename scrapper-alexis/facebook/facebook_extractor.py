@@ -403,9 +403,25 @@ def _smart_scroll_and_extract(page: Page, selector: str, target_messages: int, m
                 except Exception as e:
                     logger.warning(f"Could not take stuck screenshot: {e}")
             
-            # Wait LONGER for Facebook's lazy loading - messages might still be loading
+            # Bugfix: Wait in chunks to detect browser closure early
+            # Split 18 seconds into 4× 4.5-second chunks with page checks
             logger.info(f"  ⏳ Waiting 18 seconds for messages to load (stuck attempt {stuck_scroll_count})...")
-            page.wait_for_timeout(18000)  # Wait even longer - Facebook is slow!
+            try:
+                for wait_chunk in range(4):
+                    # Bugfix: Import is_page_alive from facebook_auth
+                    from facebook.facebook_auth import is_page_alive
+                    if not is_page_alive(page):
+                        logger.error(f"❌ Bugfix: Browser closed during wait chunk {wait_chunk + 1}/4")
+                        logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                        return list(extracted_messages)
+                    page.wait_for_timeout(4500)  # 4.5 seconds × 4 = 18 seconds total
+            except Exception as wait_error:
+                error_msg = str(wait_error).lower()
+                if 'closed' in error_msg or 'target' in error_msg:
+                    logger.error(f"❌ Bugfix: Browser closed during stuck wait: {str(wait_error)[:100]}")
+                    logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                    return list(extracted_messages)
+                raise  # Re-raise other errors
             
             # Try AGGRESSIVE scroll to force lazy loading
             logger.debug(f"Attempting aggressive scroll (3000px) with {scroll_strategy} method...")
@@ -456,10 +472,24 @@ def _smart_scroll_and_extract(page: Page, selector: str, target_messages: int, m
         
         scroll_count += 1
         
-        # CRITICAL: Wait for Facebook's lazy loading to trigger
-        # Messages can take time to load - be patient!
+        # Bugfix: Wait in chunks to detect browser closure early
+        # Split 12 seconds into 3× 4-second chunks with page checks
         logger.debug(f"⏳ Waiting 12 seconds for Facebook to lazy-load new content...")
-        page.wait_for_timeout(12000)  # Give Facebook time to load messages
+        try:
+            for wait_chunk in range(3):
+                from facebook.facebook_auth import is_page_alive
+                if not is_page_alive(page):
+                    logger.error(f"❌ Bugfix: Browser closed during lazy-load wait chunk {wait_chunk + 1}/3")
+                    logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                    return list(extracted_messages)
+                page.wait_for_timeout(4000)  # 4 seconds × 3 = 12 seconds total
+        except Exception as wait_error:
+            error_msg = str(wait_error).lower()
+            if 'closed' in error_msg or 'target' in error_msg:
+                logger.error(f"❌ Bugfix: Browser closed during lazy-load wait: {str(wait_error)[:100]}")
+                logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                return list(extracted_messages)
+            raise  # Re-raise other errors
         
         # Don't wait for networkidle - Facebook always has background activity
         # This was causing 60+ second hangs!
@@ -638,7 +668,17 @@ def extract_message_text_with_database(page: Page, profile_id: int, max_messages
                 logger.warning(f"⚠️ Only extracted {len(quality_messages)} messages (expected at least {min_acceptable_messages})")
                 logger.warning(f"🔄 Retrying extraction with different scroll strategy...")
                 logger.info(f"⏳ Waiting 20 seconds to let more messages load...")
-                page.wait_for_timeout(20000)
+                # Bugfix: Wait in chunks (5× 4-second chunks)
+                try:
+                    for wait_chunk in range(5):
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error(f"❌ Bugfix: Browser closed during retry wait chunk {wait_chunk + 1}/5")
+                            break
+                        page.wait_for_timeout(4000)
+                except Exception as wait_error:
+                    if 'closed' in str(wait_error).lower() or 'target' in str(wait_error).lower():
+                        logger.error(f"❌ Bugfix: Browser closed during retry wait")
                 continue
             
             # Success!
@@ -649,7 +689,17 @@ def extract_message_text_with_database(page: Page, profile_id: int, max_messages
             if attempt < max_retries - 1:
                 logger.warning(f"Extraction attempt {attempt + 1} failed: {e}")
                 logger.info(f"⏳ Waiting 20 seconds before retry...")
-                page.wait_for_timeout(20000)
+                # Bugfix: Wait in chunks (5× 4-second chunks)
+                try:
+                    for wait_chunk in range(5):
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error(f"❌ Bugfix: Browser closed during DB extraction error retry wait chunk {wait_chunk + 1}/5")
+                            break
+                        page.wait_for_timeout(4000)
+                except Exception as wait_error:
+                    if 'closed' in str(wait_error).lower() or 'target' in str(wait_error).lower():
+                        logger.error(f"❌ Bugfix: Browser closed during DB extraction error retry wait")
                 continue
             else:
                 logger.error(f"All {max_retries} extraction attempts failed")
@@ -665,7 +715,17 @@ def extract_message_text_with_database(page: Page, profile_id: int, max_messages
             if attempt < max_retries - 1:
                 logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
                 logger.info(f"⏳ Waiting 20 seconds before retry...")
-                page.wait_for_timeout(20000)
+                # Bugfix: Wait in chunks (5× 4-second chunks)
+                try:
+                    for wait_chunk in range(5):
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error(f"❌ Bugfix: Browser closed during unexpected error retry wait chunk {wait_chunk + 1}/5")
+                            break
+                        page.wait_for_timeout(4000)
+                except Exception as wait_error:
+                    if 'closed' in str(wait_error).lower() or 'target' in str(wait_error).lower():
+                        logger.error(f"❌ Bugfix: Browser closed during unexpected error retry wait")
                 continue
             else:
                 logger.error(f"Unexpected extraction error after {max_retries} attempts: {e}")
@@ -983,9 +1043,25 @@ def _smart_scroll_and_extract_with_db(page: Page, selector: str, profile_id: int
                     except Exception as e:
                         logger.warning(f"Could not take stuck screenshot: {e}")
                 
-                # Wait for Facebook's lazy loading
+                # Bugfix: Wait in chunks to detect browser closure early
+                # Split 18 seconds into 4× 4.5-second chunks with page checks
                 logger.info(f"  ⏳ Waiting 18 seconds for messages to load (stuck attempt {stuck_scroll_count})...")
-                page.wait_for_timeout(18000)
+                try:
+                    for wait_chunk in range(4):
+                        # Bugfix: Import is_page_alive from facebook_auth
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error(f"❌ Bugfix: Browser closed during wait chunk {wait_chunk + 1}/4")
+                            logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                            return extracted_messages, stats
+                        page.wait_for_timeout(4500)  # 4.5 seconds × 4 = 18 seconds total
+                except Exception as wait_error:
+                    error_msg = str(wait_error).lower()
+                    if 'closed' in error_msg or 'target' in error_msg:
+                        logger.error(f"❌ Bugfix: Browser closed during stuck wait: {str(wait_error)[:100]}")
+                        logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                        return extracted_messages, stats
+                    raise  # Re-raise other errors
                 
                 # Try AGGRESSIVE scroll to force lazy loading
                 logger.debug(f"Attempting aggressive scroll (3000px) with {scroll_strategy} method...")
@@ -1033,9 +1109,24 @@ def _smart_scroll_and_extract_with_db(page: Page, selector: str, profile_id: int
             
             scroll_count += 1
             
-            # Wait for Facebook's lazy loading
+            # Bugfix: Wait in chunks to detect browser closure early
+            # Split 12 seconds into 3× 4-second chunks with page checks
             logger.debug(f"⏳ Waiting 12 seconds for Facebook to lazy-load new content...")
-            page.wait_for_timeout(12000)
+            try:
+                for wait_chunk in range(3):
+                    from facebook.facebook_auth import is_page_alive
+                    if not is_page_alive(page):
+                        logger.error(f"❌ Bugfix: Browser closed during lazy-load wait chunk {wait_chunk + 1}/3")
+                        logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                        return extracted_messages, stats
+                    page.wait_for_timeout(4000)  # 4 seconds × 3 = 12 seconds total
+            except Exception as wait_error:
+                error_msg = str(wait_error).lower()
+                if 'closed' in error_msg or 'target' in error_msg:
+                    logger.error(f"❌ Bugfix: Browser closed during lazy-load wait: {str(wait_error)[:100]}")
+                    logger.info(f"✅ Returning {len(extracted_messages)} messages extracted before closure")
+                    return extracted_messages, stats
+                raise  # Re-raise other errors
         
         except Exception as e:
             # Handle page crashes gracefully
@@ -1128,7 +1219,17 @@ def extract_message_text(page: Page, max_messages: int = 10, max_retries: int = 
                 logger.warning(f"⚠️ Only extracted {len(messages)} messages (expected at least {min_acceptable_messages})")
                 logger.warning(f"🔄 Retrying extraction with different scroll strategy...")
                 logger.info(f"⏳ Waiting 20 seconds to let more messages load...")
-                page.wait_for_timeout(20000)  # Wait for messages to load, DON'T reload page
+                # Bugfix: Wait in chunks (5× 4-second chunks)
+                try:
+                    for wait_chunk in range(5):
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error(f"❌ Bugfix: Browser closed during message load retry wait chunk {wait_chunk + 1}/5")
+                            break
+                        page.wait_for_timeout(4000)
+                except Exception as wait_error:
+                    if 'closed' in str(wait_error).lower() or 'target' in str(wait_error).lower():
+                        logger.error(f"❌ Bugfix: Browser closed during message load retry wait")
                 continue  # Try again with next strategy (keeping existing messages in DOM)
             
             # Success! We got enough messages
@@ -1139,7 +1240,17 @@ def extract_message_text(page: Page, max_messages: int = 10, max_retries: int = 
             if attempt < max_retries - 1:
                 logger.warning(f"Extraction attempt {attempt + 1} failed: {e}")
                 logger.info(f"⏳ Waiting 20 seconds before retry...")
-                page.wait_for_timeout(20000)
+                # Bugfix: Wait in chunks (5× 4-second chunks)
+                try:
+                    for wait_chunk in range(5):
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error(f"❌ Bugfix: Browser closed during extraction error retry wait chunk {wait_chunk + 1}/5")
+                            break
+                        page.wait_for_timeout(4000)
+                except Exception as wait_error:
+                    if 'closed' in str(wait_error).lower() or 'target' in str(wait_error).lower():
+                        logger.error(f"❌ Bugfix: Browser closed during extraction error retry wait")
                 continue
             else:
                 logger.error(f"All {max_retries} extraction attempts failed")
@@ -1148,7 +1259,17 @@ def extract_message_text(page: Page, max_messages: int = 10, max_retries: int = 
             if attempt < max_retries - 1:
                 logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
                 logger.info(f"⏳ Waiting 20 seconds before retry...")
-                page.wait_for_timeout(20000)
+                # Bugfix: Wait in chunks (5× 4-second chunks)
+                try:
+                    for wait_chunk in range(5):
+                        from facebook.facebook_auth import is_page_alive
+                        if not is_page_alive(page):
+                            logger.error(f"❌ Bugfix: Browser closed during DB extraction error retry wait chunk {wait_chunk + 1}/5")
+                            break
+                        page.wait_for_timeout(4000)
+                except Exception as wait_error:
+                    if 'closed' in str(wait_error).lower() or 'target' in str(wait_error).lower():
+                        logger.error(f"❌ Bugfix: Browser closed during DB extraction error retry wait")
                 continue
             else:
                 logger.error(f"Unexpected extraction error after {max_retries} attempts: {e}")
