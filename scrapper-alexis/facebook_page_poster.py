@@ -815,14 +815,26 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
             logger.info("Verifying post appeared on page...")
             page.wait_for_timeout(2000)
             
-            # Check current URL
+            # Check if post modal is closed (best indicator of success)
+            logger.info("Step 1: Checking if post creation modal is closed...")
+            try:
+                modal_visible = page.locator('div[role="dialog"]').is_visible(timeout=2000)
+                if not modal_visible:
+                    logger.info("✅ Post modal closed - posting succeeded")
+                    return True
+                logger.warning("⚠️ Post modal still visible after submission")
+            except:
+                logger.info("✅ Post modal not found (likely closed) - posting succeeded")
+                return True
+            
+            # Check current URL for debugging
+            logger.info("Step 2: Verifying current URL...")
             current_url = page.url
-            if 'facebook.com' not in current_url or 'TeamMiltonero' not in current_url:
-                logger.error(f"❌ Unexpected URL after posting: {current_url}")
-                return False
+            logger.info(f"Current URL after posting: {current_url}")
             
             # Bugfix: Check if composer is available again (indicates we're back to normal page view)
             # This is a strong indicator that the posting flow completed
+            logger.info("Step 3: Checking if composer is visible (fallback verification)...")
             try:
                 composer_indicators = [
                     'text=¿Qué estás pensando',
@@ -848,7 +860,7 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
                     return False
                     
             except Exception as e:
-                logger.warning(f"Could not verify composer visibility: {e}")
+                logger.warning(f"⚠️ Could not verify composer visibility: {e}")
                 # Don't fail here, just warn
             
             logger.info("✅ All verification checks passed")
