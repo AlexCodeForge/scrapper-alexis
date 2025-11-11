@@ -255,6 +255,40 @@ echo "5. Storage:" && ls -ld scrapper-alexis-web/public/storage && \
 echo "=== ALL CHECKS PASSED ==="
 ```
 
+### 9. Critical: Verify No Hardcoded Paths
+
+**This check ensures the installation will work in any directory:**
+
+```bash
+cd /path/to/installation
+
+# Check Python config detects database correctly
+cd scrapper-alexis
+source venv/bin/activate
+python3 -c "import config; print('Database:', config.DATABASE_PATH)"
+deactivate
+
+# Should output: Database: /your/path/scrapper-alexis-web/database/database.sqlite
+# NOT: data/scraper.db or any other path!
+```
+
+**If you see `data/scraper.db`:**
+1. Delete it: `rm -f scrapper-alexis/data/scraper.db`
+2. Verify Laravel database exists: `ls -la scrapper-alexis-web/database/database.sqlite`
+3. Re-test Python config
+
+### 10. Verify Shell Scripts Use Dynamic Paths
+
+```bash
+cd scrapper-alexis
+
+# Check run scripts don't have hardcoded paths
+grep -n "cd /var/www" run_*.sh
+
+# Should return NOTHING!
+# If it shows matches, the scripts have hardcoded paths (BAD!)
+```
+
 ---
 
 ## 🔧 Troubleshooting Common Issues
@@ -411,6 +445,29 @@ journalctl -u cron -n 20 --no-pager | grep www-data
 
 # Test manually
 sudo -u www-data bash -c 'cd /path/to/alexis-scrapper-docker/scrapper-alexis-web && php artisan schedule:run'
+```
+
+### Issue 9: "Database not found" on fresh installation
+
+**Symptom:** Scripts fail with database not found errors
+
+**Cause:** Scripts checking wrong database path
+
+**Fix:**
+```bash
+cd /path/to/installation/scrapper-alexis
+
+# Check what database path Python is using
+source venv/bin/activate
+python3 -c "import config; print('Database:', config.DATABASE_PATH)"
+deactivate
+
+# Should be: .../scrapper-alexis-web/database/database.sqlite
+# If it shows data/scraper.db, delete that file:
+rm -f data/scraper.db
+
+# Verify Laravel database exists
+ls -la ../scrapper-alexis-web/database/database.sqlite
 ```
 
 ---

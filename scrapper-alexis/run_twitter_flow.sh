@@ -11,7 +11,9 @@
 # Generates images for posted messages using user-provided profile info
 # CRITICAL: Uses xvfb-run to prevent VPS crashes (see VPS_CRASH_SOLUTION.md)
 
-cd /var/www/alexis-scrapper-docker/scrapper-alexis
+# Auto-detect script location (works anywhere)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
 
 # Activate virtual environment
 source venv/bin/activate

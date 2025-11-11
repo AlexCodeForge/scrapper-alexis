@@ -3,7 +3,9 @@
 # Scrapes messages from configured Facebook profiles
 # CRITICAL: Uses xvfb-run to prevent VPS crashes (see VPS_CRASH_SOLUTION.md)
 
-cd /var/www/alexis-scrapper-docker/scrapper-alexis
+# Auto-detect script location (works anywhere)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
 
 # Process lock to prevent duplicate execution
 LOCKFILE="/var/lock/facebook_scraper.lock"

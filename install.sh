@@ -413,6 +413,70 @@ setup_database() {
     fi
 }
 
+verify_database_configuration() {
+    print_header "Verifying Database Configuration"
+    
+    LARAVEL_DB="$INSTALL_DIR/scrapper-alexis-web/database/database.sqlite"
+    
+    # Check 1: Database exists
+    if [ ! -f "$LARAVEL_DB" ]; then
+        print_error "CRITICAL: Laravel database not created!"
+        print_error "Expected: $LARAVEL_DB"
+        exit 1
+    fi
+    print_success "Database file exists"
+    
+    # Check 2: Database is readable
+    if ! sqlite3 "$LARAVEL_DB" "SELECT 1;" > /dev/null 2>&1; then
+        print_error "CRITICAL: Laravel database is not readable!"
+        exit 1
+    fi
+    print_success "Database is readable"
+    
+    # Check 3: Required tables exist
+    TABLES=$(sqlite3 "$LARAVEL_DB" "SELECT name FROM sqlite_master WHERE type='table';" 2>/dev/null)
+    REQUIRED_TABLES=("scraper_settings" "posting_settings" "messages" "profiles")
+    
+    for table in "${REQUIRED_TABLES[@]}"; do
+        if ! echo "$TABLES" | grep -q "$table"; then
+            print_error "CRITICAL: Table '$table' missing from database!"
+            exit 1
+        fi
+    done
+    print_success "All required tables exist"
+    
+    # Check 4: Python can detect database
+    cd "$INSTALL_DIR/scrapper-alexis"
+    source venv/bin/activate
+    
+    DB_CHECK=$(python3 -c "import config; print(config.DATABASE_PATH)" 2>&1)
+    
+    if [[ "$DB_CHECK" == *"database.sqlite"* ]]; then
+        print_success "Python config detects Laravel database"
+        echo "   Path: $DB_CHECK"
+    else
+        print_error "CRITICAL: Python config not detecting Laravel database!"
+        print_error "   Got: $DB_CHECK"
+        deactivate
+        exit 1
+    fi
+    
+    deactivate
+    
+    # Check 5: No legacy database files
+    LEGACY_DB="$INSTALL_DIR/scrapper-alexis/data/scraper.db"
+    if [ -f "$LEGACY_DB" ]; then
+        print_warning "Legacy database found: $LEGACY_DB"
+        print_warning "Removing to prevent confusion..."
+        rm -f "$LEGACY_DB"
+        print_success "Legacy database removed"
+    fi
+    
+    echo ""
+    print_success "✅ Database configuration verified successfully!"
+    echo ""
+}
+
 setup_permissions() {
     print_header "Setting File Permissions"
     
@@ -752,6 +816,7 @@ main() {
     install_node_dependencies
     setup_environment
     setup_database
+    verify_database_configuration
     setup_permissions
     setup_nginx
     setup_cron

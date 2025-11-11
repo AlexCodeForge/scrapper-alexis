@@ -5,12 +5,19 @@ Simple format focused on what you need to see.
 """
 
 import sqlite3
+import sys
+import os
 from datetime import datetime
 from pathlib import Path
+import config
 
 def generate_posting_log():
     """Generate clean posting log."""
-    conn = sqlite3.connect('data/scraper.db')
+    if not os.path.exists(config.DATABASE_PATH):
+        print(f"ERROR: Laravel database not found at: {config.DATABASE_PATH}")
+        sys.exit(1)
+    
+    conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
     
     log_file = Path('logs/message_posting_log.txt')

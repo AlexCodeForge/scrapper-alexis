@@ -47,7 +47,7 @@ def main():
     os.environ['ACCESSIBILITY_ENABLED'] = '0'
     
     # Initialize debug session for this run (creates per-run folder)
-    # Debug is controlled via database settings at http://213.199.33.207:8006/settings
+    # Debug is controlled via database settings at http://YOUR_SERVER_IP/settings
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     debug_session = DebugSession(f"multi_profile_scraper_{timestamp}", script_type="facebook")
     

@@ -3,7 +3,9 @@
 # Posts approved images to Facebook page
 # CRITICAL: Uses xvfb-run to prevent VPS crashes
 
-cd /var/www/alexis-scrapper-docker/scrapper-alexis
+# Auto-detect script location (works anywhere)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
 
 # Process lock to prevent duplicate execution
 LOCKFILE="/var/lock/page_poster.lock"
@@ -48,23 +50,15 @@ fi
 get_setting() {
     local key=$1
     
-    # Try multiple possible database paths
-    local possible_paths=(
-        "/var/www/scrapper-alexis/data/scraper.db"
-        "/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db"
-        "data/scraper.db"
-    )
+    # Get installation directory dynamically
+    INSTALL_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
     
-    local db_path=""
-    for path in "${possible_paths[@]}"; do
-        if [ -f "$path" ]; then
-            db_path="$path"
-            break
-        fi
-    done
+    # ALWAYS use Laravel database - single source of truth
+    local db_path="$INSTALL_DIR/scrapper-alexis-web/database/database.sqlite"
     
-    if [ -z "$db_path" ]; then
-        echo "[ERROR] Database not found in any of: ${possible_paths[*]}" >> logs/page_poster_$(date +%Y%m%d).log
+    if [ ! -f "$db_path" ]; then
+        echo "[ERROR] Laravel database not found at: $db_path" >> logs/page_poster_$(date +%Y%m%d).log
+        echo "[ERROR] Run: sudo ./install.sh to initialize database" >> logs/page_poster_$(date +%Y%m%d).log
         echo ""
         return
     fi

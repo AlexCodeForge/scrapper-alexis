@@ -451,7 +451,7 @@ def main():
     debug_session = None
     if args.debug:
         if DEBUG_HELPER_AVAILABLE:
-            # Debug is controlled via database settings at http://213.199.33.207:8006/settings
+            # Debug is controlled via database settings at http://YOUR_SERVER_IP/settings
             debug_session = DebugSession("twitter_screenshots", script_type="twitter")
             logger = debug_session.logger
         else:

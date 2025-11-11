@@ -1,7 +1,7 @@
 """Debug helper for tracking script execution with screenshots.
 
 Debug output is now controlled per-script via database settings.
-Configure at http://213.199.33.207:8006/settings
+Configure at http://YOUR_SERVER_IP/settings
 
 Supported script types:
 - 'facebook': Facebook scraper debug

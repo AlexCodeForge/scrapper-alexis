@@ -68,22 +68,12 @@ def get_posting_settings():
     try:
         import sqlite3
         
-        # Connect to shared database (Laravel web app uses this primary database)
-        possible_paths = [
-            '/var/www/alexis-scrapper-docker/scrapper-alexis-web/database/database.sqlite',  # Primary: Laravel web app database
-            '/var/www/scrapper-alexis/data/scraper.db',  # Legacy path
-            '/var/www/alexis-scrapper-docker/scrapper-alexis/data/scraper.db',  # Current Python path
-            'data/scraper.db',  # Relative path fallback
-        ]
-        
-        db_path = None
-        for path in possible_paths:
-            if os.path.exists(path):
-                db_path = path
-                break
-        
-        if not db_path:
-            logger.error(f"Database not found in any of: {possible_paths}")
+        # ALWAYS use Laravel database - single source of truth
+        # Use config.DATABASE_PATH which auto-detects correct path
+        db_path = config.DATABASE_PATH
+        if not os.path.exists(db_path):
+            logger.error(f"Laravel database not found at: {db_path}")
+            logger.error("Run: sudo ./install.sh to initialize database")
             return None
         
         conn = sqlite3.connect(db_path)
@@ -419,20 +409,15 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
         
         # Get the full path to the image first
         if not os.path.isabs(image_path):
-            # Try multiple possible data directories
-            possible_data_dirs = [
-                '/var/www/alexis-scrapper-docker/scrapper-alexis/data',
-                '/var/www/scrapper-alexis/data',
-                'data',
-            ]
+            # Auto-detect data directory relative to script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            data_dir = os.path.join(script_dir, 'data')
             
-            for data_dir in possible_data_dirs:
-                potential_path = os.path.join(data_dir, 'message_images', os.path.basename(image_path))
-                if os.path.exists(potential_path):
-                    image_full_path = potential_path
-                    break
-            else:
-                image_full_path = os.path.join(possible_data_dirs[0], 'message_images', os.path.basename(image_path))
+            if not os.path.exists(data_dir):
+                logger.error(f"Data directory not found at: {data_dir}")
+                return False
+            
+            image_full_path = os.path.join(data_dir, 'message_images', os.path.basename(image_path))
         else:
             image_full_path = image_path
         
@@ -881,7 +866,7 @@ def post_image_to_page(page, image_path: str, page_name: str = None) -> bool:
 
 def main():
     """Main execution function."""
-    # Debug is controlled via database settings at http://213.199.33.207:8006/settings
+    # Debug is controlled via database settings at http://YOUR_SERVER_IP/settings
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     debug_session = DebugSession(f"page_poster_{timestamp}", script_type="page_posting")
     

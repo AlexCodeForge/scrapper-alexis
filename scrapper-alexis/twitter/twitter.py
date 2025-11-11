@@ -114,7 +114,7 @@ def main():
     args = parser.parse_args()
     
     # Initialize debug session if requested
-    # Debug is controlled via database settings at http://213.199.33.207:8006/settings
+    # Debug is controlled via database settings at http://YOUR_SERVER_IP/settings
     debug_session = None
     if args.debug:
         debug_session = DebugSession("twitter_simple", script_type="twitter")

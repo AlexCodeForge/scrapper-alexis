@@ -2,7 +2,7 @@
 
 All dynamic settings (credentials, intervals, proxy) are stored in the database.
 No .env fallback - database is the single source of truth.
-Configure settings via web interface: http://213.199.33.207:8006/settings
+Configure settings via web interface: http://YOUR_SERVER_IP/settings
 """
 import os
 import sqlite3
@@ -39,17 +39,13 @@ def _get_database_path():
     if laravel_db.exists():
         return str(laravel_db)
     
-    # Fallback: Check for old database location (relative to current directory)
-    old_db = current_dir / 'data' / 'scraper.db'
-    if old_db.exists():
-        import logging
-        logging.warning(f"Using old database location: {old_db}")
-        logging.warning("Consider migrating to Laravel database for web interface integration")
-        return str(old_db)
-    
-    # Last resort: Return expected Laravel path even if it doesn't exist yet
-    # (it will be created during installation)
-    return str(laravel_db)
+    # NO FALLBACK - Laravel database is the ONLY source of truth
+    # Fail hard with clear error message if database doesn't exist
+    raise FileNotFoundError(
+        f"Laravel database not found at: {laravel_db}\n"
+        f"Please run installation script first: sudo ./install.sh\n"
+        f"The database must exist before running any scripts."
+    )
 
 DATABASE_PATH = os.getenv('DATABASE_PATH') or _get_database_path()
 
@@ -151,7 +147,7 @@ except Exception as e:
     logging.critical("CONFIGURATION ERROR: Cannot load settings from database")
     logging.critical("="*70)
     logging.critical(f"Error: {e}")
-    logging.critical("Action required: Configure settings at http://213.199.33.207:8006/settings")
+    logging.critical("Action required: Configure settings at http://YOUR_SERVER_IP/settings")
     logging.critical("="*70)
     # Re-raise to prevent script from running with invalid config
     raise SystemExit("Configuration error: Settings must be configured in database. No .env fallback available.")

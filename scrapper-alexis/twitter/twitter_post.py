@@ -851,9 +851,9 @@ def main():
     os.chdir(project_root)
     
     try:
-        # Force the correct database path
-        import os
-        os.environ['DATABASE_PATH'] = 'data/scraper.db'
+        # Use Laravel database path from config
+        import config as twitter_config
+        os.environ['DATABASE_PATH'] = twitter_config.DATABASE_PATH
         
         # Reimport database with correct path
         import importlib
@@ -867,8 +867,8 @@ def main():
         
         # Import database after changing directory
         from core.database import get_database, initialize_database
-        # Force reinitialize with correct path
-        db = initialize_database('data/scraper.db')
+        # Initialize with Laravel database
+        db = initialize_database(twitter_config.DATABASE_PATH)
         
         # Get next message to post (with quality filtering)
         message = get_next_message_to_post(limit=1)

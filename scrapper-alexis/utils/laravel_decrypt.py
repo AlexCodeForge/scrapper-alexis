@@ -17,6 +17,36 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _get_laravel_env_path() -> str:
+    """
+    Dynamically find Laravel .env file.
+    
+    Returns:
+        str: Path to Laravel .env file
+        
+    Raises:
+        FileNotFoundError: If .env file is not found
+    """
+    # Auto-detect Laravel .env location relative to this script
+    # Get script directory
+    from pathlib import Path
+    script_dir = Path(__file__).parent.resolve()
+    
+    # Navigate up to find Laravel directory
+    # From: scrapper-alexis/utils/laravel_decrypt.py
+    # To:   scrapper-alexis-web/.env
+    laravel_env = script_dir.parent.parent / 'scrapper-alexis-web' / '.env'
+    
+    if laravel_env.exists():
+        return str(laravel_env)
+    
+    # If not found, raise clear error
+    raise FileNotFoundError(
+        f"Laravel .env not found at: {laravel_env}\n"
+        f"Expected structure: .../scrapper-alexis-web/.env"
+    )
+
+
 def get_laravel_key() -> bytes:
     """
     Get the Laravel APP_KEY from environment or Laravel .env file.
@@ -32,23 +62,16 @@ def get_laravel_key() -> bytes:
     
     # If not in env, try reading from Laravel .env file
     if not app_key:
-        laravel_env_paths = [
-            '/var/www/alexis-scrapper-docker/scrapper-alexis-web/.env',
-            '/var/www/scrapper-alexis/.env',
-        ]
+        laravel_env_path = _get_laravel_env_path()
         
-        for env_path in laravel_env_paths:
-            if os.path.exists(env_path):
-                try:
-                    with open(env_path, 'r') as f:
-                        for line in f:
-                            if line.startswith('APP_KEY='):
-                                app_key = line.strip().split('=', 1)[1]
-                                break
-                    if app_key:
+        try:
+            with open(laravel_env_path, 'r') as f:
+                for line in f:
+                    if line.startswith('APP_KEY='):
+                        app_key = line.strip().split('=', 1)[1]
                         break
-                except Exception as e:
-                    logger.warning(f"Failed to read {env_path}: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to read {laravel_env_path}: {e}")
     
     if not app_key:
         raise ValueError("Laravel APP_KEY not found. Set LARAVEL_APP_KEY environment variable or ensure .env exists.")
